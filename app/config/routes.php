@@ -2,6 +2,7 @@
 
 declare(strict_types=1);
 
+use EstudioCandame\Controller\ContactController;
 use EstudioCandame\Controller\PageController;
 use Slim\App;
 use Slim\Views\Twig;
@@ -34,4 +35,18 @@ return function (App $app, Twig $twig): void {
 
     // "contacto.php" es la URL indexada del sitio viejo (webcandame.old/contacto.php).
     $app->get('/contacto.php', fn ($request, $response) => $pageController->redirectToAnchor($request, $response, 'contacto'));
+
+    $contactController = new ContactController(
+        $twig,
+        $basePath,
+        (string) ($_ENV['MAIL_HOST'] ?? 'smtp.gmail.com'),
+        (int) ($_ENV['MAIL_PORT'] ?? 587),
+        (string) ($_ENV['MAIL_USERNAME'] ?? ''),
+        (string) ($_ENV['MAIL_PASSWORD'] ?? ''),
+        filter_var($_ENV['MAIL_SMTP_AUTH'] ?? true, FILTER_VALIDATE_BOOL),
+        filter_var($_ENV['MAIL_SMTP_STARTTLS'] ?? true, FILTER_VALIDATE_BOOL),
+        (string) ($_ENV['CONTACT_TO_ADDRESS'] ?? 'estudiocandame@gmail.com'),
+    );
+    $app->get('/contacto', [$contactController, 'redirectToAnchor']);
+    $app->post('/contacto', [$contactController, 'submit']);
 };

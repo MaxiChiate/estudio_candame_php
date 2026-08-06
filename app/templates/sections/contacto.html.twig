@@ -1,0 +1,76 @@
+<section id="contacto" class="contactGrid centered">
+    <div class="sectionHead">
+        <p class="eyebrow">07 &mdash; Contacto</p>
+        <h1>Escr&iacute;banos y le respondemos a la brevedad</h1>
+        <div class="contactDetails">
+            <div>
+                <p class="label">Estudio</p>
+                <p class="value">Paran&aacute; 777, 7&deg; B &mdash; CABA</p>
+            </div>
+            <div>
+                <p class="label">Tel&eacute;fono</p>
+                <p class="value"><a href="tel:+541139149027">(+54) 11 3914-9027</a></p>
+            </div>
+            <div>
+                <p class="label">Email</p>
+                <p class="value"><a href="mailto:estudiocandame@gmail.com">estudiocandame@gmail.com</a></p>
+                <p class="value"><a href="mailto:dracandame@estudiocandame.com.ar">dracandame@estudiocandame.com.ar</a></p>
+            </div>
+        </div>
+        <div class="mapContainer">
+            <iframe title="Ubicaci&oacute;n del Estudio" width="100%" height="260" style="border:0" loading="lazy"
+                    src="https://maps.google.com/maps?f=q&amp;source=s_q&amp;hl=es&amp;q=Paran%C3%A1+777,+Buenos+Aires,+Argentina&amp;t=m&amp;z=15&amp;output=embed"></iframe>
+        </div>
+    </div>
+
+    <div class="contactFormPanel">
+        {% if sent is defined and sent %}
+        <div class="sentEmail">
+            <p>Su mensaje fue enviado.</p>
+            <p>Nos estaremos comunicando a la brevedad. &iexcl;Gracias!</p>
+        </div>
+        {% endif %}
+
+        {% if sendError is defined and sendError %}
+        <div class="formError">
+            <p>Hubo un problema al enviar su mensaje. Por favor intente nuevamente o escr&iacute;banos
+                directamente a estudiocandame@gmail.com.</p>
+        </div>
+        {% endif %}
+
+        {% if sent is not defined or not sent %}
+        <form method="post" action="{{ basePath }}/contacto#contacto" class="contactForm" novalidate>
+            <div class="formGrid">
+                <div class="formRow">
+                    <label for="name">Nombre <span>*</span></label>
+                    <input type="text" id="name" name="name" value="{{ contactForm.name|default('') }}"/>
+                    {% if errors is defined and errors.name is defined %}
+                        <p class="fieldError">{{ errors.name }}</p>
+                    {% endif %}
+                </div>
+                <div class="formRow">
+                    <label for="phone">Tel&eacute;fono</label>
+                    <input type="text" id="phone" name="phone" value="{{ contactForm.phone|default('') }}"/>
+                </div>
+            </div>
+            <div class="formRow">
+                <label for="email">Email <span>*</span></label>
+                <input type="text" id="email" name="email" value="{{ contactForm.email|default('') }}"/>
+                {% if errors is defined and errors.email is defined %}
+                    <p class="fieldError">{{ errors.email }}</p>
+                {% endif %}
+            </div>
+            <div class="formRow">
+                <label for="message">Mensaje <span>*</span></label>
+                <textarea id="message" name="message">{{ contactForm.message|default('') }}</textarea>
+                {% if errors is defined and errors.message is defined %}
+                    <p class="fieldError">{{ errors.message }}</p>
+                {% endif %}
+            </div>
+            <button type="submit" class="btn">Enviar consulta</button>
+            <p class="formHint">La consulta inicial no genera honorarios. Los campos marcados con * son
+                obligatorios.</p>
+        </form>
+        {% endif %}
+    </div>
+</section>
