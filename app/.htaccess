@@ -1,0 +1,4 @@
+# No se usa mientras app/ vive fuera de public_html. Se deja preparado por si
+# alguna restriccion de FTP obliga a mover app/ adentro de public_html: en ese
+# caso este archivo bloquea el acceso HTTP directo al codigo fuente.
+Require all denied

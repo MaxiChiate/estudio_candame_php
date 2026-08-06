@@ -1,0 +1,9 @@
+DirectoryIndex index.php
+
+RewriteEngine On
+
+# Si el archivo o directorio pedido existe fisicamente (css, img, js, etc.),
+# se sirve tal cual. Todo lo demas va al front controller.
+RewriteCond %{REQUEST_FILENAME} !-f
+RewriteCond %{REQUEST_FILENAME} !-d
+RewriteRule ^ index.php [QSA,L]

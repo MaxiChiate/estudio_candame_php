@@ -1,0 +1,6 @@
+/app/vendor/
+/app/.env
+/var/cache/*
+!/var/cache/.gitkeep
+.idea/
+.DS_Store
