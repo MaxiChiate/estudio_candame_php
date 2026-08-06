@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 use EstudioCandame\Controller\ContactController;
 use EstudioCandame\Controller\PageController;
+use EstudioCandame\Controller\SasConstitucionController;
+use EstudioCandame\Service\SasDocumentService;
+use EstudioCandame\Service\SmvmService;
 use Slim\App;
 use Slim\Views\Twig;
 
@@ -49,4 +52,18 @@ return function (App $app, Twig $twig): void {
     );
     $app->get('/contacto', [$contactController, 'redirectToAnchor']);
     $app->post('/contacto', [$contactController, 'submit']);
+
+    $configuradorEnabled = filter_var($_ENV['CONFIGURADOR_ENABLED'] ?? false, FILTER_VALIDATE_BOOL);
+    if ($configuradorEnabled) {
+        $smvmService = new SmvmService(
+            (string) ($_ENV['SAS_SMVM_API_URL'] ?? ''),
+            (float) ($_ENV['SMVM_FALLBACK_VALOR'] ?? 0),
+            (string) ($_ENV['SMVM_FALLBACK_FECHA'] ?? ''),
+            (int) ($_ENV['SAS_CAPITAL_MULTIPLO_SMVM'] ?? 2),
+            APP_PATH . '/../var/cache/smvm.json',
+        );
+        $sasController = new SasConstitucionController($twig, $smvmService, new SasDocumentService($smvmService));
+        $app->get('/tramites/sas/constitucion', [$sasController, 'form']);
+        $app->post('/tramites/sas/constitucion', [$sasController, 'generar']);
+    }
 };

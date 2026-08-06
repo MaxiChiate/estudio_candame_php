@@ -1,0 +1,386 @@
+{% extends 'layout/base.html.twig' %}
+{% block content %}
+<main>
+<section class="sectionPage surface centered tramitePage">
+    <div class="sectionHead">
+        <p class="eyebrow">Sociedades &mdash; SAS</p>
+        <h1>Constituci&oacute;n de Sociedad por Acciones Simplificada</h1>
+        <p class="lede">Complete los datos de los socios, el administrador y la sociedad. Al enviar el
+            formulario se generan dos archivos para continuar el tr&aacute;mite: la planilla de datos y un
+            borrador del estatuto (instrumento constitutivo).</p>
+    </div>
+
+    <div class="contactFormPanel tramiteFormPanel">
+        <div id="tramiteError" class="formError" style="display:none"></div>
+        <div id="tramiteSuccess" class="sentEmail" style="display:none">
+            <p>Documentos generados.</p>
+            <p>La descarga deber&iacute;a haber comenzado autom&aacute;ticamente.</p>
+        </div>
+
+        <form id="sasForm" class="contactForm" novalidate>
+
+            <div class="tramiteGroup">
+                <h2>Sociedad</h2>
+
+                <div class="formRow">
+                    <div class="formRowLabel">
+                        <p class="formSubLabel">Nombres propuestos, en orden de preferencia <span>*</span></p>
+                        <span class="fieldHelp">
+                            <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre los nombres</span>
+                            </button>
+                        </span>
+                    </div>
+                    <div class="fieldHelpPanel" data-help-panel hidden>
+                        <p>Al iniciar el tr&aacute;mite se intenta reservar en IGJ el primer nombre
+                            disponible, empezando por la opci&oacute;n 1: si ya est&aacute; registrada,
+                            se prueba con la 2 y luego con la 3. Por eso las tres son obligatorias.</p>
+                    </div>
+                </div>
+                <div class="formGrid">
+                    <div class="formRow">
+                        <label for="nombreOpcion1">Nombre opci&oacute;n 1 <span>*</span></label>
+                        <input type="text" id="nombreOpcion1" name="nombreOpcion1"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="nombreOpcion2">Nombre opci&oacute;n 2 <span>*</span></label>
+                        <input type="text" id="nombreOpcion2" name="nombreOpcion2"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="nombreOpcion3">Nombre opci&oacute;n 3 <span>*</span></label>
+                        <input type="text" id="nombreOpcion3" name="nombreOpcion3"/>
+                    </div>
+                </div>
+
+                <div class="formRow">
+                    <div class="formRowLabel">
+                        <label for="tipoObjeto">Objeto social <span>*</span></label>
+                        <span class="fieldHelp">
+                            <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre el objeto social</span>
+                            </button>
+                        </span>
+                    </div>
+                    <div class="fieldHelpPanel" data-help-panel hidden>
+                        <p>Cada actividad de la lista es una de las diez categor&iacute;as del modelo de
+                            estatuto preaprobado por IGJ para SAS: eleg&iacute; la que mejor describa tu
+                            negocio. Si ninguna encaja, eleg&iacute; &ldquo;Objeto espec&iacute;fico&rdquo;
+                            y redactala vos.</p>
+                    </div>
+                    <select id="tipoObjeto" name="tipoObjeto">
+                        <option value="" selected disabled>Seleccionar&hellip;</option>
+                        <option value="AGROPECUARIAS">Agropecuarias, av&iacute;colas, ganaderas, pesqueras, tamberas y vitivin&iacute;colas</option>
+                        <option value="COMUNICACIONES">Comunicaciones, espect&aacute;culos, editoriales y gr&aacute;ficas en cualquier soporte</option>
+                        <option value="CULTURALES">Culturales y educativas</option>
+                        <option value="TECNOLOGIA">Desarrollo de tecnolog&iacute;as, investigaci&oacute;n e innovaci&oacute;n y software</option>
+                        <option value="GASTRONOMIA">Gastron&oacute;micas, hoteleras y tur&iacute;sticas</option>
+                        <option value="INMOBILIARIAS">Inmobiliarias y constructoras</option>
+                        <option value="INVERSORAS">Inversoras, financieras y fideicomisos</option>
+                        <option value="ENERGIA">Petroleras, gas&iacute;feras, forestales, mineras y energ&eacute;ticas en todas sus formas</option>
+                        <option value="SALUD">Salud</option>
+                        <option value="TRANSPORTE">Transporte</option>
+                        <option value="ESPECIFICO">Objeto espec&iacute;fico (redactar a medida)</option>
+                    </select>
+                </div>
+                <div class="formRow" id="objetoEspecificoRow" style="display:none">
+                    <label for="objetoSocial">Describa el objeto social <span>*</span></label>
+                    <textarea id="objetoSocial" name="objetoSocial"></textarea>
+                </div>
+
+                <div class="formGrid">
+                    <div class="formRow">
+                        <div class="formRowLabel">
+                            <label>Capital social</label>
+                            <span class="fieldHelp">
+                                <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                    <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre el capital social</span>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="fieldHelpPanel" data-help-panel hidden>
+                            <p>No hace falta disponer de este dinero en efectivo para constituir la
+                                sociedad: alcanza con integrar el 25% al momento de la firma: el resto se
+                                completa dentro de los 2 a&ntilde;os siguientes.
+                                <a href="{{ basePath }}/#contacto">Consultanos</a> si ten&eacute;s dudas.</p>
+                        </div>
+                        <p class="readonlyValue">
+                            $ <span>{{ capitalInfo.capitalFormateado }}</span>
+                        </p>
+                        <p class="formHint">
+                            Es el m&iacute;nimo legal para una SAS: <span>{{ capitalInfo.multiplo }}</span>
+                            veces el Salario M&iacute;nimo, Vital y M&oacute;vil vigente
+                            (<span>{{ capitalInfo.smvmFormateado }}</span>
+                            al <span>{{ capitalInfo.fechaSmvm }}</span>).
+                        </p>
+                    </div>
+                    <div class="formRow">
+                        <div class="formRowLabel">
+                            <label for="cierreEjercicioMes">Cierre del ejercicio <span>*</span></label>
+                            <span class="fieldHelp">
+                                <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                    <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre el cierre de ejercicio</span>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="fieldHelpPanel" data-help-panel hidden>
+                            <p>Es la fecha en la que cierran los balances de la sociedad cada a&ntilde;o.
+                                Si no est&aacute;s seguro de cu&aacute;l te conviene,
+                                <a href="{{ basePath }}/#contadores">consult&aacute; con tu contador</a> antes de
+                                confirmar.</p>
+                        </div>
+                        <select id="cierreEjercicioMes" name="cierreEjercicioMes">
+                            <option value="" selected disabled>Seleccionar&hellip;</option>
+                            <option value="DICIEMBRE">31 de diciembre</option>
+                            <option value="JUNIO">30 de junio</option>
+                        </select>
+                    </div>
+                    <div class="formRow">
+                        <label for="duracionSociedad">Duraci&oacute;n (a&ntilde;os) <span>*</span></label>
+                        <input type="number" id="duracionSociedad" name="duracionSociedad" min="1" max="99" step="1" value="99"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="emailSociedad">Email de la sociedad</label>
+                        <input type="email" id="emailSociedad" name="emailSociedad"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="telefonoSociedad">Tel&eacute;fono</label>
+                        <input type="tel" id="telefonoSociedad" name="telefonoSociedad"
+                               placeholder="+54 9 11 1234-5678"/>
+                    </div>
+                </div>
+
+                <div class="formRow">
+                    <div class="formRowLabel">
+                        <p class="formSubLabel">Domicilio de la sede social <span>*</span></p>
+                        <span class="fieldHelp">
+                            <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre el domicilio</span>
+                            </button>
+                        </span>
+                    </div>
+                    <div class="fieldHelpPanel" data-help-panel hidden>
+                        <p>Este estudio solo tramita constituciones ante IGJ, con jurisdicci&oacute;n
+                            exclusivamente en la Ciudad Aut&oacute;noma de Buenos Aires: el domicilio
+                            legal de la sociedad siempre queda en CABA. Los administradores no necesitan
+                            dar un domicilio propio para la sociedad: la ley los tiene por constituidos
+                            autom&aacute;ticamente en esta misma sede.</p>
+                    </div>
+                </div>
+                <div class="formGrid">
+                    <div class="formRow">
+                        <label for="domicilioCalle">Calle <span>*</span></label>
+                        <input type="text" id="domicilioCalle" name="domicilioCalle"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="domicilioAltura">Altura <span>*</span></label>
+                        <input type="text" id="domicilioAltura" name="domicilioAltura"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="domicilioPiso">Piso</label>
+                        <input type="text" id="domicilioPiso" name="domicilioPiso" placeholder="Dejar en blanco si no aplica"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="domicilioDepto">Departamento</label>
+                        <input type="text" id="domicilioDepto" name="domicilioDepto" placeholder="Dejar en blanco si no aplica"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="domicilioCuerpo">Cuerpo / Torre</label>
+                        <input type="text" id="domicilioCuerpo" name="domicilioCuerpo" placeholder="Dejar en blanco si no aplica"/>
+                    </div>
+                    <div class="formRow">
+                        <label>Localidad y jurisdicci&oacute;n</label>
+                        <input type="text" value="Ciudad Aut&oacute;noma de Buenos Aires" disabled/>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tramiteGroup">
+                <div class="tramiteGroupHead">
+                    <h2>Accionistas</h2>
+                    <button type="button" class="btnOutline" id="addAccionista">Agregar accionista</button>
+                </div>
+                <div id="accionistasList"></div>
+                <p id="porcentajeTotal" class="formHint"></p>
+            </div>
+
+            <div class="tramiteGroup">
+                <div class="tramiteGroupHead">
+                    <h2>Administradores</h2>
+                    <button type="button" class="btnOutline" id="addAdministrador">Agregar administrador</button>
+                </div>
+                <div id="administradoresList"></div>
+            </div>
+
+            <button type="submit" class="btn">Generar documentos</button>
+            <p class="formHint">Los campos marcados con * son obligatorios. Se generar&aacute; un archivo
+                comprimido con la planilla de datos (.xlsx) y el borrador del estatuto (.docx).</p>
+        </form>
+    </div>
+</section>
+
+<template id="personaFieldsTemplate">
+    <div class="formGrid">
+        <div class="formRow">
+            <label>Tratamiento <span>*</span></label>
+            <select data-field="tratamiento">
+                <option value="" selected disabled>Seleccionar&hellip;</option>
+                <option value="Señor">Señor</option>
+                <option value="Señora">Señora</option>
+            </select>
+        </div>
+        <div class="formRow">
+            <label>Apellido y nombre <span>*</span></label>
+            <input type="text" data-field="nombreCompleto"/>
+        </div>
+        <div class="formRow">
+            <label>Nacionalidad <span>*</span></label>
+            <div class="comboBox" data-nacionalidad-combo>
+                <button type="button" class="comboBoxButton" data-combo-button
+                        aria-haspopup="listbox" aria-expanded="false">
+                    <span data-combo-label></span>
+                </button>
+                <ul class="comboBoxList" data-combo-list role="listbox" hidden></ul>
+                <input type="hidden" data-field="nacionalidad"/>
+            </div>
+        </div>
+        <div class="formRow">
+            <label>Fecha de nacimiento</label>
+            <input type="date" data-field="fechaNacimiento"/>
+        </div>
+        <div class="formRow">
+            <label>Tipo de documento <span>*</span></label>
+            <select data-field="tipoDocumento">
+                <option value="DNI">DNI</option>
+                <option value="Pasaporte">Pasaporte</option>
+            </select>
+        </div>
+        <div class="formRow">
+            <label>N&uacute;mero de documento <span>*</span></label>
+            <input type="text" data-field="numeroDocumento"/>
+        </div>
+        <div class="formRow">
+            <label>CUIT / CUIL <span>*</span></label>
+            <input type="text" data-field="cuitCuil"/>
+        </div>
+        <div class="formRow">
+            <label>Estado civil <span>*</span></label>
+            <select data-field="estadoCivil">
+                <option value="" selected disabled>Seleccionar&hellip;</option>
+                <option value="Soltero">Soltero/a</option>
+                <option value="Casado">Casado/a</option>
+                <option value="Divorciado">Divorciado/a</option>
+                <option value="Viudo">Viudo/a</option>
+                <option value="Unión convivencial">Uni&oacute;n convivencial</option>
+            </select>
+        </div>
+        <div class="formRow">
+            <label>C&oacute;nyuge (si casado/a)</label>
+            <input type="text" data-field="conyuge" disabled/>
+        </div>
+        <div class="formRow">
+            <label>Profesi&oacute;n</label>
+            <input type="text" data-field="profesion"/>
+        </div>
+        <div class="formRow">
+            <label>Correo electr&oacute;nico</label>
+            <input type="email" data-field="email"/>
+        </div>
+    </div>
+    <div class="tramiteSubGroup" data-domicilio-slot>
+        <p class="formSubLabel">Domicilio real <span>*</span></p>
+        <div class="formGrid">
+            <div class="formRow">
+                <label>Calle <span>*</span></label>
+                <input type="text" data-field="calle"/>
+            </div>
+            <div class="formRow">
+                <label>Altura <span>*</span></label>
+                <input type="text" data-field="altura"/>
+            </div>
+            <div class="formRow">
+                <label>Piso</label>
+                <input type="text" data-field="piso" placeholder="Dejar en blanco si no aplica"/>
+            </div>
+            <div class="formRow">
+                <label>Departamento</label>
+                <input type="text" data-field="departamento" placeholder="Dejar en blanco si no aplica"/>
+            </div>
+            <div class="formRow">
+                <label>Cuerpo / Torre</label>
+                <input type="text" data-field="cuerpo" placeholder="Dejar en blanco si no aplica"/>
+            </div>
+            <div class="formRow">
+                <label>Localidad <span>*</span></label>
+                <input type="text" data-field="localidad"/>
+            </div>
+            <div class="formRow">
+                <label>Provincia <span>*</span></label>
+                <select data-field="provincia">
+                    <option value="" selected disabled>Seleccionar&hellip;</option>
+                    <option value="Buenos Aires">Buenos Aires</option>
+                    <option value="Catamarca">Catamarca</option>
+                    <option value="Chaco">Chaco</option>
+                    <option value="Chubut">Chubut</option>
+                    <option value="Ciudad Autónoma de Buenos Aires">Ciudad Aut&oacute;noma de Buenos Aires</option>
+                    <option value="Córdoba">C&oacute;rdoba</option>
+                    <option value="Corrientes">Corrientes</option>
+                    <option value="Entre Ríos">Entre R&iacute;os</option>
+                    <option value="Formosa">Formosa</option>
+                    <option value="Jujuy">Jujuy</option>
+                    <option value="La Pampa">La Pampa</option>
+                    <option value="La Rioja">La Rioja</option>
+                    <option value="Mendoza">Mendoza</option>
+                    <option value="Misiones">Misiones</option>
+                    <option value="Neuquén">Neuqu&eacute;n</option>
+                    <option value="Río Negro">R&iacute;o Negro</option>
+                    <option value="Salta">Salta</option>
+                    <option value="San Juan">San Juan</option>
+                    <option value="San Luis">San Luis</option>
+                    <option value="Santa Cruz">Santa Cruz</option>
+                    <option value="Santa Fe">Santa Fe</option>
+                    <option value="Santiago del Estero">Santiago del Estero</option>
+                    <option value="Tierra del Fuego">Tierra del Fuego</option>
+                    <option value="Tucumán">Tucum&aacute;n</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="accionistaTemplate">
+    <div class="tramiteCard" data-accionista>
+        <div class="tramiteCardHead">
+            <p class="tramiteCardTitle"></p>
+            <button type="button" class="tramiteRemove" data-remove>Quitar</button>
+        </div>
+        <div data-persona-slot></div>
+        <div class="formGrid">
+            <div class="formRow">
+                <label>Porcentaje de participaci&oacute;n <span>*</span></label>
+                <input type="text" inputmode="decimal" data-field="porcentajeParticipacion" placeholder="50"/>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="administradorTemplate">
+    <div class="tramiteCard" data-administrador>
+        <div class="tramiteCardHead">
+            <p class="tramiteCardTitle"></p>
+            <button type="button" class="tramiteRemove" data-remove>Quitar</button>
+        </div>
+        <div data-persona-slot></div>
+        <div class="formGrid">
+            <div class="formRow">
+                <label>Cargo</label>
+                <select data-field="cargo">
+                    <option value="Titular">Titular</option>
+                    <option value="Suplente">Suplente</option>
+                </select>
+            </div>
+        </div>
+    </div>
+</template>
+<script src="{{ basePath }}/js/sas-constitucion.js"></script>
+</main>
+{% endblock %}
