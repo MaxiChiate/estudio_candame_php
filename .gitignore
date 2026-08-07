@@ -1,6 +1,6 @@
 /app/vendor/
 /app/.env
-/var/cache/*
-!/var/cache/.gitkeep
+/app/var/cache/*
+!/app/var/cache/.gitkeep
 .idea/
 .DS_Store

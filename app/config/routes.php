@@ -60,7 +60,7 @@ return function (App $app, Twig $twig): void {
             (float) ($_ENV['SMVM_FALLBACK_VALOR'] ?? 0),
             (string) ($_ENV['SMVM_FALLBACK_FECHA'] ?? ''),
             (int) ($_ENV['SAS_CAPITAL_MULTIPLO_SMVM'] ?? 2),
-            APP_PATH . '/../var/cache/smvm.json',
+            APP_PATH . '/var/cache/smvm.json',
         );
         $sasController = new SasConstitucionController($twig, $smvmService, new SasDocumentService($smvmService));
         $app->get('/tramites/sas/constitucion', [$sasController, 'form']);
