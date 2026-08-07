@@ -7,7 +7,7 @@ Guía para Claude Code al trabajar en este repo.
 Port a **PHP 8.3 / Slim 4 / Twig 3** del sitio de Estudio Candame (estudio jurídico,
 Buenos Aires — constitución de sociedades SRL/SA/SAS ante **IGJ, jurisdicción CABA
 únicamente**), migrado desde un proyecto Spring Boot/Kotlin/Thymeleaf porque el hosting
-contratado es **cPanel compartido (CloudLinux + LiteSpeed) sin JVM**. Toda la copy del
+contratado es **cPanel compartido (CloudLinux + Apache, sin JVM)**. Toda la copy del
 sitio está en español.
 
 Este repo es standalone: no depende del proyecto Kotlin en runtime ni en build. El
@@ -25,16 +25,47 @@ pero el desarrollo activo es acá.
 
 ## Stack y restricciones del hosting
 
-- PHP 8.3, `max_execution_time=30s`, `memory_limit=192M`.
-- Funciones deshabilitadas en el server: `exec`, `passthru`, `shell_exec`, `system`,
-  `proc_open`, `popen`, `parse_ini_file`, `show_source`. No usar estas funciones ni
-  ninguna librería que las use internamente (ni siquiera indirectamente).
+- PHP 8.3, `max_execution_time=60s`, `memory_limit=192M` (vía `.user.ini`, ver
+  [Producción](#producción)).
+- No usar `exec`/`passthru`/`shell_exec`/`system`/`proc_open`/`popen`/
+  `parse_ini_file`/`show_source` ni ninguna librería que las use internamente (ni
+  siquiera indirectamente). Esto es política del proyecto, no sólo una restricción del
+  hosting: en el deploy verificado en Neolo `disable_functions` está vacío (nada
+  deshabilitado a nivel servidor), pero no hay que depender de eso — es hosting
+  compartido y esa config puede cambiar sin aviso.
 - Sin SSH. **Composer no corre en el servidor** — se instala en local y se sube
   `app/vendor/` ya armado por FTP.
 - Sin base de datos.
 - Extensiones disponibles: zip, gd, mbstring, dom, xmlwriter, xmlreader, SimpleXML,
   iconv, fileinfo, intl, bcmath, xsl, imagick, curl, openssl, pdo_mysql (esta última sin
   uso actual, no hay DB).
+
+## Producción
+
+Sitio andando en https://estudiocandame.com.ar (cPanel compartido de Neolo).
+
+- PHP productivo: **8.3.32 (ea-php83)**, gestionado por MultiPHP Manager (no por el
+  PHP Selector de CloudLinux, que sólo ofrece la 8.1 nativa porque CageFS está
+  deshabilitado a nivel servidor). El cambio de versión se aplica vía bloque
+  `AddHandler` en `.htaccess` — si ese bloque se borra, el sitio cae a PHP 8.1 y
+  Composer aborta con un error de versión mínima.
+- `allow_url_fopen` está **Off** (`PHP_INI_SYSTEM`, no se puede cambiar por
+  `.user.ini`/`.htaccess`): cualquier request HTTP saliente tiene que ir por cURL,
+  nunca `file_get_contents()` con una URL.
+- **Permisos al extraer un deploy: archivos 0644, directorios 0755, `.env` 0600.** Un
+  `index.php` con permiso de escritura de grupo (0664, lo que deja un `unzip` en el
+  administrador de archivos de cPanel) hace que suEXEC le niegue la ejecución a PHP →
+  500 sin ninguna entrada en el log de PHP. Es la trampa más cara del deploy y la
+  menos obvia.
+- Límites de PHP se ajustan con `.user.ini` en `public_html` (no con `php_value` en
+  `.htaccess`, y no con el PHP Selector): `memory_limit=192M`, `post_max_size=64M`,
+  `upload_max_filesize=32M`, `max_input_vars=5000`, `max_execution_time=60`. Tarda
+  ~5 minutos en tomar efecto tras subirlo.
+- `MAIL_HOST` productivo es `mail.estudiocandame.com.ar` — `localhost` falla el
+  handshake TLS.
+- Deploy: `composer install --no-dev --optimize-autoloader` en local → zip de `app/`
+  → Cargar + Extraer en el administrador de archivos de cPanel → corregir permisos →
+  borrar el zip del servidor. Detalle completo en el README.
 
 ## Estructura de directorios (importante, no es negociable)
 
@@ -95,11 +126,14 @@ dev server built-in.
     texto legal o corregir una tilde faltante, es acá.
   - `SmvmService` — consulta la API de datos.gob.ar para el SMVM vigente (capital mínimo
     SAS, art. 40 Ley 27.349), con fallback si la API no responde.
-- **Cache de archivo** (`var/cache/*.json`, TTL por `filemtime()`) — reemplaza el cache
-  en memoria (`@Volatile`) del proceso Kotlin, porque PHP-FPM/CGI no tiene un proceso
-  long-lived. Es una decisión de arquitectura tomada durante el port, no dictada por el
-  Kotlin original — si algún día hay más de una cosa para cachear, seguir este mismo
-  patrón (JSON + TTL en `var/cache/`) en vez de inventar otro mecanismo.
+- **Cache de archivo** (`app/var/cache/*.json`, TTL por `filemtime()`) — reemplaza el
+  cache en memoria (`@Volatile`) del proceso Kotlin, porque PHP-FPM/CGI no tiene un
+  proceso long-lived. Es una decisión de arquitectura tomada durante el port, no
+  dictada por el Kotlin original — si algún día hay más de una cosa para cachear,
+  seguir este mismo patrón (JSON + TTL en `app/var/cache/`) en vez de inventar otro
+  mecanismo. Tiene que vivir bajo `app/`, no un nivel arriba: en producción,
+  `APP_PATH` es `/home/estudicn/app`, y un `../var/` ahí apunta a un directorio de
+  sistema de cPanel, no del proyecto (bug real, corregido — ver `routes.php`).
 
 ## Reglas del proyecto
 
@@ -107,8 +141,9 @@ dev server built-in.
 - UTF-8 y funciones `mb_*` en todo el código que toque strings (nombres, direcciones,
   texto legal — el estudio opera 100% en español con tildes/ñ).
 - Nunca usar `exec`/`shell_exec`/`proc_open` ni librerías que dependan de binarios
-  externos (ej. no wkhtmltopdf) — estas funciones están deshabilitadas en el hosting.
-- Generación de documentos (Excel+Word+zip) tiene que entrar en los 30s de
+  externos (ej. no wkhtmltopdf) — ver política del proyecto en
+  [Stack y restricciones del hosting](#stack-y-restricciones-del-hosting).
+- Generación de documentos (Excel+Word+zip) tiene que entrar en los 60s de
   `max_execution_time` del hosting — ya validado que entra sin necesidad de partir el
   flujo en dos requests.
 - Es un **port**, no un rediseño: preservar contenido y estructura del sitio Kotlin
