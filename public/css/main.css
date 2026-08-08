@@ -76,6 +76,10 @@ h1, h2, h3 {
     min-height: 100vh;
 }
 
+.mainContainer > main {
+    flex: 1;
+}
+
 .eyebrow {
     font-size: 12px;
     letter-spacing: 0.18em;
@@ -745,6 +749,15 @@ section[id] {
 .tramitePage {
     grid-template-columns: 1fr;
     max-width: 900px;
+}
+
+.errorPage {
+    grid-template-columns: 1fr;
+    max-width: 700px;
+    text-align: center;
+    min-height: 40vh;
+    align-content: center;
+    justify-items: center;
 }
 
 .tramiteFormPanel {
