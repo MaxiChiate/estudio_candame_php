@@ -193,18 +193,34 @@ es una implementación nueva, no un port.
 
 ## Estado del repo
 
-Remoto en GitHub (`origin` → `MaxiChiate/estudio_candame_php`). Dos ramas locales:
-`development` (rama de trabajo, antes se llamaba `master`) y `production` (creada el
-2026-08-09, todavía apuntando al mismo commit que `development` — no hay divergencia
-todavía). `origin` sólo tiene `master` por ahora; no se empujó el rename ni la rama
-`production` sin confirmación explícita del usuario, porque cambia la rama default del
-remoto (visible para cualquiera con acceso al repo en GitHub).
+Remoto en GitHub (`origin` → `MaxiChiate/estudio_candame_php`, privado). `development`
+es la rama default (antes era `master`; se renombró, se empujó y se borró `master` del
+remoto el 2026-08-09). `production` dispara el deploy automático por CI al recibir un
+push — ver "Deploy por FTP" abajo.
 
-## Deploy por FTP (`deploy.sh`)
+## Deploy (`deploy.sh` + CI)
 
-Alternativa al deploy manual por zip (ver README, sección "Deploy automático"):
-`./deploy.sh [--live] [--env]` sincroniza por FTPS con `lftp mirror` contra el cPanel de
-Neolo. Usa `.ftp.env` (gitignored, credenciales reales) — **nunca** correr `lftp mirror`
-en modo `--verbose`/`-d` sin `--no-perms`: el chmod automático de `mirror` loguea la URL
-completa con usuario y contraseña en texto plano. Ya está arreglado en el script (ver
-comentario ahí), pero si se toca ese archivo, no sacar `--no-perms` de los dos `mirror`.
+Dos caminos, mismo mecanismo de fondo:
+
+- **CI:** push a `production` dispara `.github/workflows/deploy.yml` (Environment
+  `production` en GitHub, secrets a nivel repo: `FTP_HOST`, `FTP_USER`, `FTP_PASS`,
+  `ENV_PRODUCTION` — sin reviewers obligatorios, deploy directo). El job instala
+  dependencias, corre `deploy.sh --live --env` y valida con un smoke test (`curl` a
+  `/` esperando `200`). `workflow_dispatch` para redeployar sin commit nuevo — ojo, por
+  default toma la rama default del repo (`development`), hay que elegir `production` a
+  mano en el dropdown de Actions.
+- **Manual, en local:** `./deploy.sh [--live] [--env]` sincroniza por FTPS con `lftp
+  mirror` contra el cPanel de Neolo. Usa `.ftp.env` (gitignored, credenciales reales).
+
+En ambos casos: **nunca** correr `lftp mirror` en modo `--verbose`/`-d` sin el pipe de
+redacción (`$REDACT_SED` en el script) — lftp loguea cada acción (`get`, `mkdir`,
+`chmod`, no sólo `chmod`) como una URL completa con usuario y contraseña en texto
+plano. Ya está arreglado en el script (pipe `sed` en las tres invocaciones de `lftp`),
+pero si se toca ese archivo, no sacar ese pipe de ninguna.
+
+`public/.htaccess` ahora incluye, versionado, el bloque `AddHandler` de MultiPHP
+Manager (antes de las reglas de rewrite de Slim) y `deploy.sh` lo sincroniza sin
+excluirlo (decisión del usuario 2026-08-09, invierte la exclusión original). Si algún
+día se cambia la versión de PHP a mano desde MultiPHP Manager en cPanel, ese cambio
+vive sólo en el servidor hasta que se refleje en `public/.htaccess` — si no, el
+próximo deploy lo revierte silenciosamente.

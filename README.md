@@ -45,47 +45,36 @@ El trámite de constitución de SAS (`/tramites/sas/constitucion`) está detrás
 
 ## Deploy a producción (cPanel de Neolo)
 
+Sitio en https://estudiocandame.com.ar. Dos formas de deployar:
+
+### Automático (CI)
+
+Push (o merge) a la rama `production` dispara `.github/workflows/deploy.yml`: instala
+dependencias con Composer, corre `./deploy.sh --live --env` contra el servidor y valida
+con un smoke test que el sitio responda `200`. Rama de trabajo: `development`.
+
+Para redeployar sin un commit nuevo, correr el workflow a mano desde la pestaña
+**Actions** (`workflow_dispatch`) — al hacerlo, elegir explícitamente la rama
+`production` en el dropdown: por default toma la rama default del repo, que es
+`development`, no `production`.
+
+### Manual, en local (`deploy.sh`)
+
 No hay SSH útil ni Composer en el servidor: las dependencias se instalan **en local**
-y se sube `app/vendor/` ya generado. FTP con `vendor/` (miles de archivos chiquitos)
-tarda horas y se corta — el método que funciona es subir un `.zip` y extraerlo con el
-administrador de archivos de cPanel:
-
-1. En local: `composer install --no-dev --optimize-autoloader` y completar
-   `app/.env` con los valores de producción a partir de `app/.env.example`.
-2. Comprimir `app/` en un `.zip`.
-3. En el administrador de archivos de cPanel: **Cargar** el zip a
-   `/home/estudicn/app/` (o donde corresponda) y luego **Extraer**.
-4. Borrar el zip del servidor apenas termina de extraer — el disco de estas cuentas
-   compartidas es chico.
-5. Repetir el mismo paso 2-4 para el **contenido** de `public/` → `public_html/`.
-6. **Corregir permisos** (ver "Trampas" abajo) — el paso que más rompe si se salta.
-7. Confirmar que `/home/estudicn/app/.env` exista en el servidor con los valores
-   reales (SMTP, `CONTACT_TO_ADDRESS`, `CONFIGURADOR_ENABLED`, etc.) — no se commitea
-   al repo, y sus permisos deben quedar en `0600`.
-8. Confirmar que el bloque `AddHandler` que generó MultiPHP Manager sigue presente en
-   `public_html/.htaccess` (ver más abajo) — si se pisa ese archivo con el `.htaccess`
-   del repo sin ese bloque, el sitio corre con la versión nativa del servidor en vez
-   de PHP 8.3.
-
-Si en algún momento el hosting obliga a mover `app/` adentro de `public_html` (por
-restricciones del cliente FTP), cambiar la constante `APP_PATH` en `public/index.php`
-y confirmar que `app/.htaccess` (`Require all denied`) esté presente para bloquear el
-acceso HTTP directo al código fuente.
-
-### Deploy automático (`deploy.sh`, FTPS)
-
-Alternativa al zip+extraer manual de arriba: `./deploy.sh` sincroniza `app/` → `/app` y
-`public/` → `/public_html` por FTPS usando `lftp mirror`, contra el mismo servidor
-(`homero.lineadns.com` — el hostname real, no el dominio: el certificado FTP está
-emitido para la máquina de Neolo). Requiere `lftp` instalado en local y un archivo
-`.ftp.env` en la raíz del repo (no versionado, gitignored) con `FTP_HOST`/`FTP_USER`/
-`FTP_PASS`.
+y se sube `app/vendor/` ya generado.
 
 ```bash
+composer install --no-dev --optimize-autoloader
 ./deploy.sh              # dry-run: muestra el diff, no toca nada
-./deploy.sh --live        # ejecuta de verdad
+./deploy.sh --live        # sincroniza por FTPS con lftp
 ./deploy.sh --live --env  # además sube app/.env.production como /app/.env
 ```
+
+`deploy.sh` sincroniza `app/` → `/app` y `public/` → `/public_html` por FTPS (`lftp
+mirror`) contra `homero.lineadns.com` — el hostname real del servidor, no el dominio: el
+certificado FTP está emitido para la máquina de Neolo, no para
+`estudiocandame.com.ar`. Requiere `lftp` instalado y un archivo `.ftp.env` en la raíz
+del repo (no versionado, gitignored) con `FTP_HOST`/`FTP_USER`/`FTP_PASS`.
 
 Puntos importantes:
 
@@ -96,24 +85,29 @@ Puntos importantes:
   pero excluye `.env`, `.env.*`, `.ftp.env`, `.git*` y `var/cache/` — así no borra el
   `.env` de producción ni el cache en runtime (`SmvmService` lo recrea solo si falta el
   directorio).
-- El mirror de `public/` **excluye `.htaccess` a propósito** (además de `.user.ini` y
-  `error_log`, que tampoco viven en el repo): el `.htaccess` de producción tiene el
-  bloque `AddHandler` de MultiPHP Manager (fuerza `ea-php83`) seguido de las reglas de
-  rewrite de Slim agregadas a mano — el de este repo no tiene ese bloque. Si algún día
-  cambian las reglas de rewrite de Slim, hay que aplicarlas a mano en
-  `public_html/.htaccess` (después del bloque `AddHandler`), no vía este script.
+- El mirror de `public/` sincroniza `.htaccess` — el bloque `AddHandler` de MultiPHP
+  Manager está versionado ahí (ver "PHP en el servidor" abajo), así que ya no hace
+  falta revisarlo a mano después de cada deploy. **Ojo:** si alguna vez se cambia la
+  versión de PHP a mano desde MultiPHP Manager en cPanel, ese cambio queda sólo en el
+  servidor — el próximo deploy lo pisa con lo que diga el repo, hay que reflejar el
+  cambio en `public/.htaccess` también.
 - Corrige permisos de `index.php` y `.htaccess` a `0644` al final de un `--live` (FTP
-  ya sube en `0644` en este hosting, así que normalmente es un no-op) — la misma trampa
-  de suEXEC que con el método zip, ver más abajo.
+  ya sube en `0644` en este hosting, así que normalmente es un no-op) — mismo motivo
+  que la trampa de suEXEC de abajo.
+
+Si en algún momento el hosting obliga a mover `app/` adentro de `public_html` (por
+restricciones del cliente FTP), cambiar la constante `APP_PATH` en `public/index.php`
+y confirmar que `app/.htaccess` (`Require all denied`) esté presente para bloquear el
+acceso HTTP directo al código fuente.
 
 ### PHP en el servidor
 
 La cuenta usa **MultiPHP Manager**, no el PHP Selector de CloudLinux (el aislamiento
 CageFS está deshabilitado a nivel servidor, así que el Selector sólo ofrece la 8.1
-nativa). El cambio de versión a **8.3.32 (ea-php83)** se aplica agregando este bloque
-al `.htaccess` de `public_html` — **tiene que quedar**, si se borra el sitio cae a PHP
-8.1 y Composer aborta con `Your Composer dependencies require a PHP version
-">= 8.3.0"`:
+nativa). El cambio de versión a **8.3.32 (ea-php83)** se aplica con este bloque, ahora
+versionado al principio de `public/.htaccess` (antes de las reglas de rewrite de
+Slim) — **tiene que quedar ahí**, si se borra el sitio cae a PHP 8.1 y Composer aborta
+con `Your Composer dependencies require a PHP version ">= 8.3.0"`:
 
 ```apache
 # php -- BEGIN cPanel-generated handler, do not edit
@@ -158,14 +152,11 @@ DNI, etc.).
 
 ### Trampas del deploy
 
-- **Permisos: `index.php` debe ser 0644.** Al extraer un zip en el administrador de
-  archivos de cPanel, los archivos quedan en `0664` y los directorios en `0775`. Con
-  suEXEC (lo que usa cPanel), PHP se niega a ejecutar cualquier script con permiso de
-  escritura para el grupo → **500 de Apache sin ninguna entrada en el log de PHP**,
-  porque el intérprete ni siquiera arranca. Es la trampa que más tiempo hizo perder en
-  el primer deploy. Regla: archivos `0644`, directorios `0755`, `.env` `0600`. Los
-  archivos de `app/` que sólo se `require`-an (no se invocan directo por HTTP) no
-  pasan por ese chequeo, pero conviene normalizarlos igual.
+- El método viejo (zip vía administrador de archivos de cPanel) tenía un bug de
+  permisos — archivos en `0664`, directorios en `0775`, rotos por suEXEC (PHP se niega
+  a ejecutar un script con permiso de escritura de grupo → 500 sin nada en el log) —
+  que había que corregir a mano en cada deploy. Es la razón por la que se abandonó ese
+  método a favor de `deploy.sh` por FTPS, que sube directo en `0644`.
 - **El `error_log` no se puede leer por HTTP** — `https://dominio/error_log` da 403
   (`authz_core: client denied`). Hay que abrirlo desde el administrador de archivos.
 - Cualquier script de diagnóstico temporal (con `display_errors` activado) expone
