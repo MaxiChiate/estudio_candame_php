@@ -36,6 +36,10 @@ return function (App $app, Twig $twig): void {
 
     $app->get('/links', [$pageController, 'redirectToHome']);
 
+    // Ruta descartable para probar el pipeline de deploy (CI + deploy.sh) end to
+    // end. Sacar cuando ya no haga falta.
+    $app->get('/deploy-test', fn ($request, $response) => $twig->render($response, 'deploy-test.html.twig'));
+
     // "contacto.php" es la URL indexada del sitio viejo (webcandame.old/contacto.php).
     $app->get('/contacto.php', fn ($request, $response) => $pageController->redirectToAnchor($request, $response, 'contacto'));
 
