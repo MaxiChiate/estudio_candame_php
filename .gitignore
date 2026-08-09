@@ -1,6 +1,8 @@
 /app/vendor/
 /app/.env
+/app/.env.production
 /app/var/cache/*
 !/app/var/cache/.gitkeep
 .idea/
 .DS_Store
+.ftp.env
