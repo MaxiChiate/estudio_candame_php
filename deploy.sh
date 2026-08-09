@@ -118,16 +118,14 @@ mirror --reverse --delete --no-perms ${DRY} --verbose \
 # --- docroot ---
 # Sin --delete: en public_html viven archivos que no están en el repo
 # (.user.ini, error_log, cgi-bin) y no queremos tocarlos.
-# .htaccess EXCLUIDO a propósito: el de producción tiene el bloque AddHandler
-# de MultiPHP Manager (fuerza ea-php83) seguido de estas mismas reglas de
-# Slim agregadas a mano. El .htaccess de este repo NO tiene ese bloque — si
-# se sincronizara, cada deploy pisaría el .htaccess del servidor y el sitio
-# caería a la 8.1 nativa (Composer con dependencias >=8.3 rompe en el acto,
-# ver README). Si algún día cambian las reglas de rewrite de Slim, hay que
-# aplicarlas a mano en public_html/.htaccess (después del bloque AddHandler).
+# .htaccess YA NO está excluido: el bloque AddHandler de MultiPHP Manager
+# (fuerza ea-php83) está versionado en public/.htaccess, antes de las reglas
+# de rewrite de Slim (ver README, "PHP en el servidor"). OJO: si alguna vez
+# se sube la versión de PHP a mano desde MultiPHP Manager en cPanel, ese
+# cambio queda solo en el servidor — el próximo deploy lo pisa con lo que
+# diga el repo, hay que reflejar el cambio acá también.
 mirror --reverse --no-perms ${DRY} --verbose \
   --exclude-glob .user.ini \
-  --exclude-glob .htaccess \
   --exclude-glob .git* \
   --exclude-glob error_log \
   ./public ${REMOTE_PUB}
