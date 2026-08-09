@@ -1,0 +1,79 @@
+name: Deploy to production
+
+# Triggered by pushes to `production`. `development` is the working branch:
+# to publish, merge development -> production. Can also be run manually from
+# the Actions tab, which is useful for redeploying without a new commit.
+on:
+  push:
+    branches: [production]
+  workflow_dispatch:
+
+# Never run two deploys at once: two lftp processes writing to the same
+# public_html leave the site in an inconsistent state.
+concurrency:
+  group: deploy-production
+  cancel-in-progress: false
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    # Configure this under Settings -> Environments. Adding required reviewers
+    # makes the job wait for manual approval before touching the server.
+    environment: production
+
+    steps:
+      - uses: actions/checkout@v4
+
+      # Match the host's PHP version and extension set so Composer resolves
+      # the same way it would in production.
+      - name: Set up PHP 8.3
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: '8.3'
+          extensions: zip, gd, mbstring, dom, xmlwriter, xmlreader, simplexml, iconv, fileinfo, intl, bcmath, xsl, curl, openssl
+          coverage: none
+
+      - name: Cache Composer packages
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/composer
+          key: composer-${{ hashFiles('composer.lock') }}
+          restore-keys: composer-
+
+      # --no-dev: the server never runs tests or dev tooling.
+      # Honours the app/vendor path set via vendor-dir in composer.json.
+      - name: Install dependencies
+        run: composer install --no-dev --optimize-autoloader --no-interaction --no-progress
+
+      - name: Install lftp
+        run: sudo apt-get update -qq && sudo apt-get install -y -qq lftp
+
+      # printf rather than a heredoc: writes the literal values without the
+      # shell interpreting anything inside the password.
+      - name: Write credentials
+        env:
+          FTP_HOST: ${{ secrets.FTP_HOST }}
+          FTP_USER: ${{ secrets.FTP_USER }}
+          FTP_PASS: ${{ secrets.FTP_PASS }}
+          ENV_PRODUCTION: ${{ secrets.ENV_PRODUCTION }}
+        run: |
+          umask 077
+          printf 'FTP_HOST=%s\nFTP_USER=%s\nFTP_PASS=%s\n' \
+            "$FTP_HOST" "$FTP_USER" "$FTP_PASS" > .ftp.env
+          printf '%s' "$ENV_PRODUCTION" > app/.env.production
+
+      # Recorded in the run log: if something goes wrong, this shows exactly
+      # which files were about to change and which were about to be deleted.
+      - name: Dry run
+        run: bash deploy.sh
+
+      - name: Deploy
+        run: bash deploy.sh --live --env
+
+      - name: Smoke test
+        run: |
+          sleep 5
+          code=$(curl -sS -o /dev/null -w '%{http_code}' https://estudiocandame.com.ar/)
+          echo "HTTP $code"
+          [ "$code" = "200" ] || { echo "Site is not returning 200 after deploy"; exit 1; }
