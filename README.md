@@ -72,6 +72,40 @@ restricciones del cliente FTP), cambiar la constante `APP_PATH` en `public/index
 y confirmar que `app/.htaccess` (`Require all denied`) esté presente para bloquear el
 acceso HTTP directo al código fuente.
 
+### Deploy automático (`deploy.sh`, FTPS)
+
+Alternativa al zip+extraer manual de arriba: `./deploy.sh` sincroniza `app/` → `/app` y
+`public/` → `/public_html` por FTPS usando `lftp mirror`, contra el mismo servidor
+(`homero.lineadns.com` — el hostname real, no el dominio: el certificado FTP está
+emitido para la máquina de Neolo). Requiere `lftp` instalado en local y un archivo
+`.ftp.env` en la raíz del repo (no versionado, gitignored) con `FTP_HOST`/`FTP_USER`/
+`FTP_PASS`.
+
+```bash
+./deploy.sh              # dry-run: muestra el diff, no toca nada
+./deploy.sh --live        # ejecuta de verdad
+./deploy.sh --live --env  # además sube app/.env.production como /app/.env
+```
+
+Puntos importantes:
+
+- Sincroniza el **working tree local**, no el HEAD de git — cualquier cambio sin
+  commitear en `app/` o `public/` se sube igual. Si hay cambios en curso que no se
+  quieren deployear, `git stash` antes de `--live`.
+- El mirror de `app/` usa `--delete` (el servidor queda como espejo exacto del repo)
+  pero excluye `.env`, `.env.*`, `.ftp.env`, `.git*` y `var/cache/` — así no borra el
+  `.env` de producción ni el cache en runtime (`SmvmService` lo recrea solo si falta el
+  directorio).
+- El mirror de `public/` **excluye `.htaccess` a propósito** (además de `.user.ini` y
+  `error_log`, que tampoco viven en el repo): el `.htaccess` de producción tiene el
+  bloque `AddHandler` de MultiPHP Manager (fuerza `ea-php83`) seguido de las reglas de
+  rewrite de Slim agregadas a mano — el de este repo no tiene ese bloque. Si algún día
+  cambian las reglas de rewrite de Slim, hay que aplicarlas a mano en
+  `public_html/.htaccess` (después del bloque `AddHandler`), no vía este script.
+- Corrige permisos de `index.php` y `.htaccess` a `0644` al final de un `--live` (FTP
+  ya sube en `0644` en este hosting, así que normalmente es un no-op) — la misma trampa
+  de suEXEC que con el método zip, ver más abajo.
+
 ### PHP en el servidor
 
 La cuenta usa **MultiPHP Manager**, no el PHP Selector de CloudLinux (el aislamiento

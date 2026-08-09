@@ -193,6 +193,18 @@ es una implementación nueva, no un port.
 
 ## Estado del repo
 
-`git init` propio, **sin remoto todavía**, cambios del port inicial hechos `git add -A`
-pero **sin commitear** — el usuario no pidió explícitamente el primer commit. Antes de
-crear nuevos commits, confirmar con el usuario si esto sigue así o si ya se resolvió.
+Remoto en GitHub (`origin` → `MaxiChiate/estudio_candame_php`). Dos ramas locales:
+`development` (rama de trabajo, antes se llamaba `master`) y `production` (creada el
+2026-08-09, todavía apuntando al mismo commit que `development` — no hay divergencia
+todavía). `origin` sólo tiene `master` por ahora; no se empujó el rename ni la rama
+`production` sin confirmación explícita del usuario, porque cambia la rama default del
+remoto (visible para cualquiera con acceso al repo en GitHub).
+
+## Deploy por FTP (`deploy.sh`)
+
+Alternativa al deploy manual por zip (ver README, sección "Deploy automático"):
+`./deploy.sh [--live] [--env]` sincroniza por FTPS con `lftp mirror` contra el cPanel de
+Neolo. Usa `.ftp.env` (gitignored, credenciales reales) — **nunca** correr `lftp mirror`
+en modo `--verbose`/`-d` sin `--no-perms`: el chmod automático de `mirror` loguea la URL
+completa con usuario y contraseña en texto plano. Ya está arreglado en el script (ver
+comentario ahí), pero si se toca ese archivo, no sacar `--no-perms` de los dos `mirror`.
