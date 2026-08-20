@@ -210,6 +210,13 @@ h1, h2, h3 {
     color: var(--color-accent);
 }
 
+.TextHeader h1 .heroSince {
+    display: inline-block;
+    font-size: 24px;
+    color: var(--color-text-muted);
+    margin-top: 6px;
+}
+
 .TextHeader p {
     font-size: 17px;
     line-height: 1.7;
@@ -400,6 +407,12 @@ section[id] {
     margin: 0;
 }
 
+.sectionHead p.subtitle {
+    font-size: 20px;
+    line-height: 1.5;
+    margin: 12px 0 0;
+}
+
 .sectionBody p {
     font-size: 17px;
     line-height: 1.7;
@@ -469,7 +482,7 @@ section[id] {
 
 .simpleList p {
     margin: 0;
-    font-size: 14px;
+    font-size: 18px;
     color: var(--color-text);
     letter-spacing: 0.02em;
 }
