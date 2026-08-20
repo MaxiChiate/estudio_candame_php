@@ -3,7 +3,13 @@
 declare(strict_types=1);
 
 use EstudioCandame\Controller\ContactController;
+use EstudioCandame\Controller\ConsultaConstitucionController;
 use EstudioCandame\Controller\PageController;
+use EstudioCandame\Service\CapitalMinimoResolver;
+use EstudioCandame\Service\ConsultaConstitucionMailer;
+use EstudioCandame\Service\FichaConstitucionXlsxBuilder;
+use EstudioCandame\Service\SmvmService;
+use EstudioCandame\Support\AntiAbuso\RateLimiter;
 use Slim\App;
 use Slim\Views\Twig;
 
@@ -49,4 +55,43 @@ return function (App $app, Twig $twig): void {
     );
     $app->get('/contacto', [$contactController, 'redirectToAnchor']);
     $app->post('/contacto', [$contactController, 'submit']);
+
+    $configuradorEnabled = filter_var($_ENV['CONFIGURADOR_ENABLED'] ?? false, FILTER_VALIDATE_BOOL);
+    if ($configuradorEnabled) {
+        $smvmService = new SmvmService(
+            (string) ($_ENV['SAS_SMVM_API_URL'] ?? ''),
+            (float) ($_ENV['SMVM_FALLBACK_VALOR'] ?? 0),
+            (string) ($_ENV['SMVM_FALLBACK_FECHA'] ?? ''),
+            (int) ($_ENV['SAS_CAPITAL_MULTIPLO_SMVM'] ?? 2),
+            APP_PATH . '/var/cache/smvm.json',
+        );
+        $capitalesMinimos = require APP_PATH . '/config/capitales_minimos.php';
+        $capitalMinimoResolver = new CapitalMinimoResolver($smvmService, $capitalesMinimos);
+
+        $mailer = new ConsultaConstitucionMailer(
+            (string) ($_ENV['MAIL_HOST'] ?? 'smtp.gmail.com'),
+            (int) ($_ENV['MAIL_PORT'] ?? 587),
+            (string) ($_ENV['MAIL_USERNAME'] ?? ''),
+            (string) ($_ENV['MAIL_PASSWORD'] ?? ''),
+            filter_var($_ENV['MAIL_SMTP_AUTH'] ?? true, FILTER_VALIDATE_BOOL),
+            filter_var($_ENV['MAIL_SMTP_STARTTLS'] ?? true, FILTER_VALIDATE_BOOL),
+            (string) ($_ENV['CONSULTA_CONSTITUCION_TO_ADDRESS'] ?? 'info@estudiocandame.com.ar'),
+        );
+
+        $rateLimiter = new RateLimiter(
+            APP_PATH . '/var/cache/rate-limit-consulta-constitucion.json',
+            (int) ($_ENV['CONSULTA_CONSTITUCION_RATE_LIMIT_VENTANA_SEGUNDOS'] ?? 3600),
+            (int) ($_ENV['CONSULTA_CONSTITUCION_RATE_LIMIT_MAX_ENVIOS'] ?? 5),
+        );
+
+        $consultaController = new ConsultaConstitucionController(
+            $twig,
+            $capitalMinimoResolver,
+            new FichaConstitucionXlsxBuilder(),
+            $mailer,
+            $rateLimiter,
+        );
+        $app->get('/tramites/constitucion', [$consultaController, 'form']);
+        $app->post('/tramites/constitucion', [$consultaController, 'enviar']);
+    }
 };
