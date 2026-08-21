@@ -18,9 +18,17 @@
             "EstudioCandame\\": "app/src/"
         }
     },
+    "autoload-dev": {
+        "psr-4": {
+            "EstudioCandame\\Tests\\": "tests/"
+        }
+    },
     "config": {
         "optimize-autoloader": true,
         "sort-packages": true,
         "vendor-dir": "app/vendor"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^11.5"
     }
 }

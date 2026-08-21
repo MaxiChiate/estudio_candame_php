@@ -1,0 +1,103 @@
+{
+    "enviadoEn": "2026-08-12",
+    "capitalMinimo": {
+        "tipo": "SA",
+        "piso": 30000000,
+        "bloqueante": false,
+        "detalle": "Decreto 209/2024, vigente desde el 01/03/2024.",
+        "fechaReferencia": "2024-03-01"
+    },
+    "form": {
+        "tipoSocietario": "SA",
+        "contacto": {
+            "nombre": "Julián Peralta",
+            "email": "julian.peralta@example.com",
+            "telefono": "+54 9 11 5555-4444",
+            "rol": "ABOGADO"
+        },
+        "sociedad": {
+            "nombreOpcion1": "Cerro Alto",
+            "nombreOpcion2": "Meridiano Industrial",
+            "nombreOpcion3": "Cauce Producciones",
+            "objetoSocial": "Fabricación y comercialización de productos metalúrgicos.",
+            "capitalSocial": 10000000,
+            "duracionAnios": 50,
+            "cierreEjercicioDia": 31,
+            "cierreEjercicioMes": 12,
+            "sede": {
+                "calle": "Av. Independencia",
+                "numero": "3300",
+                "piso": "",
+                "depto": ""
+            },
+            "sedeJurisdiccion": "CABA",
+            "emailSociedad": "info@cerroalto.example.com",
+            "telefonoSociedad": "",
+            "urgente": false
+        },
+        "socios": [
+            {
+                "apellidoYNombre": "García, Ana",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1985-03-14",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000017",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Ingeniera en Sistemas",
+                "domicilioReal": {
+                    "calle": "Rivadavia",
+                    "numero": "2000",
+                    "piso": "3",
+                    "depto": "B",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "ana.garcia@example.com",
+                "porcentajeParticipacion": "50"
+            },
+            {
+                "apellidoYNombre": "Gómez, Luis",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1980-11-02",
+                "identificacionFiscalTipo": "CUIL",
+                "identificacionFiscalNumero": "27100000011",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Contador Público",
+                "domicilioReal": {
+                    "calle": "Cabildo",
+                    "numero": "3100",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "luis.gomez@example.com",
+                "porcentajeParticipacion": "50"
+            }
+        ],
+        "administradores": [
+            {
+                "apellidoYNombre": "García, Ana",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1985-03-14",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000017",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Ingeniera en Sistemas",
+                "domicilioReal": {
+                    "calle": "Rivadavia",
+                    "numero": "2000",
+                    "piso": "3",
+                    "depto": "B",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "ana.garcia@example.com",
+                "cargo": "TITULAR"
+            }
+        ]
+    }
+}

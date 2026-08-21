@@ -1,0 +1,123 @@
+{
+    "enviadoEn": "2026-08-10",
+    "capitalMinimo": {
+        "tipo": "SAS",
+        "piso": 753200,
+        "bloqueante": true,
+        "detalle": "Mínimo legal: 2 veces el SMVM vigente (art. 40, Ley 27.349).",
+        "fechaReferencia": "2026-08-01"
+    },
+    "form": {
+        "tipoSocietario": "SAS",
+        "contacto": {
+            "nombre": "Rodrigo Suárez",
+            "email": "rodrigo.suarez@example.com",
+            "telefono": "+54 9 11 5555-1111",
+            "rol": "CONTADOR"
+        },
+        "sociedad": {
+            "nombreOpcion1": "Nortex",
+            "nombreOpcion2": "Vertice Digital",
+            "nombreOpcion3": "Andes Software",
+            "objetoSocial": "Desarrollo, diseño y comercialización de software y servicios de tecnología.",
+            "capitalSocial": 753200,
+            "duracionAnios": 99,
+            "cierreEjercicioDia": 31,
+            "cierreEjercicioMes": 12,
+            "sede": {
+                "calle": "Av. Corrientes",
+                "numero": "1234",
+                "piso": "5",
+                "depto": "A"
+            },
+            "sedeJurisdiccion": "CABA",
+            "emailSociedad": "contacto@nortex.example.com",
+            "telefonoSociedad": "+54 9 11 5555-2222",
+            "urgente": false
+        },
+        "socios": [
+            {
+                "apellidoYNombre": "García, Ana",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1985-03-14",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000017",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Ingeniera en Sistemas",
+                "domicilioReal": {
+                    "calle": "Rivadavia",
+                    "numero": "2000",
+                    "piso": "3",
+                    "depto": "B",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "ana.garcia@example.com",
+                "porcentajeParticipacion": "60"
+            },
+            {
+                "apellidoYNombre": "Gómez, Luis",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1980-11-02",
+                "identificacionFiscalTipo": "CUIL",
+                "identificacionFiscalNumero": "27100000011",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Contador Público",
+                "domicilioReal": {
+                    "calle": "Cabildo",
+                    "numero": "3100",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "luis.gomez@example.com",
+                "porcentajeParticipacion": "40"
+            }
+        ],
+        "administradores": [
+            {
+                "apellidoYNombre": "García, Ana",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1985-03-14",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000017",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Ingeniera en Sistemas",
+                "domicilioReal": {
+                    "calle": "Rivadavia",
+                    "numero": "2000",
+                    "piso": "3",
+                    "depto": "B",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "ana.garcia@example.com",
+                "cargo": "TITULAR"
+            },
+            {
+                "apellidoYNombre": "Gómez, Luis",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1980-11-02",
+                "identificacionFiscalTipo": "CUIL",
+                "identificacionFiscalNumero": "27100000011",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Contador Público",
+                "domicilioReal": {
+                    "calle": "Cabildo",
+                    "numero": "3100",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "luis.gomez@example.com",
+                "cargo": "SUPLENTE"
+            }
+        ]
+    }
+}

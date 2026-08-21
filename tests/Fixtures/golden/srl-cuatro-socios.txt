@@ -1,0 +1,118 @@
+Tipo societario: SRL
+Fecha de envío: 11/08/2026
+Enviado por: Marina Castro
+Rol: Escribano/a
+Email de contacto: marina.castro@example.com
+Teléfono de contacto: +54 9 11 5555-3333
+SOCIOS – DATOS COMPLETOS: 
+Socio 1: 
+Apellido y nombre: Fernández, Marta
+Nacionalidad: Argentina
+Fecha de nacimiento: 20/06/1975
+Tipo de identificación fiscal: CUIT
+Número de identificación fiscal: 20100000025
+Estado civil: Casado/a
+Cónyuge: Pedro Ruiz
+Profesión: Comerciante
+Domicilio real - Calle y número: San Martín 800
+Domicilio real - Piso: 
+Domicilio real - Departamento: 
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: marta.fernandez@example.com
+Socio 2: 
+Apellido y nombre: López, Jorge
+Nacionalidad: Argentina
+Fecha de nacimiento: 10/02/1990
+Tipo de identificación fiscal: CUIT
+Número de identificación fiscal: 20100000033
+Estado civil: Soltero/a
+Cónyuge: 
+Profesión: Despachante de Aduana
+Domicilio real - Calle y número: Belgrano 1500
+Domicilio real - Piso: 2
+Domicilio real - Departamento: C
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: jorge.lopez@example.com
+Socio 3: 
+Apellido y nombre: Martínez, Sofía
+Nacionalidad: Argentina
+Fecha de nacimiento: 05/09/1988
+Tipo de identificación fiscal: CUIL
+Número de identificación fiscal: 27100000038
+Estado civil: Divorciado/a
+Cónyuge: 
+Profesión: Administradora de Empresas
+Domicilio real - Calle y número: Warnes 900
+Domicilio real - Piso: 
+Domicilio real - Departamento: 
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: sofia.martinez@example.com
+Socio 4: 
+Apellido y nombre: Torres, Diego
+Nacionalidad: Argentina
+Fecha de nacimiento: 25/12/1970
+Tipo de identificación fiscal: CUIL
+Número de identificación fiscal: 27100000046
+Estado civil: Viudo/a
+Cónyuge: 
+Profesión: Ingeniero Industrial
+Domicilio real - Calle y número: Nazca 2200
+Domicilio real - Piso: 
+Domicilio real - Departamento: 
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: diego.torres@example.com
+SOCIEDAD: 
+Nombre opción 1: Sur Insumos
+Nombre opción 2: Rio de la Plata Distribuidora
+Nombre opción 3: Pampa Comercial
+Objeto social: Compraventa, distribución e importación de insumos industriales.
+Duración: 30 años
+Cierre de ejercicio: 30/06
+Sede - Calle y número: Av. Directorio 4500
+Sede - Piso: 
+Sede - Departamento: 
+Sede - Jurisdicción: Ciudad Autónoma de Buenos Aires
+Email de la sociedad: 
+Teléfono de la sociedad: 
+CAPITAL Y PORCENTAJES: 
+Capital social: 500.000
+Porcentaje de participación - Fernández, Marta: 25%
+Porcentaje de participación - López, Jorge: 25%
+Porcentaje de participación - Martínez, Sofía: 25%
+Porcentaje de participación - Torres, Diego: 25%
+Gerencia – DATOS COMPLETOS: 
+Gerente titular 1: 
+Apellido y nombre: Fernández, Marta
+Nacionalidad: Argentina
+Fecha de nacimiento: 20/06/1975
+Tipo de identificación fiscal: CUIT
+Número de identificación fiscal: 20100000025
+Estado civil: Casado/a
+Cónyuge: Pedro Ruiz
+Profesión: Comerciante
+Domicilio real - Calle y número: San Martín 800
+Domicilio real - Piso: 
+Domicilio real - Departamento: 
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: marta.fernandez@example.com
+Gerente titular 2: 
+Apellido y nombre: López, Jorge
+Nacionalidad: Argentina
+Fecha de nacimiento: 10/02/1990
+Tipo de identificación fiscal: CUIT
+Número de identificación fiscal: 20100000033
+Estado civil: Soltero/a
+Cónyuge: 
+Profesión: Despachante de Aduana
+Domicilio real - Calle y número: Belgrano 1500
+Domicilio real - Piso: 2
+Domicilio real - Departamento: C
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: jorge.lopez@example.com
+Trámite urgente: No

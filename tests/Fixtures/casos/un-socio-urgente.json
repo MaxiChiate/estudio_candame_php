@@ -1,0 +1,83 @@
+{
+    "enviadoEn": "2026-08-13",
+    "capitalMinimo": {
+        "tipo": "SAS",
+        "piso": 753200,
+        "bloqueante": true,
+        "detalle": "Mínimo legal: 2 veces el SMVM vigente (art. 40, Ley 27.349).",
+        "fechaReferencia": "2026-08-01"
+    },
+    "form": {
+        "tipoSocietario": "SAS",
+        "contacto": {
+            "nombre": "Valeria Rossi",
+            "email": "valeria.rossi@example.com",
+            "telefono": "+54 9 11 5555-5555",
+            "rol": "INTERESADO"
+        },
+        "sociedad": {
+            "nombreOpcion1": "Rossi Consultora",
+            "nombreOpcion2": "Faro Estrategia",
+            "nombreOpcion3": "Delta Asesores",
+            "objetoSocial": "Servicios de consultoría en gestión y estrategia empresarial.",
+            "capitalSocial": 2000000,
+            "duracionAnios": 99,
+            "cierreEjercicioDia": 31,
+            "cierreEjercicioMes": 12,
+            "sede": {
+                "calle": "Av. Callao",
+                "numero": "500",
+                "piso": "",
+                "depto": ""
+            },
+            "sedeJurisdiccion": "CABA",
+            "emailSociedad": "",
+            "telefonoSociedad": "",
+            "urgente": true
+        },
+        "socios": [
+            {
+                "apellidoYNombre": "Rossi, Valeria",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1992-04-18",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000025",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Licenciada en Administración",
+                "domicilioReal": {
+                    "calle": "Scalabrini Ortiz",
+                    "numero": "1100",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "valeria.rossi@example.com",
+                "porcentajeParticipacion": "100"
+            }
+        ],
+        "administradores": [
+            {
+                "apellidoYNombre": "Rossi, Valeria",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1992-04-18",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000025",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Licenciada en Administración",
+                "domicilioReal": {
+                    "calle": "Scalabrini Ortiz",
+                    "numero": "1100",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "valeria.rossi@example.com",
+                "cargo": "TITULAR"
+            }
+        ]
+    }
+}
