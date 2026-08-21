@@ -1020,6 +1020,51 @@ section[id] {
     margin-top: 4px;
 }
 
+.tipoSocietarioGroup {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+}
+
+.tipoSocietarioOption {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 15px;
+    color: var(--color-text);
+}
+
+.tipoSocietarioOption input {
+    width: auto;
+}
+
+.formCheckboxRow {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.formCheckboxRow input[type="checkbox"] {
+    width: auto;
+}
+
+.formCheckboxRow label {
+    text-transform: none;
+    letter-spacing: normal;
+    font-size: 15px;
+    color: var(--color-text);
+}
+
+/* Campo honeypot: oculto fuera de pantalla (no display:none) para que un bot que
+   ignora ese estilo lo siga completando y quede detectado. */
+.honeypotField {
+    position: absolute;
+    left: -9999px;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+}
+
 /* Footer */
 .footer {
     background: var(--color-dark);
