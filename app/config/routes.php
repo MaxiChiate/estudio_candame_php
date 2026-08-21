@@ -4,12 +4,15 @@ declare(strict_types=1);
 
 use EstudioCandame\Controller\ContactController;
 use EstudioCandame\Controller\ConsultaConstitucionController;
+use EstudioCandame\Controller\HumoController;
 use EstudioCandame\Controller\PageController;
+use EstudioCandame\Pruebas\EnvioPruebaService;
 use EstudioCandame\Service\CapitalMinimoResolver;
 use EstudioCandame\Service\ConsultaConstitucionMailer;
 use EstudioCandame\Service\FichaConstitucionXlsxBuilder;
 use EstudioCandame\Service\SmvmService;
 use EstudioCandame\Support\AntiAbuso\RateLimiter;
+use EstudioCandame\Support\RelojSistema;
 use Slim\App;
 use Slim\Views\Twig;
 
@@ -84,14 +87,55 @@ return function (App $app, Twig $twig): void {
             (int) ($_ENV['CONSULTA_CONSTITUCION_RATE_LIMIT_MAX_ENVIOS'] ?? 5),
         );
 
+        $reloj = new RelojSistema();
+
         $consultaController = new ConsultaConstitucionController(
             $twig,
             $capitalMinimoResolver,
             new FichaConstitucionXlsxBuilder(),
             $mailer,
             $rateLimiter,
+            $reloj,
         );
         $app->get('/tramites/constitucion', [$consultaController, 'form']);
         $app->post('/tramites/constitucion', [$consultaController, 'enviar']);
+
+        // Ruta de humo: solo existe si estan las dos variables completas. Ademas de
+        // "CONFIGURADOR_ENABLED apagado", esto ya resuelve dos de los cuatro motivos de
+        // 404 del spec por simple ausencia de la ruta -- el token incorrecto se chequea
+        // en HumoController porque depende del request.
+        $smokeTestToken = (string) ($_ENV['SMOKE_TEST_TOKEN'] ?? '');
+        $smokeTestTo = (string) ($_ENV['SMOKE_TEST_TO'] ?? '');
+        if ($smokeTestToken !== '' && $smokeTestTo !== '') {
+            $mailHost = (string) ($_ENV['MAIL_HOST'] ?? 'smtp.gmail.com');
+            $mailPort = (int) ($_ENV['MAIL_PORT'] ?? 587);
+            $mailUsername = (string) ($_ENV['MAIL_USERNAME'] ?? '');
+            $estudioToAddress = (string) ($_ENV['CONSULTA_CONSTITUCION_TO_ADDRESS'] ?? 'info@estudiocandame.com.ar');
+
+            $mailerPrueba = new ConsultaConstitucionMailer(
+                $mailHost,
+                $mailPort,
+                $mailUsername,
+                (string) ($_ENV['MAIL_PASSWORD'] ?? ''),
+                filter_var($_ENV['MAIL_SMTP_AUTH'] ?? true, FILTER_VALIDATE_BOOL),
+                filter_var($_ENV['MAIL_SMTP_STARTTLS'] ?? true, FILTER_VALIDATE_BOOL),
+                $estudioToAddress,
+                null,
+                $smokeTestTo,
+            );
+            $envioPrueba = new EnvioPruebaService(new FichaConstitucionXlsxBuilder(), $mailerPrueba, $reloj);
+            $humoRateLimiter = new RateLimiter(APP_PATH . '/var/cache/rate-limit-smoke-test.json', 60, 1);
+
+            $humoController = new HumoController(
+                $envioPrueba,
+                $humoRateLimiter,
+                $smokeTestToken,
+                $mailHost,
+                $mailPort,
+                $mailUsername !== '' ? $mailUsername : $estudioToAddress,
+                $smokeTestTo,
+            );
+            $app->get('/tramites/constitucion/_humo', [$humoController, 'humo']);
+        }
     }
 };

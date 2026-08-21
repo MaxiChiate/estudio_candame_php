@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace EstudioCandame\Controller;
 
-use DateTimeImmutable;
 use EstudioCandame\Model\ConsultaConstitucionForm;
 use EstudioCandame\Model\TipoSocietario;
 use EstudioCandame\Model\ValidationError;
@@ -15,6 +14,7 @@ use EstudioCandame\Service\FichaConstitucionXlsxBuilder;
 use EstudioCandame\Support\AntiAbuso\CsrfToken;
 use EstudioCandame\Support\AntiAbuso\FormularioAntispam;
 use EstudioCandame\Support\AntiAbuso\RateLimiter;
+use EstudioCandame\Support\Reloj;
 use EstudioCandame\Support\SiteMeta;
 use PHPMailer\PHPMailer\Exception as PHPMailerException;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -29,6 +29,7 @@ final class ConsultaConstitucionController
         private readonly FichaConstitucionXlsxBuilder $xlsxBuilder,
         private readonly ConsultaConstitucionMailer $mailer,
         private readonly RateLimiter $rateLimiter,
+        private readonly Reloj $reloj,
     ) {
     }
 
@@ -73,7 +74,7 @@ final class ConsultaConstitucionController
         }
 
         $form = ConsultaConstitucionForm::fromArray($payload);
-        $ahora = new DateTimeImmutable();
+        $ahora = $this->reloj->ahora();
         $capitalMinimo = $form->tipoSocietario !== null
             ? $this->capitalMinimoResolver->resolver($form->tipoSocietario)
             : new CapitalMinimoInfo(TipoSocietario::SAS, null, false, '', '');
