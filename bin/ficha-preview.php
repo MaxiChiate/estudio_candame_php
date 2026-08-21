@@ -5,8 +5,8 @@ declare(strict_types=1);
 
 require dirname(__DIR__) . '/app/vendor/autoload.php';
 
+use EstudioCandame\Pruebas\CasoPruebaLoader;
 use EstudioCandame\Service\FichaConstitucionXlsxBuilder;
-use EstudioCandame\Tests\Fixtures\FichaFixtures;
 
 /**
  * Genera un .xlsx real a partir de un caso de prueba, para revisar visualmente la
@@ -14,8 +14,8 @@ use EstudioCandame\Tests\Fixtures\FichaFixtures;
  * de tests/Fixtures/golden/ correspondiente al caso, en vez de un .xlsx.
  *
  * Uso:
- *   php bin/ficha-preview.php tests/Fixtures/casos/sas-dos-socios.json out.xlsx
- *   php bin/ficha-preview.php tests/Fixtures/casos/sas-dos-socios.json --update-golden
+ *   php bin/ficha-preview.php app/config/casos_prueba/sas-dos-socios.json out.xlsx
+ *   php bin/ficha-preview.php app/config/casos_prueba/sas-dos-socios.json --update-golden
  */
 
 $rutaCasoArg = $argv[1] ?? null;
@@ -33,7 +33,7 @@ if (!is_file($rutaCasoArg)) {
 
 $caso = basename($rutaCasoArg, '.json');
 
-$fixture = FichaFixtures::cargar($caso);
+$fixture = CasoPruebaLoader::cargar($caso);
 $form = $fixture['form'];
 $capitalMinimo = $fixture['capitalMinimo'];
 $enviadoEn = $fixture['enviadoEn'];

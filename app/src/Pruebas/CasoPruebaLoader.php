@@ -2,32 +2,36 @@
 
 declare(strict_types=1);
 
-namespace EstudioCandame\Tests\Fixtures;
+namespace EstudioCandame\Pruebas;
 
 use DateTimeImmutable;
 use EstudioCandame\Model\ConsultaConstitucionForm;
 use EstudioCandame\Model\TipoSocietario;
 use EstudioCandame\Service\CapitalMinimoInfo;
+use RuntimeException;
 
 /**
- * Carga los casos de tests/Fixtures/casos/*.json y los arma como los objetos de
- * dominio que consumen GoldenTest, XlsxGeneracionTest y bin/ficha-preview.php. Un solo
- * lugar para no repetir el parseo de capitalMinimo/enviadoEn en cada test.
+ * Carga los casos de app/config/casos_prueba/*.json y los arma como los objetos de
+ * dominio que consumen los golden tests, bin/ficha-preview.php, bin/consulta-test.php y
+ * la ruta de humo. Vive bajo app/src/ (no en tests/) porque produccion tambien lo
+ * necesita -- composer install --no-dev no incluye el autoload-dev de tests/.
  */
-final class FichaFixtures
+final class CasoPruebaLoader
 {
+    private const DIRECTORIO = __DIR__ . '/../../config/casos_prueba';
+
     /** @return array{form: ConsultaConstitucionForm, capitalMinimo: CapitalMinimoInfo, enviadoEn: DateTimeImmutable} */
     public static function cargar(string $caso): array
     {
-        $ruta = __DIR__ . '/casos/' . $caso . '.json';
+        $ruta = self::DIRECTORIO . '/' . $caso . '.json';
         $contenido = file_get_contents($ruta);
         if ($contenido === false) {
-            throw new \RuntimeException("No se pudo leer el caso de prueba: $ruta");
+            throw new RuntimeException("No se pudo leer el caso de prueba: $ruta");
         }
 
         $data = json_decode($contenido, true);
         if (!is_array($data)) {
-            throw new \RuntimeException("El caso de prueba no es JSON valido: $ruta");
+            throw new RuntimeException("El caso de prueba no es JSON valido: $ruta");
         }
 
         $capitalMinimoData = (array) $data['capitalMinimo'];
@@ -49,7 +53,7 @@ final class FichaFixtures
     /** @return string[] */
     public static function listarCasos(): array
     {
-        $archivos = glob(__DIR__ . '/casos/*.json') ?: [];
+        $archivos = glob(self::DIRECTORIO . '/*.json') ?: [];
 
         return array_map(static fn (string $ruta): string => basename($ruta, '.json'), $archivos);
     }

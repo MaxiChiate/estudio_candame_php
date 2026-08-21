@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace EstudioCandame\Tests\Ficha;
 
+use EstudioCandame\Pruebas\CasoPruebaLoader;
 use EstudioCandame\Service\FichaConstitucionXlsxBuilder;
-use EstudioCandame\Tests\Fixtures\FichaFixtures;
 use PhpOffice\PhpSpreadsheet\IOFactory;
 use PHPUnit\Framework\TestCase;
 
@@ -18,7 +18,7 @@ final class XlsxGeneracionTest extends TestCase
 {
     public function testCeldasDelXlsxCoincidenConElGolden(): void
     {
-        $fixture = FichaFixtures::cargar('sas-dos-socios');
+        $fixture = CasoPruebaLoader::cargar('sas-dos-socios');
 
         $builder = new FichaConstitucionXlsxBuilder();
         $bytes = $builder->build($fixture['form'], $fixture['capitalMinimo'], $fixture['enviadoEn']);

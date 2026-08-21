@@ -4,8 +4,8 @@ declare(strict_types=1);
 
 namespace EstudioCandame\Tests\Ficha;
 
+use EstudioCandame\Pruebas\CasoPruebaLoader;
 use EstudioCandame\Service\FichaConstitucionXlsxBuilder;
-use EstudioCandame\Tests\Fixtures\FichaFixtures;
 use PHPUnit\Framework\Attributes\DataProvider;
 use PHPUnit\Framework\TestCase;
 
@@ -21,7 +21,7 @@ final class GoldenTest extends TestCase
     public static function casos(): array
     {
         $casos = [];
-        foreach (FichaFixtures::listarCasos() as $caso) {
+        foreach (CasoPruebaLoader::listarCasos() as $caso) {
             $casos[$caso] = [$caso];
         }
 
@@ -31,7 +31,7 @@ final class GoldenTest extends TestCase
     #[DataProvider('casos')]
     public function testFilasCoincidenConElGolden(string $caso): void
     {
-        $fixture = FichaFixtures::cargar($caso);
+        $fixture = CasoPruebaLoader::cargar($caso);
 
         $builder = new FichaConstitucionXlsxBuilder();
         $filas = $builder->buildRows($fixture['form'], $fixture['capitalMinimo'], $fixture['enviadoEn']);
