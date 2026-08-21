@@ -3,6 +3,8 @@
 /app/.env.production
 /app/var/cache/*
 !/app/var/cache/.gitkeep
+/app/var/tmp/*
+!/app/var/tmp/.gitkeep
 .idea/
 .DS_Store
 .ftp.env

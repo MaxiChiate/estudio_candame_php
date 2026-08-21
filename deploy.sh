@@ -113,6 +113,7 @@ mirror --reverse --delete --no-perms ${DRY} --verbose \
   --exclude-glob .ftp.env \
   --exclude-glob .git* \
   --exclude 'var/cache/' \
+  --exclude 'var/tmp/' \
   ./app ${REMOTE_APP}
 
 # --- docroot ---
