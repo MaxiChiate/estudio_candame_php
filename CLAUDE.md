@@ -91,9 +91,12 @@ public/         docroot real — esto es lo que va a public_html/ en cPanel
 composer install
 cp app/.env.example app/.env   # completar SMTP y CONFIGURADOR_ENABLED si hace falta
 php -S localhost:8000 -t public
+app/vendor/bin/phpunit
 ```
 
-No hay test suite todavía. No hay linter/formatter configurado todavía.
+No hay linter/formatter configurado todavía. Los tests viven en `tests/` (fuera de
+`app/`, junto con `phpunit.xml` en la raíz) y cubren la consulta de constitución de
+sociedad — ver más abajo. El resto del sitio no tiene tests todavía.
 
 **Quirk del dev server:** `php -S` da manejo especial a URLs terminadas en `.php`
 (las trata como ruta literal a un script, sin pasar por el router), a diferencia de
@@ -113,19 +116,35 @@ dev server built-in.
 - **Formulario de contacto**: `ContactController` usa **PHPMailer** por SMTP (reemplaza
   `JavaMailSender` de Spring). Flash message vía `$_SESSION` (reemplaza
   `RedirectAttributes.addFlashAttribute`).
-- **Trámite de constitución de SAS** (`/tramites/sas/constitucion`, GET+POST) — el
-  único trámite implementado (no hay SA/SRL, tampoco los había en el Kotlin original).
-  Vive detrás del feature flag `CONFIGURADOR_ENABLED` en `.env`: en `false` (default)
-  la ruta no se registra → 404. El flag ES el mecanismo, no dejar código comentado como
-  alternativa.
-  - `SasConstitucionController` — GET arma el form + `capitalInfo`; POST valida JSON y
-    devuelve un ZIP para descargar.
-  - `SasDocumentService` (el archivo más grande del proyecto, ~560 líneas) — genera la
-    planilla `.xlsx` (PhpSpreadsheet) y el estatuto `.docx` (PhpWord) dentro del ZIP.
-    Acá vive el texto legal fijo de las cláusulas y todos los labels — si hay que tocar
-    texto legal o corregir una tilde faltante, es acá.
+- **Consulta de constitución de sociedad** (`/tramites/constitucion`, GET+POST) —
+  formulario único para **SAS/SRL/SA** (a diferencia del Kotlin original, que solo tenía
+  SAS). Vive detrás del feature flag `CONFIGURADOR_ENABLED` en `.env`: en `false`
+  (default) la ruta no se registra → 404. El flag ES el mecanismo, no dejar código
+  comentado como alternativa.
+  - Es una **consulta**, no un trámite: no genera estatuto, edicto, dictamen ni ningún
+    otro instrumento. Solo arma una ficha `.xlsx` con los datos (misma estructura que la
+    ficha en papel del estudio) y manda dos mails — el resumen con el xlsx adjunto a
+    `info@estudiocandame.com.ar`, y un acuse de texto fijo al remitente. Ver
+    `.claude/rules/configurador.md` para el detalle de qué quedó fuera y por qué.
+  - `ConsultaConstitucionController` — GET arma el form con el capital mínimo de los 3
+    tipos ya resuelto, token CSRF y timestamp de servido; POST valida JSON (todos los
+    errores juntos, nunca corta en el primero) y responde `200 {ok:true}` o
+    `400 {errores:[...]}` — nunca un archivo para descargar.
+  - `FichaConstitucionXlsxBuilder` — genera la planilla. `buildRows()` devuelve las filas
+    `[etiqueta, valor]` antes de tocar PhpSpreadsheet (lo que testea
+    `tests/Ficha/GoldenTest.php`); acá viven todas las etiquetas de la ficha — si hay que
+    corregir una tilde faltante o el orden de las secciones, es acá.
+  - `CapitalMinimoResolver` — resuelve el piso de capital según el tipo: SAS delega en
+    `SmvmService` (bloqueante), SA lee `app/config/capitales_minimos.php` (aviso, no
+    bloqueante), SRL no tiene piso.
   - `SmvmService` — consulta la API de datos.gob.ar para el SMVM vigente (capital mínimo
-    SAS, art. 40 Ley 27.349), con fallback si la API no responde.
+    SAS, art. 40 Ley 27.349), con fallback si la API no responde. Sin cambios respecto al
+    port original.
+  - `ConsultaConstitucionMailer` — arma y manda los dos mails (PHPMailer, mismo wiring
+    SMTP que `ContactController`).
+  - `Support/AntiAbuso/` — CSRF por sesión, honeypot, mínimo de 3s entre servido y
+    envío, y rate limit por IP en archivo (mismo patrón de cache por archivo que
+    `SmvmService`, ver el punto de "Cache de archivo" más abajo).
 - **Cache de archivo** (`app/var/cache/*.json`, TTL por `filemtime()`) — reemplaza el
   cache en memoria (`@Volatile`) del proceso Kotlin, porque PHP-FPM/CGI no tiene un
   proceso long-lived. Es una decisión de arquitectura tomada durante el port, no
@@ -143,15 +162,17 @@ dev server built-in.
 - Nunca usar `exec`/`shell_exec`/`proc_open` ni librerías que dependan de binarios
   externos (ej. no wkhtmltopdf) — ver política del proyecto en
   [Stack y restricciones del hosting](#stack-y-restricciones-del-hosting).
-- Generación de documentos (Excel+Word+zip) tiene que entrar en los 60s de
+- Generación de la ficha (Excel) + envío de los dos mails tiene que entrar en los 60s de
   `max_execution_time` del hosting — ya validado que entra sin necesidad de partir el
   flujo en dos requests.
 - Es un **port**, no un rediseño: preservar contenido y estructura del sitio Kotlin
-  original salvo los bugs listados abajo, que sí se corrigieron a propósito.
+  original salvo los bugs listados abajo, que sí se corrigieron a propósito. (La
+  consulta de constitución es la excepción: dejó de ser un port cuando pasó a cubrir
+  SAS/SRL/SA y a no generar instrumentos — ver `.claude/rules/configurador.md`.)
 - **Cuidado con interpolación de strings de PHP en doble comilla**: sólo funciona un
   nivel de `->` (`"$obj->prop"` OK, `"$obj->prop->prop2"` rompe con "Object could not be
-  converted to string"). Ya pasó una vez en `SasDocumentService.php` — usar
-  concatenación explícita (`.`) cuando se encadena más de un nivel.
+  converted to string"). Ya pasó una vez en el builder de la ficha — usar concatenación
+  explícita (`.`) cuando se encadena más de un nivel.
 
 ## Bugs del Kotlin original corregidos en este port (no reintroducir)
 
@@ -164,7 +185,7 @@ dev server built-in.
 3. Timezone no forzado → `America/Argentina/Buenos_Aires` se fuerza al arrancar en
    `app/bootstrap.php`, sin depender de la config del server.
 4. Email de socio/administrador era opcional → ahora es obligatorio en
-   `SasPersona::validate()`.
+   `Persona::validate()`.
 
 ## Decisiones pendientes de revisión del usuario (no resolver sin que el usuario decida)
 
@@ -175,12 +196,15 @@ dev server built-in.
 
 ## Fuera de alcance (confirmado, no es un olvido)
 
-SA y SRL no están implementados — tampoco lo estaban en el Kotlin original, sólo SAS.
-El resto del pipeline aspiracional descripto en `.claude/rules/configurador.md` del
-proyecto Kotlin (planilla unificada con presupuesto, numeración PRES, carpeta de Drive,
-Edicto, Dictamen, portal de seguimiento, recordatorios anuales) es diseño a futuro que
-tampoco estaba implementado ahí — no había nada que portar. Si se retoma ese trabajo,
-es una implementación nueva, no un port.
+La consulta de constitución (SAS/SRL/SA) no genera ningún instrumento: ni estatuto, ni
+edicto, ni dictamen, ni presupuesto, ni numeración de expedientes, ni carpeta de Drive,
+ni portal de seguimiento, ni recordatorios anuales. Tampoco pide, valida, guarda ni
+escribe en ningún archivo la clave fiscal ni el apellido materno de nadie — para eso
+alcanza con el checkbox de trámite urgente, la doctora junta esos datos por su cuenta.
+Ese pipeline aspiracional (el que describía `.claude/rules/configurador.md` del proyecto
+Kotlin) nunca se implementó ahí tampoco — no hay nada que portar. Si se retoma ese
+trabajo, es una implementación nueva, no un port. Ver `.claude/rules/configurador.md`
+de este repo para el detalle completo de qué se sacó y por qué.
 
 ## Convenciones de git
 
