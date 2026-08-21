@@ -16,8 +16,14 @@ use PHPMailer\PHPMailer\PHPMailer;
  * nombre). Mismo wiring SMTP que ContactController.
  *
  * $transporte es el seam de testing: por defecto llama a PHPMailer::send(), pero un
- * test puede inyectar un closure que capture el mailer configurado en vez de mandarlo
- * por red.
+ * test (o el entorno de prueba de bin/consulta-test.php y la ruta de humo) puede
+ * inyectar un closure que capture el mailer configurado en vez de mandarlo por red.
+ *
+ * $destinatarioPruebaOverride es el modo de prueba: si esta seteado, ambos mails van
+ * ahi en vez de a $estudioToAddress / la direccion del formulario. Quien construye el
+ * mailer decide el destinatario efectivo -- no hay ningun `if` de "estamos en modo
+ * prueba" desperdigado en los metodos de envio, solo helpers que resuelven el valor ya
+ * decidido en el constructor.
  */
 final class ConsultaConstitucionMailer
 {
@@ -30,39 +36,64 @@ final class ConsultaConstitucionMailer
         private readonly bool $mailSmtpStarttls,
         private readonly string $estudioToAddress,
         private readonly ?Closure $transporte = null,
+        private readonly ?string $destinatarioPruebaOverride = null,
     ) {
     }
 
     /** @throws PHPMailerException */
-    public function enviarConsultaAlEstudio(ConsultaConstitucionForm $form, string $xlsxBytes, string $xlsxNombreArchivo): void
+    public function enviarConsultaAlEstudio(ConsultaConstitucionForm $form, string $xlsxBytes, string $xlsxNombreArchivo, ?string $casoPrueba = null): void
     {
         $mailer = $this->crearMailer();
-        $mailer->addAddress($this->estudioToAddress);
+        $mailer->addAddress($this->destinatarioEfectivo($this->estudioToAddress));
         if ($form->contacto->email !== '') {
             $mailer->addReplyTo($form->contacto->email);
         }
 
-        $mailer->Subject = sprintf('Consulta constitución %s — %s', $form->tipoSocietario?->value ?? '', $form->sociedad->nombreOpcion1);
-        $mailer->Body = $this->cuerpoParaEstudio($form);
+        $mailer->Subject = $this->prefijoAsuntoPrueba() . sprintf('Consulta constitución %s — %s', $form->tipoSocietario?->value ?? '', $form->sociedad->nombreOpcion1);
+        $mailer->Body = $this->prefijoCuerpoPrueba($casoPrueba) . $this->cuerpoParaEstudio($form);
         $mailer->addStringAttachment($xlsxBytes, $xlsxNombreArchivo);
 
         $this->enviar($mailer);
     }
 
     /** @throws PHPMailerException */
-    public function enviarAcuseAlRemitente(ConsultaConstitucionForm $form): void
+    public function enviarAcuseAlRemitente(ConsultaConstitucionForm $form, ?string $casoPrueba = null): void
     {
         $mailer = $this->crearMailer();
-        $mailer->addAddress($form->contacto->email);
+        $mailer->addAddress($this->destinatarioEfectivo($form->contacto->email));
 
-        $mailer->Subject = 'Recibimos tu consulta de constitución - Estudio Candame';
-        $mailer->Body = sprintf(
+        $mailer->Subject = $this->prefijoAsuntoPrueba() . 'Recibimos tu consulta de constitución - Estudio Candame';
+        $mailer->Body = $this->prefijoCuerpoPrueba($casoPrueba) . sprintf(
             "Hola %s,\n\nRecibimos tu consulta de constitución de sociedad. En breve nos vamos a poner en " .
             "contacto para continuar con los siguientes pasos.\n\nEstudio Candame",
             $form->contacto->nombre,
         );
 
         $this->enviar($mailer);
+    }
+
+    private function modoPrueba(): bool
+    {
+        return $this->destinatarioPruebaOverride !== null;
+    }
+
+    private function destinatarioEfectivo(string $destinatarioNormal): string
+    {
+        return $this->destinatarioPruebaOverride ?? $destinatarioNormal;
+    }
+
+    private function prefijoAsuntoPrueba(): string
+    {
+        return $this->modoPrueba() ? '[PRUEBA] ' : '';
+    }
+
+    private function prefijoCuerpoPrueba(?string $casoPrueba): string
+    {
+        if (!$this->modoPrueba()) {
+            return '';
+        }
+
+        return sprintf("Este es un envío de PRUEBA correspondiente al caso \"%s\". No es una consulta real.\n\n", $casoPrueba ?? '(sin especificar)');
     }
 
     private function crearMailer(): PHPMailer
