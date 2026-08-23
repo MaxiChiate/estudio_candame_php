@@ -12,6 +12,8 @@ final class Persona
         public string $apellidoYNombre = '',
         public string $nacionalidad = '',
         public ?DateTimeImmutable $fechaNacimiento = null,
+        public ?TipoDocumento $tipoDocumento = null,
+        public string $numeroDocumento = '',
         public IdentificacionFiscal $identificacionFiscal = new IdentificacionFiscal(),
         public ?EstadoCivil $estadoCivil = null,
         public string $conyuge = '',
@@ -30,6 +32,8 @@ final class Persona
             apellidoYNombre: trim((string) ($data['apellidoYNombre'] ?? '')),
             nacionalidad: trim((string) ($data['nacionalidad'] ?? '')),
             fechaNacimiento: $fecha !== '' ? (DateTimeImmutable::createFromFormat('Y-m-d', $fecha) ?: null) : null,
+            tipoDocumento: TipoDocumento::tryFrom((string) ($data['tipoDocumento'] ?? '')),
+            numeroDocumento: trim((string) ($data['numeroDocumento'] ?? '')),
             identificacionFiscal: new IdentificacionFiscal(
                 tipo: IdentificacionFiscalTipo::tryFrom((string) ($data['identificacionFiscalTipo'] ?? '')),
                 numero: trim((string) ($data['identificacionFiscalNumero'] ?? '')),
@@ -61,6 +65,14 @@ final class Persona
             $errors[] = new ValidationError("$prefix.fechaNacimiento", 'FECHA_FUTURA', 'La fecha de nacimiento no puede ser futura');
         } elseif ($this->fechaNacimiento->modify('+18 years') > $ahora) {
             $errors[] = new ValidationError("$prefix.fechaNacimiento", 'MENOR_DE_EDAD', 'Debe ser mayor de 18 años');
+        }
+
+        if ($this->tipoDocumento === null) {
+            $errors[] = new ValidationError("$prefix.tipoDocumento", 'CAMPO_REQUERIDO', 'Seleccione el tipo de documento');
+        }
+
+        if ($this->numeroDocumento === '') {
+            $errors[] = new ValidationError("$prefix.numeroDocumento", 'CAMPO_REQUERIDO', 'Ingrese el número de documento');
         }
 
         $errors = [...$errors, ...$this->identificacionFiscal->validate($prefix)];

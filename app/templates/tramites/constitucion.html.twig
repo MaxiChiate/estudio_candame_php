@@ -301,6 +301,20 @@
             <p class="fieldError" data-field-error="fechaNacimiento"></p>
         </div>
         <div class="formRow">
+            <label>Tipo de documento <span>*</span></label>
+            <select data-field="tipoDocumento">
+                <option value="" selected disabled>Seleccionar&hellip;</option>
+                <option value="DNI">DNI</option>
+                <option value="PASAPORTE">Pasaporte</option>
+            </select>
+            <p class="fieldError" data-field-error="tipoDocumento"></p>
+        </div>
+        <div class="formRow">
+            <label>N&uacute;mero de documento <span>*</span></label>
+            <input type="text" data-field="numeroDocumento"/>
+            <p class="fieldError" data-field-error="numeroDocumento"></p>
+        </div>
+        <div class="formRow">
             <label>Tipo de identificaci&oacute;n <span>*</span></label>
             <select data-field="identificacionFiscalTipo">
                 <option value="" selected disabled>Seleccionar&hellip;</option>

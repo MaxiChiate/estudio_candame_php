@@ -34,6 +34,14 @@ final class ConsultaConstitucionFormTest extends TestCase
                 self::conCambios(['contacto.email' => 'no-es-un-email']),
                 ['EMAIL_INVALIDO'],
             ],
+            'tipo de documento faltante' => [
+                self::conCambios(['socios.0.tipoDocumento' => '']),
+                ['CAMPO_REQUERIDO'],
+            ],
+            'numero de documento faltante' => [
+                self::conCambios(['socios.0.numeroDocumento' => '']),
+                ['CAMPO_REQUERIDO'],
+            ],
             'CUIT con formato invalido (no son 11 digitos)' => [
                 self::conCambios(['socios.0.identificacionFiscalNumero' => '1234567890']),
                 ['FORMATO_INVALIDO'],
@@ -178,6 +186,8 @@ final class ConsultaConstitucionFormTest extends TestCase
             'apellidoYNombre' => 'Pérez, Juan',
             'nacionalidad' => 'Argentina',
             'fechaNacimiento' => '1990-01-01',
+            'tipoDocumento' => 'DNI',
+            'numeroDocumento' => '32123456',
             'identificacionFiscalTipo' => 'CUIT',
             'identificacionFiscalNumero' => $cuit,
             'estadoCivil' => 'SOLTERO',

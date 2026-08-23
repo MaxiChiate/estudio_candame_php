@@ -194,6 +194,8 @@ final class FichaConstitucionXlsxBuilder
             $this->dato('Apellido y nombre', $persona->apellidoYNombre),
             $this->dato('Nacionalidad', $persona->nacionalidad),
             $this->dato('Fecha de nacimiento', $persona->fechaNacimiento?->format('d/m/Y') ?? ''),
+            $this->dato('Tipo de documento', $persona->tipoDocumento?->etiqueta() ?? ''),
+            $this->dato('Número de documento', $persona->numeroDocumento),
             $this->dato('Tipo de identificación fiscal', $persona->identificacionFiscal->tipo?->value ?? ''),
             $this->dato('Número de identificación fiscal', $persona->identificacionFiscal->numero),
             $this->dato('Estado civil', $persona->estadoCivil?->etiqueta() ?? ''),
