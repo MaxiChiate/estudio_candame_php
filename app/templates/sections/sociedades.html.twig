@@ -52,5 +52,10 @@
                 Inspecci&oacute;n General de Justicia, para que nuestros clientes est&eacute;n siempre al tanto de
                 los cambios normativos que impactan en la vida de su sociedad.</p>
         </div>
+        {% if configuradorEnabled %}
+        <div class="contentActions">
+            <a class="btn" href="{{ basePath }}/tramites/constitucion">Constitu&iacute; tu sociedad</a>
+        </div>
+        {% endif %}
     </div>
 </section>

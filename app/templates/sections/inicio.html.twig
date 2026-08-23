@@ -10,8 +10,12 @@
                 Judicial, con el firme objetivo de resolver los conflictos antes de que lleguen a juicio &mdash;
                 evitando los gastos y la angustia de los largos tr&aacute;mites judiciales.</p>
             <div class="heroActions">
-                <a class="btn" href="#contacto">Consultar el caso</a>
-                <a class="btnOutline" href="#servicios">Ver &aacute;reas de trabajo</a>
+                {% if configuradorEnabled %}
+                <a class="btn" href="{{ basePath }}/tramites/constitucion">Constitu&iacute; tu sociedad</a>
+                <a class="btnOutline" href="#contacto">Enviar consulta</a>
+                {% else %}
+                <a class="btn" href="#contacto">Enviar consulta</a>
+                {% endif %}
             </div>
             <div class="heroStats">
                 <div class="stat">
