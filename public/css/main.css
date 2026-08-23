@@ -719,6 +719,12 @@ section[id] {
     cursor: not-allowed;
 }
 
+.tramiteFormPanel select:disabled {
+    background: var(--color-border);
+    color: var(--color-text-soft);
+    cursor: not-allowed;
+}
+
 .fieldError {
     color: #b23b3b;
     font-size: 0.85rem;

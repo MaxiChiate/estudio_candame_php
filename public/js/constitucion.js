@@ -69,6 +69,14 @@ function populateNacionalidadCombos(scope) {
                 li.classList.toggle("active", li.textContent === nacionalidad);
             });
             closeCombo(combo);
+
+            // El tipo de documento no se elige: DNI para argentinos, pasaporte para
+            // el resto. El <select> queda disabled en el HTML, solo lo actualiza esto.
+            var formGrid = combo.closest(".formGrid");
+            var tipoDocumentoSelect = formGrid ? formGrid.querySelector('[data-field="tipoDocumento"]') : null;
+            if (tipoDocumentoSelect) {
+                tipoDocumentoSelect.value = nacionalidad === "Argentina" ? "DNI" : "PASAPORTE";
+            }
         }
 
         NACIONALIDADES.forEach(function (nacionalidad) {

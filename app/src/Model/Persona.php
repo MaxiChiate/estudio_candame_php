@@ -69,6 +69,10 @@ final class Persona
 
         if ($this->tipoDocumento === null) {
             $errors[] = new ValidationError("$prefix.tipoDocumento", 'CAMPO_REQUERIDO', 'Seleccione el tipo de documento');
+        } elseif ($this->nacionalidad === 'Argentina' && $this->tipoDocumento !== TipoDocumento::DNI) {
+            $errors[] = new ValidationError("$prefix.tipoDocumento", 'DOCUMENTO_INVALIDO', 'Los argentinos se identifican con DNI');
+        } elseif ($this->nacionalidad !== '' && $this->nacionalidad !== 'Argentina' && $this->tipoDocumento !== TipoDocumento::PASAPORTE) {
+            $errors[] = new ValidationError("$prefix.tipoDocumento", 'DOCUMENTO_INVALIDO', 'Los extranjeros se identifican con pasaporte');
         }
 
         if ($this->numeroDocumento === '') {

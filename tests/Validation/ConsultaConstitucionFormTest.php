@@ -42,6 +42,14 @@ final class ConsultaConstitucionFormTest extends TestCase
                 self::conCambios(['socios.0.numeroDocumento' => '']),
                 ['CAMPO_REQUERIDO'],
             ],
+            'pasaporte no permitido para argentino' => [
+                self::conCambios(['socios.0.tipoDocumento' => 'PASAPORTE']),
+                ['DOCUMENTO_INVALIDO'],
+            ],
+            'DNI no permitido para extranjero' => [
+                self::conCambios(['socios.0.nacionalidad' => 'Chilena']),
+                ['DOCUMENTO_INVALIDO'],
+            ],
             'CUIT con formato invalido (no son 11 digitos)' => [
                 self::conCambios(['socios.0.identificacionFiscalNumero' => '1234567890']),
                 ['FORMATO_INVALIDO'],
