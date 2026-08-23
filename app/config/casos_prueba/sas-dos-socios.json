@@ -3,7 +3,7 @@
     "capitalMinimo": {
         "tipo": "SAS",
         "piso": 753200,
-        "bloqueante": true,
+        "bloqueante": false,
         "detalle": "Mínimo legal: 2 veces el SMVM vigente (art. 40, Ley 27.349).",
         "fechaReferencia": "2026-08-01"
     },

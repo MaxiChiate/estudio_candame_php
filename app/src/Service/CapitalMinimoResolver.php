@@ -9,9 +9,10 @@ use EstudioCandame\Model\TipoSocietario;
 
 /**
  * Punto unico de resolucion del capital minimo por tipo societario: SAS delega en
- * SmvmService (bloqueante, art. 40 Ley 27.349), SA lee capitales_minimos.php (aviso, no
- * bloqueante), SRL no tiene piso. Se llama una sola vez por request y el resultado se
- * reutiliza tanto para validar como para armar la ficha.
+ * SmvmService, SA lee capitales_minimos.php -- ninguno de los dos es bloqueante, son
+ * solo un aviso informativo (decision del usuario: no trabar el envio de la consulta
+ * por el capital). SRL no tiene piso. Se llama una sola vez por request y el resultado
+ * se reutiliza tanto para validar como para armar la ficha.
  */
 final class CapitalMinimoResolver
 {
@@ -38,7 +39,7 @@ final class CapitalMinimoResolver
         return new CapitalMinimoInfo(
             TipoSocietario::SAS,
             $capital->capital,
-            true,
+            false,
             sprintf('Mínimo legal: %d veces el SMVM vigente (art. 40, Ley 27.349).', $capital->multiplo),
             $capital->fechaSmvm,
         );
