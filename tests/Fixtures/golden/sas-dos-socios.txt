@@ -1,0 +1,94 @@
+Tipo societario: SAS
+Fecha de envío: 10/08/2026
+Enviado por: Rodrigo Suárez
+Rol: Contador/a
+Email de contacto: rodrigo.suarez@example.com
+Teléfono de contacto: +54 9 11 5555-1111
+SOCIOS – DATOS COMPLETOS: 
+Socio 1: 
+Apellido y nombre: García, Ana
+Nacionalidad: Argentina
+Fecha de nacimiento: 14/03/1985
+Tipo de documento: DNI
+Número de documento: 10000001
+Tipo de identificación fiscal: CUIT
+Número de identificación fiscal: 20100000017
+Estado civil: Soltero/a
+Cónyuge: 
+Profesión: Ingeniera en Sistemas
+Domicilio real - Calle y número: Rivadavia 2000
+Domicilio real - Piso: 3
+Domicilio real - Departamento: B
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: ana.garcia@example.com
+Socio 2: 
+Apellido y nombre: Gómez, Luis
+Nacionalidad: Argentina
+Fecha de nacimiento: 02/11/1980
+Tipo de documento: DNI
+Número de documento: 10000001
+Tipo de identificación fiscal: CUIL
+Número de identificación fiscal: 27100000011
+Estado civil: Soltero/a
+Cónyuge: 
+Profesión: Contador Público
+Domicilio real - Calle y número: Cabildo 3100
+Domicilio real - Piso: 
+Domicilio real - Departamento: 
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: luis.gomez@example.com
+SOCIEDAD: 
+Nombre opción 1: Nortex
+Nombre opción 2: Vertice Digital
+Nombre opción 3: Andes Software
+Objeto social: Desarrollo, diseño y comercialización de software y servicios de tecnología.
+Duración: 99 años
+Cierre de ejercicio: 31/12
+Sede - Calle y número: Av. Corrientes 1234
+Sede - Piso: 5
+Sede - Departamento: A
+Sede - Jurisdicción: Ciudad Autónoma de Buenos Aires
+Email de la sociedad: contacto@nortex.example.com
+Teléfono de la sociedad: +54 9 11 5555-2222
+CAPITAL Y PORCENTAJES: 
+Capital social: 753.200
+Porcentaje de participación - García, Ana: 60%
+Porcentaje de participación - Gómez, Luis: 40%
+Administración – DATOS COMPLETOS: 
+Administrador titular 1: 
+Apellido y nombre: García, Ana
+Nacionalidad: Argentina
+Fecha de nacimiento: 14/03/1985
+Tipo de documento: DNI
+Número de documento: 10000001
+Tipo de identificación fiscal: CUIT
+Número de identificación fiscal: 20100000017
+Estado civil: Soltero/a
+Cónyuge: 
+Profesión: Ingeniera en Sistemas
+Domicilio real - Calle y número: Rivadavia 2000
+Domicilio real - Piso: 3
+Domicilio real - Departamento: B
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: ana.garcia@example.com
+Administrador suplente 2: 
+Apellido y nombre: Gómez, Luis
+Nacionalidad: Argentina
+Fecha de nacimiento: 02/11/1980
+Tipo de documento: DNI
+Número de documento: 10000001
+Tipo de identificación fiscal: CUIL
+Número de identificación fiscal: 27100000011
+Estado civil: Soltero/a
+Cónyuge: 
+Profesión: Contador Público
+Domicilio real - Calle y número: Cabildo 3100
+Domicilio real - Piso: 
+Domicilio real - Departamento: 
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: luis.gomez@example.com
+Trámite urgente: No

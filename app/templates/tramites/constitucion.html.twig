@@ -1,0 +1,463 @@
+{% extends 'layout/base.html.twig' %}
+{% block content %}
+<main>
+<section class="sectionPage surface centered tramitePage">
+    <div class="sectionHead">
+        <p class="eyebrow">Sociedades &mdash; Consulta de constituci&oacute;n</p>
+        <h1>Consulta de constituci&oacute;n de sociedad</h1>
+        <p class="lede">Complete los datos de la sociedad, los socios y el &oacute;rgano de administraci&oacute;n.
+            Nos pondremos en contacto con usted para definir los pr&oacute;ximos pasos del tr&aacute;mite.</p>
+    </div>
+
+    <div class="contactFormPanel tramiteFormPanel">
+        <div id="tramiteError" class="formError" style="display:none">
+            <p id="tramiteErrorResumen"></p>
+            <ul id="tramiteErrorLista"></ul>
+        </div>
+        <div id="tramiteSuccess" class="sentEmail" style="display:none">
+            <p>Consulta enviada.</p>
+            <p>En breve nos ponemos en contacto para definir los pr&oacute;ximos pasos.</p>
+        </div>
+
+        <form id="consultaForm" class="contactForm" novalidate>
+
+            <div class="tramiteGroup">
+                <h2>Tipo societario</h2>
+                <div class="tipoSocietarioGroup" data-tipo-societario-group>
+                    <label class="tipoSocietarioOption">
+                        <input type="radio" name="tipoSocietario" value="SAS" checked/> SAS
+                    </label>
+                    <label class="tipoSocietarioOption">
+                        <input type="radio" name="tipoSocietario" value="SRL"/> SRL
+                    </label>
+                    <label class="tipoSocietarioOption">
+                        <input type="radio" name="tipoSocietario" value="SA"/> SA
+                    </label>
+                </div>
+                <p class="fieldError" data-field-error="tipoSocietario"></p>
+            </div>
+
+            <div class="tramiteGroup">
+                <h2>Datos de contacto</h2>
+                <div class="formGrid">
+                    <div class="formRow">
+                        <label for="contactoNombre">Nombre y apellido <span>*</span></label>
+                        <input type="text" id="contactoNombre"/>
+                        <p class="fieldError" data-field-error="contacto.nombre"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="contactoEmail">Email <span>*</span></label>
+                        <input type="email" id="contactoEmail"/>
+                        <p class="fieldError" data-field-error="contacto.email"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="contactoTelefono">Tel&eacute;fono <span>*</span></label>
+                        <input type="tel" id="contactoTelefono" placeholder="+54 9 11 1234-5678"/>
+                        <p class="fieldError" data-field-error="contacto.telefono"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="contactoRol">Su rol <span>*</span></label>
+                        <select id="contactoRol">
+                            <option value="" selected disabled>Seleccionar&hellip;</option>
+                            <option value="INTERESADO">Interesado/a directo</option>
+                            <option value="CONTADOR">Contador/a</option>
+                            <option value="ESCRIBANO">Escribano/a</option>
+                            <option value="ABOGADO">Abogado/a</option>
+                            <option value="OTRO">Otro</option>
+                        </select>
+                        <p class="fieldError" data-field-error="contacto.rol"></p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tramiteGroup">
+                <h2>Sociedad</h2>
+
+                <div class="formRow">
+                    <div class="formRowLabel">
+                        <p class="formSubLabel">Nombres propuestos, en orden de preferencia <span>*</span></p>
+                        <span class="fieldHelp">
+                            <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre los nombres</span>
+                            </button>
+                        </span>
+                    </div>
+                    <div class="fieldHelpPanel" data-help-panel hidden>
+                        <p>Al iniciar el tr&aacute;mite se intenta reservar en IGJ el primer nombre
+                            disponible, empezando por la opci&oacute;n 1: si ya est&aacute; registrada, se
+                            prueba con la 2 y luego con la 3. No incluya el tipo societario al final (por
+                            ejemplo, "Acme", no "Acme SAS").</p>
+                    </div>
+                </div>
+                <div class="formGrid">
+                    <div class="formRow">
+                        <label for="nombreOpcion1">Nombre opci&oacute;n 1 <span>*</span></label>
+                        <input type="text" id="nombreOpcion1"/>
+                        <p class="fieldError" data-field-error="sociedad.nombreOpcion1"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="nombreOpcion2">Nombre opci&oacute;n 2 <span>*</span></label>
+                        <input type="text" id="nombreOpcion2"/>
+                        <p class="fieldError" data-field-error="sociedad.nombreOpcion2"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="nombreOpcion3">Nombre opci&oacute;n 3 <span>*</span></label>
+                        <input type="text" id="nombreOpcion3"/>
+                        <p class="fieldError" data-field-error="sociedad.nombreOpcion3"></p>
+                    </div>
+                </div>
+
+                <div class="formRow">
+                    <div class="formRowLabel">
+                        <label for="objetoSocial">Objeto social <span>*</span></label>
+                        <span class="fieldHelp">
+                            <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre el objeto social</span>
+                            </button>
+                        </span>
+                    </div>
+                    <div class="fieldHelpPanel" data-help-panel hidden>
+                        <p>Es el detalle de la actividad que va a desarrollar la sociedad. Puede escribirlo
+                            con sus propias palabras, lo terminamos de redactar con usted al armar el
+                            instrumento.</p>
+                    </div>
+                    <textarea id="objetoSocial"></textarea>
+                    <p class="fieldError" data-field-error="sociedad.objetoSocial"></p>
+                </div>
+
+                <div class="formGrid">
+                    <div class="formRow">
+                        <div class="formRowLabel">
+                            <label for="capitalSocial">Capital social <span>*</span></label>
+                            <span class="fieldHelp">
+                                <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                    <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre el capital social</span>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="fieldHelpPanel" data-help-panel hidden>
+                            <p>No hace falta disponer de este dinero en efectivo para constituir la
+                                sociedad: alcanza con integrar el 25% al momento de la firma, el resto se
+                                completa dentro de los 2 a&ntilde;os siguientes.
+
+                        </div>
+                        <input type="number" id="capitalSocial" min="0" step="1"/>
+                        <p id="capitalHint" class="formHint"></p>
+                        <p class="fieldError" data-field-error="sociedad.capitalSocial"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="duracionAnios">Duraci&oacute;n (a&ntilde;os) <span>*</span></label>
+                        <input type="number" id="duracionAnios" min="1" max="99" step="1" value="99"/>
+                        <p class="fieldError" data-field-error="sociedad.duracionAnios"></p>
+                    </div>
+                    <div class="formRow">
+                        <div class="formRowLabel">
+                            <label for="cierreEjercicioDia">Cierre de ejercicio <span>*</span></label>
+                            <span class="fieldHelp">
+                                <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                    <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre el cierre de ejercicio</span>
+                                </button>
+                            </span>
+                        </div>
+                        <div class="fieldHelpPanel" data-help-panel hidden>
+                            <p>Es la fecha en la que cierran los balances de la sociedad cada a&ntilde;o. Si
+                                no est&aacute; seguro de cu&aacute;l le conviene,
+                                <a href="{{ basePath }}/#contadores">consulte con su contador</a> antes de
+                                confirmar.</p>
+                        </div>
+                        <div class="formGrid">
+                            <input type="number" id="cierreEjercicioDia" min="1" max="31" step="1" placeholder="D&iacute;a"/>
+                            <select id="cierreEjercicioMes">
+                                <option value="" selected disabled>Mes&hellip;</option>
+                                <option value="1">Enero</option>
+                                <option value="2">Febrero</option>
+                                <option value="3">Marzo</option>
+                                <option value="4">Abril</option>
+                                <option value="5">Mayo</option>
+                                <option value="6">Junio</option>
+                                <option value="7">Julio</option>
+                                <option value="8">Agosto</option>
+                                <option value="9">Septiembre</option>
+                                <option value="10">Octubre</option>
+                                <option value="11">Noviembre</option>
+                                <option value="12">Diciembre</option>
+                            </select>
+                        </div>
+                        <p class="fieldError" data-field-error="sociedad.cierreEjercicio"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="emailSociedad">Email de la sociedad</label>
+                        <input type="email" id="emailSociedad"/>
+                        <p class="fieldError" data-field-error="sociedad.emailSociedad"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="telefonoSociedad">Tel&eacute;fono de la sociedad</label>
+                        <input type="tel" id="telefonoSociedad" placeholder="+54 9 11 1234-5678"/>
+                    </div>
+                    <div class="formRow formCheckboxRow">
+                        <input type="checkbox" id="urgente"/>
+                        <label for="urgente">Requiere tr&aacute;mite urgente</label>
+                    </div>
+                </div>
+
+                <div class="formRow">
+                    <div class="formRowLabel">
+                        <p class="formSubLabel">Domicilio de la sede social <span>*</span></p>
+                        <span class="fieldHelp">
+                            <button type="button" class="fieldHelpTrigger" data-help-trigger aria-expanded="false">
+                                <span aria-hidden="true">?</span><span class="srOnly">Ayuda sobre el domicilio</span>
+                            </button>
+                        </span>
+                    </div>
+                    <div class="fieldHelpPanel" data-help-panel hidden>
+                        <p>Este estudio solo tramita constituciones ante IGJ, con jurisdicci&oacute;n
+                            exclusivamente en la Ciudad Aut&oacute;noma de Buenos Aires: el domicilio legal
+                            de la sociedad siempre queda en CABA.</p>
+                    </div>
+                </div>
+                <div class="formGrid">
+                    <div class="formRow">
+                        <label for="sedeCalle">Calle <span>*</span></label>
+                        <input type="text" id="sedeCalle"/>
+                        <p class="fieldError" data-field-error="sociedad.sede.calle"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="sedeNumero">N&uacute;mero <span>*</span></label>
+                        <input type="text" id="sedeNumero"/>
+                        <p class="fieldError" data-field-error="sociedad.sede.numero"></p>
+                    </div>
+                    <div class="formRow">
+                        <label for="sedePiso">Piso</label>
+                        <input type="text" id="sedePiso" placeholder="Dejar en blanco si no aplica"/>
+                    </div>
+                    <div class="formRow">
+                        <label for="sedeDepto">Departamento</label>
+                        <input type="text" id="sedeDepto" placeholder="Dejar en blanco si no aplica"/>
+                    </div>
+                    <div class="formRow">
+                        <label>Jurisdicci&oacute;n</label>
+                        <input type="text" value="Ciudad Aut&oacute;noma de Buenos Aires" disabled/>
+                    </div>
+                </div>
+            </div>
+
+            <div class="tramiteGroup">
+                <div class="tramiteGroupHead">
+                    <h2>Socios</h2>
+                    <button type="button" class="btnOutline" id="addSocio">Agregar socio</button>
+                </div>
+                <div id="sociosList"></div>
+                <p id="porcentajeTotal" class="formHint"></p>
+                <p class="fieldError" data-field-error="socios"></p>
+            </div>
+
+            <div class="tramiteGroup">
+                <div class="tramiteGroupHead">
+                    <h2 id="administradoresTitulo">Administraci&oacute;n</h2>
+                    <button type="button" class="btnOutline" id="addAdministrador">Agregar administrador</button>
+                </div>
+                <div id="administradoresList"></div>
+                <p class="fieldError" data-field-error="administradores"></p>
+            </div>
+
+            <input type="hidden" id="csrfToken" value="{{ csrfToken }}"/>
+            <input type="hidden" id="formularioServidoEn" value="{{ formularioServidoEn }}"/>
+            <div class="honeypotField" aria-hidden="true">
+                <label for="honeypotField">No completar este campo</label>
+                <input type="text" id="honeypotField" name="{{ honeypotCampo }}" tabindex="-1" autocomplete="off"/>
+            </div>
+
+            <button type="submit" class="btn">Enviar consulta</button>
+            <p class="formHint">Los campos marcados con * son obligatorios. Recibimos su consulta y nos ponemos en contacto.</p>
+        </form>
+    </div>
+</section>
+
+<template id="personaFieldsTemplate">
+    <div class="formGrid">
+        <div class="formRow">
+            <label>Apellido y nombre <span>*</span></label>
+            <input type="text" data-field="apellidoYNombre"/>
+            <p class="fieldError" data-field-error="apellidoYNombre"></p>
+        </div>
+        <div class="formRow">
+            <label>Nacionalidad <span>*</span></label>
+            <div class="comboBox" data-nacionalidad-combo>
+                <button type="button" class="comboBoxButton" data-combo-button
+                        aria-haspopup="listbox" aria-expanded="false">
+                    <span data-combo-label></span>
+                </button>
+                <ul class="comboBoxList" data-combo-list role="listbox" hidden></ul>
+                <input type="hidden" data-field="nacionalidad"/>
+            </div>
+            <p class="fieldError" data-field-error="nacionalidad"></p>
+        </div>
+        <div class="formRow">
+            <label>Fecha de nacimiento <span>*</span></label>
+            <input type="date" data-field="fechaNacimiento"/>
+            <p class="fieldError" data-field-error="fechaNacimiento"></p>
+        </div>
+        <div class="formRow">
+            <label>Tipo de documento</label>
+            <select data-field="tipoDocumento" disabled>
+                <option value="DNI">DNI</option>
+                <option value="PASAPORTE">Pasaporte</option>
+            </select>
+            <p class="formHint">Se determina autom&aacute;ticamente seg&uacute;n la nacionalidad.</p>
+            <p class="fieldError" data-field-error="tipoDocumento"></p>
+        </div>
+        <div class="formRow">
+            <label>N&uacute;mero de documento <span>*</span></label>
+            <input type="text" data-field="numeroDocumento"/>
+            <p class="fieldError" data-field-error="numeroDocumento"></p>
+        </div>
+        <div class="formRow">
+            <label>Tipo de identificaci&oacute;n <span>*</span></label>
+            <select data-field="identificacionFiscalTipo">
+                <option value="" selected disabled>Seleccionar&hellip;</option>
+                <option value="CUIT">CUIT</option>
+                <option value="CUIL">CUIL</option>
+                <option value="CDI">CDI</option>
+            </select>
+            <p class="fieldError" data-field-error="identificacionFiscalTipo"></p>
+        </div>
+        <div class="formRow">
+            <label>N&uacute;mero <span>*</span></label>
+            <input type="text" inputmode="numeric" placeholder="20123456786" data-field="identificacionFiscalNumero"/>
+            <p class="fieldError" data-field-error="identificacionFiscalNumero"></p>
+        </div>
+        <div class="formRow">
+            <label>Estado civil <span>*</span></label>
+            <select data-field="estadoCivil">
+                <option value="" selected disabled>Seleccionar&hellip;</option>
+                <option value="SOLTERO">Soltero/a</option>
+                <option value="CASADO">Casado/a</option>
+                <option value="DIVORCIADO">Divorciado/a</option>
+                <option value="VIUDO">Viudo/a</option>
+            </select>
+            <p class="fieldError" data-field-error="estadoCivil"></p>
+        </div>
+        <div class="formRow">
+            <label>C&oacute;nyuge (si casado/a)</label>
+            <input type="text" data-field="conyuge" disabled/>
+            <p class="fieldError" data-field-error="conyuge"></p>
+        </div>
+        <div class="formRow">
+            <label>Profesi&oacute;n <span>*</span></label>
+            <input type="text" data-field="profesion"/>
+            <p class="fieldError" data-field-error="profesion"></p>
+        </div>
+        <div class="formRow">
+            <label>Correo electr&oacute;nico <span>*</span></label>
+            <input type="email" data-field="email"/>
+            <p class="fieldError" data-field-error="email"></p>
+        </div>
+    </div>
+    <div class="tramiteSubGroup" data-domicilio-slot>
+        <p class="formSubLabel">Domicilio real <span>*</span></p>
+        <div class="formGrid">
+            <div class="formRow">
+                <label>Calle <span>*</span></label>
+                <input type="text" data-field="calle"/>
+                <p class="fieldError" data-field-error="domicilioReal.calle"></p>
+            </div>
+            <div class="formRow">
+                <label>N&uacute;mero <span>*</span></label>
+                <input type="text" data-field="numero"/>
+                <p class="fieldError" data-field-error="domicilioReal.numero"></p>
+            </div>
+            <div class="formRow">
+                <label>Piso</label>
+                <input type="text" data-field="piso" placeholder="Dejar en blanco si no aplica"/>
+            </div>
+            <div class="formRow">
+                <label>Departamento</label>
+                <input type="text" data-field="depto" placeholder="Dejar en blanco si no aplica"/>
+            </div>
+            <div class="formRow">
+                <label>Localidad <span>*</span></label>
+                <input type="text" data-field="localidad"/>
+                <p class="fieldError" data-field-error="domicilioReal.localidad"></p>
+            </div>
+            <div class="formRow">
+                <label>Provincia <span>*</span></label>
+                <select data-field="provincia">
+                    <option value="" selected disabled>Seleccionar&hellip;</option>
+                    <option value="Buenos Aires">Buenos Aires</option>
+                    <option value="Catamarca">Catamarca</option>
+                    <option value="Chaco">Chaco</option>
+                    <option value="Chubut">Chubut</option>
+                    <option value="Ciudad Autónoma de Buenos Aires">Ciudad Aut&oacute;noma de Buenos Aires</option>
+                    <option value="Córdoba">C&oacute;rdoba</option>
+                    <option value="Corrientes">Corrientes</option>
+                    <option value="Entre Ríos">Entre R&iacute;os</option>
+                    <option value="Formosa">Formosa</option>
+                    <option value="Jujuy">Jujuy</option>
+                    <option value="La Pampa">La Pampa</option>
+                    <option value="La Rioja">La Rioja</option>
+                    <option value="Mendoza">Mendoza</option>
+                    <option value="Misiones">Misiones</option>
+                    <option value="Neuquén">Neuqu&eacute;n</option>
+                    <option value="Río Negro">R&iacute;o Negro</option>
+                    <option value="Salta">Salta</option>
+                    <option value="San Juan">San Juan</option>
+                    <option value="San Luis">San Luis</option>
+                    <option value="Santa Cruz">Santa Cruz</option>
+                    <option value="Santa Fe">Santa Fe</option>
+                    <option value="Santiago del Estero">Santiago del Estero</option>
+                    <option value="Tierra del Fuego">Tierra del Fuego</option>
+                    <option value="Tucumán">Tucum&aacute;n</option>
+                </select>
+                <p class="fieldError" data-field-error="domicilioReal.provincia"></p>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="socioTemplate">
+    <div class="tramiteCard" data-socio>
+        <div class="tramiteCardHead">
+            <p class="tramiteCardTitle"></p>
+            <button type="button" class="tramiteRemove" data-remove>Quitar</button>
+        </div>
+        <div data-persona-slot></div>
+        <div class="formGrid">
+            <div class="formRow">
+                <label>Porcentaje de participaci&oacute;n <span>*</span></label>
+                <input type="text" inputmode="decimal" data-field="porcentajeParticipacion" placeholder="50"/>
+                <p class="fieldError" data-field-error="porcentajeParticipacion"></p>
+            </div>
+        </div>
+    </div>
+</template>
+
+<template id="administradorTemplate">
+    <div class="tramiteCard" data-administrador>
+        <div class="tramiteCardHead">
+            <p class="tramiteCardTitle"></p>
+            <button type="button" class="tramiteRemove" data-remove>Quitar</button>
+        </div>
+        <div class="formRow">
+            <div class="formGrid">
+                <select data-copiar-de-socio></select>
+                <button type="button" class="btnOutline" data-copiar-btn>Copiar datos de un socio</button>
+            </div>
+        </div>
+        <div data-persona-slot></div>
+        <div class="formGrid">
+            <div class="formRow">
+                <label data-cargo-label>Cargo</label>
+                <select data-field="cargo">
+                    <option value="TITULAR" data-cargo-option="TITULAR">Titular</option>
+                    <option value="SUPLENTE" data-cargo-option="SUPLENTE">Suplente</option>
+                </select>
+                <p class="fieldError" data-field-error="cargo"></p>
+            </div>
+        </div>
+    </div>
+</template>
+
+<script id="capitalInfoData" type="application/json">{{ capitalInfoPorTipo|json_encode|raw }}</script>
+<script src="{{ basePath }}/js/constitucion.js"></script>
+</main>
+{% endblock %}

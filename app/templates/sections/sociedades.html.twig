@@ -2,12 +2,15 @@
     <div class="sectionHead">
         <p class="eyebrow">04 &mdash; Sociedades comerciales</p>
         <h1>Tr&aacute;mites societarios</h1>
-        <p>Asesoramiento en la constituci&oacute;n y gesti&oacute;n societaria.</p>
+        <p class="subtitle">Asesoramiento en la constituci&oacute;n y reformas societarias.</p>
         <div class="simpleList">
             <p>Constituci&oacute;n de SRL o SA</p>
+            <p>Asociaciones Civiles</p>
+            <p>Fundaciones</p>
             <p>Liquidaci&oacute;n</p>
             <p>Asociaciones Civiles y Fundaciones</p>
             <p>Art. 60 &mdash; Renovaci&oacute;n de Directores</p>
+            <p>Reformas Societarias</p>
             <p>Cesi&oacute;n de cuotas sociales</p>
             <p>Cambio de domicilio y de jurisdicci&oacute;n</p>
         </div>
@@ -49,5 +52,10 @@
                 Inspecci&oacute;n General de Justicia, para que nuestros clientes est&eacute;n siempre al tanto de
                 los cambios normativos que impactan en la vida de su sociedad.</p>
         </div>
+        {% if configuradorEnabled %}
+        <div class="contentActions">
+            <a class="btn" href="{{ basePath }}/tramites/constitucion">Constitu&iacute; tu sociedad</a>
+        </div>
+        {% endif %}
     </div>
 </section>

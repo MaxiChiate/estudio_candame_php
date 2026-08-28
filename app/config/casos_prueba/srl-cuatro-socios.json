@@ -1,0 +1,175 @@
+{
+    "enviadoEn": "2026-08-11",
+    "capitalMinimo": {
+        "tipo": "SRL",
+        "piso": null,
+        "bloqueante": false,
+        "detalle": "La SRL no tiene capital mínimo legal.",
+        "fechaReferencia": ""
+    },
+    "form": {
+        "tipoSocietario": "SRL",
+        "contacto": {
+            "nombre": "Marina Castro",
+            "email": "marina.castro@example.com",
+            "telefono": "+54 9 11 5555-3333",
+            "rol": "ESCRIBANO"
+        },
+        "sociedad": {
+            "nombreOpcion1": "Sur Insumos",
+            "nombreOpcion2": "Rio de la Plata Distribuidora",
+            "nombreOpcion3": "Pampa Comercial",
+            "objetoSocial": "Compraventa, distribución e importación de insumos industriales.",
+            "capitalSocial": 500000,
+            "duracionAnios": 30,
+            "cierreEjercicioDia": 30,
+            "cierreEjercicioMes": 6,
+            "sede": {
+                "calle": "Av. Directorio",
+                "numero": "4500",
+                "piso": "",
+                "depto": ""
+            },
+            "sedeJurisdiccion": "CABA",
+            "emailSociedad": "",
+            "telefonoSociedad": "",
+            "urgente": false
+        },
+        "socios": [
+            {
+                "apellidoYNombre": "Fernández, Marta",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1975-06-20",
+                "tipoDocumento": "DNI",
+                "numeroDocumento": "10000002",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000025",
+                "estadoCivil": "CASADO",
+                "conyuge": "Pedro Ruiz",
+                "profesion": "Comerciante",
+                "domicilioReal": {
+                    "calle": "San Martín",
+                    "numero": "800",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "marta.fernandez@example.com",
+                "porcentajeParticipacion": "25"
+            },
+            {
+                "apellidoYNombre": "López, Jorge",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1990-02-10",
+                "tipoDocumento": "DNI",
+                "numeroDocumento": "10000003",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000033",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Despachante de Aduana",
+                "domicilioReal": {
+                    "calle": "Belgrano",
+                    "numero": "1500",
+                    "piso": "2",
+                    "depto": "C",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "jorge.lopez@example.com",
+                "porcentajeParticipacion": "25"
+            },
+            {
+                "apellidoYNombre": "Martínez, Sofía",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1988-09-05",
+                "tipoDocumento": "DNI",
+                "numeroDocumento": "10000003",
+                "identificacionFiscalTipo": "CUIL",
+                "identificacionFiscalNumero": "27100000038",
+                "estadoCivil": "DIVORCIADO",
+                "conyuge": "",
+                "profesion": "Administradora de Empresas",
+                "domicilioReal": {
+                    "calle": "Warnes",
+                    "numero": "900",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "sofia.martinez@example.com",
+                "porcentajeParticipacion": "25"
+            },
+            {
+                "apellidoYNombre": "Torres, Diego",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1970-12-25",
+                "tipoDocumento": "DNI",
+                "numeroDocumento": "10000004",
+                "identificacionFiscalTipo": "CUIL",
+                "identificacionFiscalNumero": "27100000046",
+                "estadoCivil": "VIUDO",
+                "conyuge": "",
+                "profesion": "Ingeniero Industrial",
+                "domicilioReal": {
+                    "calle": "Nazca",
+                    "numero": "2200",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "diego.torres@example.com",
+                "porcentajeParticipacion": "25"
+            }
+        ],
+        "administradores": [
+            {
+                "apellidoYNombre": "Fernández, Marta",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1975-06-20",
+                "tipoDocumento": "DNI",
+                "numeroDocumento": "10000002",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000025",
+                "estadoCivil": "CASADO",
+                "conyuge": "Pedro Ruiz",
+                "profesion": "Comerciante",
+                "domicilioReal": {
+                    "calle": "San Martín",
+                    "numero": "800",
+                    "piso": "",
+                    "depto": "",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "marta.fernandez@example.com",
+                "cargo": "TITULAR"
+            },
+            {
+                "apellidoYNombre": "López, Jorge",
+                "nacionalidad": "Argentina",
+                "fechaNacimiento": "1990-02-10",
+                "tipoDocumento": "DNI",
+                "numeroDocumento": "10000003",
+                "identificacionFiscalTipo": "CUIT",
+                "identificacionFiscalNumero": "20100000033",
+                "estadoCivil": "SOLTERO",
+                "conyuge": "",
+                "profesion": "Despachante de Aduana",
+                "domicilioReal": {
+                    "calle": "Belgrano",
+                    "numero": "1500",
+                    "piso": "2",
+                    "depto": "C",
+                    "localidad": "Ciudad Autónoma de Buenos Aires",
+                    "provincia": "Ciudad Autónoma de Buenos Aires"
+                },
+                "email": "jorge.lopez@example.com",
+                "cargo": "TITULAR"
+            }
+        ]
+    }
+}
