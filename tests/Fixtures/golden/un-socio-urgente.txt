@@ -1,0 +1,59 @@
+Tipo societario: SAS
+Fecha de envío: 13/08/2026
+Enviado por: Valeria Rossi
+Rol: Interesado/a
+Email de contacto: valeria.rossi@example.com
+Teléfono de contacto: +54 9 11 5555-5555
+SOCIOS – DATOS COMPLETOS: 
+Socio 1: 
+Apellido y nombre: Rossi, Valeria
+Nacionalidad: Argentina
+Fecha de nacimiento: 18/04/1992
+Tipo de documento: DNI
+Número de documento: 10000002
+Tipo de identificación fiscal: CUIT
+Número de identificación fiscal: 20100000025
+Estado civil: Soltero/a
+Cónyuge: 
+Profesión: Licenciada en Administración
+Domicilio real - Calle y número: Scalabrini Ortiz 1100
+Domicilio real - Piso: 
+Domicilio real - Departamento: 
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: valeria.rossi@example.com
+SOCIEDAD: 
+Nombre opción 1: Rossi Consultora
+Nombre opción 2: Faro Estrategia
+Nombre opción 3: Delta Asesores
+Objeto social: Servicios de consultoría en gestión y estrategia empresarial.
+Duración: 99 años
+Cierre de ejercicio: 31/12
+Sede - Calle y número: Av. Callao 500
+Sede - Piso: 
+Sede - Departamento: 
+Sede - Jurisdicción: Ciudad Autónoma de Buenos Aires
+Email de la sociedad: 
+Teléfono de la sociedad: 
+CAPITAL Y PORCENTAJES: 
+Capital social: 2.000.000
+Porcentaje de participación - Rossi, Valeria: 100%
+Administración – DATOS COMPLETOS: 
+Administrador titular 1: 
+Apellido y nombre: Rossi, Valeria
+Nacionalidad: Argentina
+Fecha de nacimiento: 18/04/1992
+Tipo de documento: DNI
+Número de documento: 10000002
+Tipo de identificación fiscal: CUIT
+Número de identificación fiscal: 20100000025
+Estado civil: Soltero/a
+Cónyuge: 
+Profesión: Licenciada en Administración
+Domicilio real - Calle y número: Scalabrini Ortiz 1100
+Domicilio real - Piso: 
+Domicilio real - Departamento: 
+Domicilio real - Localidad: Ciudad Autónoma de Buenos Aires
+Domicilio real - Provincia: Ciudad Autónoma de Buenos Aires
+Email: valeria.rossi@example.com
+Trámite urgente: Sí
