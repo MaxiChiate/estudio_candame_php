@@ -14,9 +14,10 @@
             <p id="tramiteErrorResumen"></p>
             <ul id="tramiteErrorLista"></ul>
         </div>
-        <div id="tramiteSuccess" class="sentEmail" style="display:none">
-            <p>Consulta enviada.</p>
+        <div id="tramiteSuccess" class="sentEmail tramiteSuccessCard" style="display:none">
+            <p id="tramiteSuccessTitulo" tabindex="-1">Consulta enviada.</p>
             <p>En breve nos ponemos en contacto para definir los pr&oacute;ximos pasos.</p>
+            <a class="btn" href="{{ basePath }}/">Volver al inicio</a>
         </div>
 
         <form id="consultaForm" class="contactForm" novalidate>

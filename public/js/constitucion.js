@@ -521,8 +521,18 @@ document.addEventListener("DOMContentLoaded", function () {
                 return null;
             }).then(function (data) {
                 if (response.ok) {
+                    form.style.display = "none";
+                    errorBox.style.display = "none";
                     successBox.style.display = "block";
-                    successBox.scrollIntoView({ behavior: "smooth", block: "start" });
+
+                    var seccion = form.closest("section");
+                    var cabecera = seccion ? seccion.querySelector(".sectionHead") : null;
+                    (cabecera || seccion || document.body).scrollIntoView({ behavior: "smooth", block: "start" });
+
+                    var titulo = document.getElementById("tramiteSuccessTitulo");
+                    if (titulo) {
+                        titulo.focus();
+                    }
                     return;
                 }
 
