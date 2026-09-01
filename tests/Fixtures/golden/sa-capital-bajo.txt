@@ -53,8 +53,8 @@ Sede - Jurisdicción: Ciudad Autónoma de Buenos Aires
 Email de la sociedad: info@cerroalto.example.com
 Teléfono de la sociedad: 
 CAPITAL Y PORCENTAJES: 
-Capital social: 10.000.000
-Aviso de capital mínimo: El capital social está por debajo del mínimo sugerido (30.000.000,00). Decreto 209/2024, vigente desde el 01/03/2024.
+Capital social: 300.000
+Aviso de capital mínimo: El capital social está por debajo del mínimo sugerido (500.000,00). Es un valor de referencia sugerido, no un mínimo legal: puede enviar la consulta con un importe menor.
 Porcentaje de participación - García, Ana: 50%
 Porcentaje de participación - Gómez, Luis: 50%
 Directorio – DATOS COMPLETOS: 
