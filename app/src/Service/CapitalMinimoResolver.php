@@ -4,19 +4,19 @@ declare(strict_types=1);
 
 namespace EstudioCandame\Service;
 
-use DateTimeImmutable;
 use EstudioCandame\Model\TipoSocietario;
 
 /**
- * Punto unico de resolucion del capital minimo por tipo societario: SAS delega en
- * SmvmService, SA lee capitales_minimos.php -- ninguno de los dos es bloqueante, son
- * solo un aviso informativo (decision del usuario: no trabar el envio de la consulta
- * por el capital). SRL no tiene piso. Se llama una sola vez por request y el resultado
- * se reutiliza tanto para validar como para armar la ficha.
+ * Punto unico de resolucion del capital sugerido por tipo societario. Ninguno de los
+ * tres tipos es bloqueante: el capital sugerido es siempre un aviso informativo, nunca
+ * traba el envio de la consulta (decision del usuario). SAS delega en SmvmService
+ * (2 x SMVM vigente); SRL y SA leen capitales_minimos.php ($500.000 sugeridos). Se
+ * llama una sola vez por request y el resultado se reutiliza tanto para validar como
+ * para armar la ficha.
  */
 final class CapitalMinimoResolver
 {
-    /** @param array<string, array{capitalMinimo: float, norma: string, vigenciaDesde: string, ultimaVerificacion: string}> $capitalesMinimosConfig */
+    /** @param array<string, array{capitalSugerido: float, detalle: string, ultimaVerificacion: string}> $capitalesMinimosConfig */
     public function __construct(
         private readonly SmvmService $smvmService,
         private readonly array $capitalesMinimosConfig,
@@ -27,8 +27,7 @@ final class CapitalMinimoResolver
     {
         return match ($tipo) {
             TipoSocietario::SAS => $this->resolverSas(),
-            TipoSocietario::SA => $this->resolverSa(),
-            TipoSocietario::SRL => new CapitalMinimoInfo(TipoSocietario::SRL, null, false, 'La SRL no tiene capital mínimo legal.', ''),
+            TipoSocietario::SA, TipoSocietario::SRL => $this->resolverSugerido($tipo),
         };
     }
 
@@ -45,26 +44,19 @@ final class CapitalMinimoResolver
         );
     }
 
-    private function resolverSa(): CapitalMinimoInfo
+    private function resolverSugerido(TipoSocietario $tipo): CapitalMinimoInfo
     {
-        $config = $this->capitalesMinimosConfig['SA'] ?? null;
+        $config = $this->capitalesMinimosConfig[$tipo->value] ?? null;
         if ($config === null) {
-            return new CapitalMinimoInfo(TipoSocietario::SA, null, false, '', '');
+            return new CapitalMinimoInfo($tipo, null, false, '', '');
         }
 
         return new CapitalMinimoInfo(
-            TipoSocietario::SA,
-            (float) $config['capitalMinimo'],
+            $tipo,
+            (float) $config['capitalSugerido'],
             false,
-            sprintf('%s, vigente desde el %s.', $config['norma'], self::fechaLegible((string) $config['vigenciaDesde'])),
-            (string) $config['vigenciaDesde'],
+            (string) $config['detalle'],
+            '',
         );
-    }
-
-    private static function fechaLegible(string $fechaIso): string
-    {
-        $fecha = DateTimeImmutable::createFromFormat('Y-m-d', $fechaIso);
-
-        return $fecha !== false ? $fecha->format('d/m/Y') : $fechaIso;
     }
 }

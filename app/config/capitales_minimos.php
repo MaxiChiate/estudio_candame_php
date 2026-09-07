@@ -3,20 +3,27 @@
 declare(strict_types=1);
 
 /**
- * Piso legal de capital social por tipo societario que NO sale del SMVM (el de la SAS
- * es en vivo via SmvmService, art. 40 Ley 27.349 -- nunca duplicarlo aca).
+ * Capital social SUGERIDO (valor de referencia, NO bloqueante) por tipo societario
+ * cuando no sale del SMVM. Es solo una orientacion para quien completa la consulta: el
+ * formulario permite enviar con un capital menor y la ficha se limita a agregar un
+ * aviso informativo, nunca un error.
  *
- * SA: Decreto 209/2024 (B.O. 01/03/2024), vigente desde el 01/03/2024.
- * Ultima verificacion de este valor: 2026-08-20.
+ * El sugerido de la SAS NO va aca: se calcula en vivo con SmvmService (2 x SMVM
+ * vigente, art. 40 Ley 27.349) -- nunca duplicarlo en este archivo.
  *
- * SRL no tiene piso legal: se omite a proposito. CapitalMinimoResolver trata la
- * ausencia de la clave como "sin piso, sin aviso".
+ * SRL y SA: $500.000 sugeridos. No es un piso legal (la SRL no tiene; el de la SA por
+ * decreto es otro numero) -- es el valor que el estudio recomienda usar como punto de
+ * partida. Ultima verificacion de este valor: 2026-09-01.
  */
 return [
+    'SRL' => [
+        'capitalSugerido' => 500_000.0,
+        'detalle' => 'Es un valor de referencia sugerido, no un mínimo legal: puede enviar la consulta con un importe menor.',
+        'ultimaVerificacion' => '2026-09-01',
+    ],
     'SA' => [
-        'capitalMinimo' => 30_000_000.0,
-        'norma' => 'Decreto 209/2024',
-        'vigenciaDesde' => '2024-03-01',
-        'ultimaVerificacion' => '2026-08-20',
+        'capitalSugerido' => 500_000.0,
+        'detalle' => 'Es un valor de referencia sugerido, no un mínimo legal: puede enviar la consulta con un importe menor.',
+        'ultimaVerificacion' => '2026-09-01',
     ],
 ];

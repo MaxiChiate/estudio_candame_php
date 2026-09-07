@@ -73,8 +73,9 @@ Fuera de alcance, explícitamente, ahora y hasta nueva instrucción:
   `Administrador`/`Persona`/`Domicilio`/`IdentificacionFiscal`. `validate()` no hace
   I/O: la fecha de referencia y el capital mínimo ya resuelto entran como parámetros.
 - `Validation/CuitCuilCdiValidator` y `Validation/DenominacionValidator`.
-- `Service/CapitalMinimoResolver` + `app/config/capitales_minimos.php` — SAS bloqueante
-  vía `SmvmService`, SA aviso no bloqueante, SRL sin piso.
+- `Service/CapitalMinimoResolver` + `app/config/capitales_minimos.php` — los tres tipos
+  son sugerencias no bloqueantes (nunca traban el envío): SRL y SA sugieren $500.000
+  desde `capitales_minimos.php`, SAS sugiere 2×SMVM vigente desde `SmvmService`.
 - `Service/FichaConstitucionXlsxBuilder` — `buildRows()` (testeado por golden files) +
   el writer de PhpSpreadsheet.
 - `Service/ConsultaConstitucionMailer` — los dos mails.

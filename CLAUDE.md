@@ -134,9 +134,11 @@ dev server built-in.
     `[etiqueta, valor]` antes de tocar PhpSpreadsheet (lo que testea
     `tests/Ficha/GoldenTest.php`); acá viven todas las etiquetas de la ficha — si hay que
     corregir una tilde faltante o el orden de las secciones, es acá.
-  - `CapitalMinimoResolver` — resuelve el piso de capital según el tipo: SAS delega en
-    `SmvmService` (bloqueante), SA lee `app/config/capitales_minimos.php` (aviso, no
-    bloqueante), SRL no tiene piso.
+  - `CapitalMinimoResolver` — resuelve el capital sugerido según el tipo, siempre como
+    aviso no bloqueante (nunca traba el envío): SAS delega en `SmvmService` (2×SMVM
+    vigente), SRL y SA leen `app/config/capitales_minimos.php` ($500.000 sugeridos). El
+    campo `bloqueante` de `CapitalMinimoInfo` sigue existiendo como mecanismo genérico
+    pero ningún tipo real lo activa.
   - `SmvmService` — consulta la API de datos.gob.ar para el SMVM vigente (capital mínimo
     SAS, art. 40 Ley 27.349), con fallback si la API no responde. Sin cambios respecto al
     port original.

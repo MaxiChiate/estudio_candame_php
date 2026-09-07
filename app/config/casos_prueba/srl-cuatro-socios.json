@@ -2,9 +2,9 @@
     "enviadoEn": "2026-08-11",
     "capitalMinimo": {
         "tipo": "SRL",
-        "piso": null,
+        "piso": 500000,
         "bloqueante": false,
-        "detalle": "La SRL no tiene capital mínimo legal.",
+        "detalle": "Es un valor de referencia sugerido, no un mínimo legal: puede enviar la consulta con un importe menor.",
         "fechaReferencia": ""
     },
     "form": {

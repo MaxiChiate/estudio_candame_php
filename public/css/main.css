@@ -783,6 +783,21 @@ section[id] {
     max-width: none;
 }
 
+.tramiteSuccessCard {
+    text-align: center;
+    padding: 40px 0;
+}
+
+.tramiteSuccessCard p:last-of-type {
+    font-size: 16px;
+    color: var(--color-text-muted);
+    margin: 0 0 28px;
+}
+
+.tramiteSuccessCard #tramiteSuccessTitulo {
+    outline: none;
+}
+
 .tramiteGroup {
     border-top: 1px solid var(--color-divider);
     padding-top: 28px;

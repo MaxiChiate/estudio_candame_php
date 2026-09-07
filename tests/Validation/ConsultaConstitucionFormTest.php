@@ -102,7 +102,7 @@ final class ConsultaConstitucionFormTest extends TestCase
                 self::conCambios(['sociedad.sedeJurisdiccion' => 'Buenos Aires']),
                 ['SEDE_FUERA_DE_CABA'],
             ],
-            'capital por debajo del minimo bloqueante de la SAS' => [
+            'capital por debajo de un minimo bloqueante (mecanismo generico sintetico)' => [
                 self::conCambios(['sociedad.capitalSocial' => 100000]),
                 ['CAPITAL_INSUFICIENTE'],
             ],
@@ -121,7 +121,7 @@ final class ConsultaConstitucionFormTest extends TestCase
     public function testCodigosDeError(array $payload, array $codigosEsperados): void
     {
         $form = ConsultaConstitucionForm::fromArray($payload);
-        $errores = $form->validate(self::ahora(), self::capitalMinimoSas());
+        $errores = $form->validate(self::ahora(), self::capitalMinimoBloqueanteSintetico());
 
         $codigosObtenidos = array_map(static fn ($error) => $error->codigo, $errores);
 
@@ -133,7 +133,14 @@ final class ConsultaConstitucionFormTest extends TestCase
         return new DateTimeImmutable('2026-08-10');
     }
 
-    private static function capitalMinimoSas(): CapitalMinimoInfo
+    /**
+     * `CapitalMinimoInfo` sintetico con `bloqueante: true`. Ningun tipo societario real
+     * bloquea el envio por capital (SAS/SRL/SA son todos avisos no bloqueantes), pero
+     * `Sociedad::validate()` conserva el mecanismo generico `bloqueante` como guard
+     * rail. Este helper lo ejercita: el caso "mecanismo generico sintetico" es el unico
+     * que espera `CAPITAL_INSUFICIENTE`; el resto de los casos no toca el capital.
+     */
+    private static function capitalMinimoBloqueanteSintetico(): CapitalMinimoInfo
     {
         return new CapitalMinimoInfo(
             TipoSocietario::SAS,

@@ -2,10 +2,10 @@
     "enviadoEn": "2026-08-12",
     "capitalMinimo": {
         "tipo": "SA",
-        "piso": 30000000,
+        "piso": 500000,
         "bloqueante": false,
-        "detalle": "Decreto 209/2024, vigente desde el 01/03/2024.",
-        "fechaReferencia": "2024-03-01"
+        "detalle": "Es un valor de referencia sugerido, no un mínimo legal: puede enviar la consulta con un importe menor.",
+        "fechaReferencia": ""
     },
     "form": {
         "tipoSocietario": "SA",
@@ -20,7 +20,7 @@
             "nombreOpcion2": "Meridiano Industrial",
             "nombreOpcion3": "Cauce Producciones",
             "objetoSocial": "Fabricación y comercialización de productos metalúrgicos.",
-            "capitalSocial": 10000000,
+            "capitalSocial": 300000,
             "duracionAnios": 50,
             "cierreEjercicioDia": 31,
             "cierreEjercicioMes": 12,
