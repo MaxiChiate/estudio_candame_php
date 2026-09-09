@@ -10,9 +10,9 @@ use EstudioCandame\Model\TipoSocietario;
  * Punto unico de resolucion del capital sugerido por tipo societario. Ninguno de los
  * tres tipos es bloqueante: el capital sugerido es siempre un aviso informativo, nunca
  * traba el envio de la consulta (decision del usuario). SAS delega en SmvmService
- * (2 x SMVM vigente); SRL y SA leen capitales_minimos.php ($500.000 sugeridos). Se
- * llama una sola vez por request y el resultado se reutiliza tanto para validar como
- * para armar la ficha.
+ * (2 x SMVM vigente); SRL y SA leen capitales_minimos.php (SRL $500.000, SA
+ * $1.000.000 sugeridos). Se llama una sola vez por request y el resultado se reutiliza
+ * tanto para validar como para armar la ficha.
  */
 final class CapitalMinimoResolver
 {
