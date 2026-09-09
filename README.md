@@ -45,55 +45,16 @@ El trámite de constitución de SAS (`/tramites/sas/constitucion`) está detrás
 
 ## Deploy a producción (cPanel de Neolo)
 
-Sitio en https://estudiocandame.com.ar. Dos formas de deployar:
+Sitio en https://estudiocandame.com.ar.
 
-### Automático (CI)
+**El deploy se dispara con un push a la rama `production`** — eso corre
+`.github/workflows/deploy.yml`, que construye el `vendor/` con Composer, sincroniza por
+FTPS con `deploy.sh` y valida con un smoke test que el sitio responda `200`. Rama de
+trabajo: `development`.
 
-Push (o merge) a la rama `production` dispara `.github/workflows/deploy.yml`: instala
-dependencias con Composer, corre `./deploy.sh --live --env` contra el servidor y valida
-con un smoke test que el sitio responda `200`. Rama de trabajo: `development`.
-
-Para redeployar sin un commit nuevo, correr el workflow a mano desde la pestaña
-**Actions** (`workflow_dispatch`) — al hacerlo, elegir explícitamente la rama
-`production` en el dropdown: por default toma la rama default del repo, que es
-`development`, no `production`.
-
-### Manual, en local (`deploy.sh`)
-
-No hay SSH útil ni Composer en el servidor: las dependencias se instalan **en local**
-y se sube `app/vendor/` ya generado.
-
-```bash
-composer install --no-dev --optimize-autoloader
-./deploy.sh              # dry-run: muestra el diff, no toca nada
-./deploy.sh --live        # sincroniza por FTPS con lftp
-./deploy.sh --live --env  # además sube app/.env.production como /app/.env
-```
-
-`deploy.sh` sincroniza `app/` → `/app` y `public/` → `/public_html` por FTPS (`lftp
-mirror`) contra `homero.lineadns.com` — el hostname real del servidor, no el dominio: el
-certificado FTP está emitido para la máquina de Neolo, no para
-`estudiocandame.com.ar`. Requiere `lftp` instalado y un archivo `.ftp.env` en la raíz
-del repo (no versionado, gitignored) con `FTP_HOST`/`FTP_USER`/`FTP_PASS`.
-
-Puntos importantes:
-
-- Sincroniza el **working tree local**, no el HEAD de git — cualquier cambio sin
-  commitear en `app/` o `public/` se sube igual. Si hay cambios en curso que no se
-  quieren deployear, `git stash` antes de `--live`.
-- El mirror de `app/` usa `--delete` (el servidor queda como espejo exacto del repo)
-  pero excluye `.env`, `.env.*`, `.ftp.env`, `.git*` y `var/cache/` — así no borra el
-  `.env` de producción ni el cache en runtime (`SmvmService` lo recrea solo si falta el
-  directorio).
-- El mirror de `public/` sincroniza `.htaccess` — el bloque `AddHandler` de MultiPHP
-  Manager está versionado ahí (ver "PHP en el servidor" abajo), así que ya no hace
-  falta revisarlo a mano después de cada deploy. **Ojo:** si alguna vez se cambia la
-  versión de PHP a mano desde MultiPHP Manager en cPanel, ese cambio queda sólo en el
-  servidor — el próximo deploy lo pisa con lo que diga el repo, hay que reflejar el
-  cambio en `public/.htaccess` también.
-- Corrige permisos de `index.php` y `.htaccess` a `0644` al final de un `--live` (FTP
-  ya sube en `0644` en este hosting, así que normalmente es un no-op) — mismo motivo
-  que la trampa de suEXEC de abajo.
+📖 **La guía completa está en [DEPLOY.md](DEPLOY.md)**: el paso a paso del flujo por CI,
+cómo redeployar sin un commit nuevo, el `deploy.sh` manual (y por qué es peligroso
+correrlo con el `vendor/` de desarrollo), y qué mirar si el sitio queda en 500.
 
 Si en algún momento el hosting obliga a mover `app/` adentro de `public_html` (por
 restricciones del cliente FTP), cambiar la constante `APP_PATH` en `public/index.php`
@@ -150,15 +111,15 @@ Tarda ~5 minutos en tomar efecto tras subirlo. Sin este archivo, `upload_max_fil
 queda en 2M — insuficiente el día que se implemente subida de documentos (fotos de
 DNI, etc.).
 
-### Trampas del deploy
+### Trampas del entorno
 
-- El método viejo (zip vía administrador de archivos de cPanel) tenía un bug de
-  permisos — archivos en `0664`, directorios en `0775`, rotos por suEXEC (PHP se niega
-  a ejecutar un script con permiso de escritura de grupo → 500 sin nada en el log) —
-  que había que corregir a mano en cada deploy. Es la razón por la que se abandonó ese
-  método a favor de `deploy.sh` por FTPS, que sube directo en `0644`.
+Las trampas del *procedimiento* de deploy (autoloader inconsistente, permisos de
+suEXEC, bloque `AddHandler` borrado) están en [DEPLOY.md](DEPLOY.md#si-el-sitio-queda-en-500).
+Las del entorno en sí:
+
 - **El `error_log` no se puede leer por HTTP** — `https://dominio/error_log` da 403
-  (`authz_core: client denied`). Hay que abrirlo desde el administrador de archivos.
+  (`authz_core: client denied`). Hay que bajarlo por FTP o abrirlo desde el
+  administrador de archivos.
 - Cualquier script de diagnóstico temporal (con `display_errors` activado) expone
   rutas absolutas del servidor en los stack traces — borrarlo del servidor apenas se
   termina de usar, no dejarlo "por las dudas".
