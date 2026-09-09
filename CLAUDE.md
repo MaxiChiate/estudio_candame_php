@@ -136,9 +136,9 @@ dev server built-in.
     corregir una tilde faltante o el orden de las secciones, es acá.
   - `CapitalMinimoResolver` — resuelve el capital sugerido según el tipo, siempre como
     aviso no bloqueante (nunca traba el envío): SAS delega en `SmvmService` (2×SMVM
-    vigente), SRL y SA leen `app/config/capitales_minimos.php` ($500.000 sugeridos). El
-    campo `bloqueante` de `CapitalMinimoInfo` sigue existiendo como mecanismo genérico
-    pero ningún tipo real lo activa.
+    vigente), SRL y SA leen `app/config/capitales_minimos.php` (SRL $500.000, SA
+    $1.000.000 sugeridos). El campo `bloqueante` de `CapitalMinimoInfo` sigue existiendo
+    como mecanismo genérico pero ningún tipo real lo activa.
   - `SmvmService` — consulta la API de datos.gob.ar para el SMVM vigente (capital mínimo
     SAS, art. 40 Ley 27.349), con fallback si la API no responde. Sin cambios respecto al
     port original.

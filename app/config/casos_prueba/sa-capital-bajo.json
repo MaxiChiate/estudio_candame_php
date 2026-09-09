@@ -2,7 +2,7 @@
     "enviadoEn": "2026-08-12",
     "capitalMinimo": {
         "tipo": "SA",
-        "piso": 500000,
+        "piso": 1000000,
         "bloqueante": false,
         "detalle": "Es un valor de referencia sugerido, no un mínimo legal: puede enviar la consulta con un importe menor.",
         "fechaReferencia": ""
