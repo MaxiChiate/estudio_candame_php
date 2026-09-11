@@ -343,6 +343,41 @@ h1, h2, h3 {
     color: var(--color-accent);
 }
 
+/* Boton enviando (js/envio-form.js): deshabilitado, con spinner al lado del texto.
+   CSS puro, sin gif ni assets de terceros. */
+.btn.is-enviando,
+.btn.is-enviando:hover {
+    background: var(--color-accent-dark);
+    cursor: progress;
+}
+
+.btnSpinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.6em;
+    vertical-align: -0.15em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btnSpinnerGiro 0.7s linear infinite;
+}
+
+@keyframes btnSpinnerGiro {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Sin movimiento: queda un anillo fijo; "Enviando…" ya comunica el estado. */
+@media (prefers-reduced-motion: reduce) {
+    .btnSpinner {
+        animation: none;
+        border-right-color: currentColor;
+        opacity: 0.6;
+    }
+}
+
 /* Content */
 .centered {
     max-width: var(--max-width);

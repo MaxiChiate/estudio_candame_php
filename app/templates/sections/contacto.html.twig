@@ -39,7 +39,7 @@
         {% endif %}
 
         {% if sent is not defined or not sent %}
-        <form method="post" action="{{ basePath }}/contacto#contacto" class="contactForm" novalidate>
+        <form method="post" action="{{ basePath }}/contacto#contacto" class="contactForm" novalidate data-envio-lento>
             <div class="formGrid">
                 <div class="formRow">
                     <label for="name">Nombre <span>*</span></label>
