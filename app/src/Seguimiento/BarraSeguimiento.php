@@ -37,7 +37,8 @@ final class BarraSeguimiento
         }
 
         try {
-            $acceso = $this->accesos->resolver($token);
+            // Solo lectura: mostrar la barra no es una visita al portal.
+            $acceso = $this->accesos->buscarPorToken($token);
             if ($acceso === null) {
                 return null;
             }

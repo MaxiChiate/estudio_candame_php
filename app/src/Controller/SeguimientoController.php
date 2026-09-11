@@ -37,9 +37,9 @@ final class SeguimientoController
     {
         $token = (string) ($args['token'] ?? '');
 
-        // resolver() ya devuelve null indistintamente para formato invalido, token
+        // buscarPorToken() ya devuelve null indistintamente para formato invalido, token
         // inexistente y token revocado: no hay forma de diferenciarlos desde aca.
-        $acceso = $this->accesos->resolver($token);
+        $acceso = $this->accesos->buscarPorToken($token);
         if ($acceso === null) {
             return $this->noDisponible($request, $response);
         }
@@ -50,7 +50,9 @@ final class SeguimientoController
             return $this->noDisponible($request, $response);
         }
 
-        $this->accesos->registrarAcceso($acceso->accesoId);
+        if (self::esVisitaReal($request)) {
+            $this->accesos->registrarAcceso($acceso->accesoId);
+        }
 
         $eventos = $this->tramites->eventosPublicos($tramite->id);
 
@@ -108,6 +110,28 @@ final class SeguimientoController
 
         return $this->conCabecerasPrivadas($response)
             ->withHeader('Set-Cookie', CookieSeguimiento::valorBorrar(CookieSeguimiento::esHttps($request)));
+    }
+
+    /**
+     * Solo un GET real cuenta como visita. La ruta se registra con get(), pero FastRoute
+     * despacha los HEAD a las rutas GET por su cuenta (RegexBasedAbstract::dispatch), asi
+     * que un HEAD llega igual a verEstado. Los prefetch del navegador (Sec-Purpose en
+     * Chrome, Purpose/X-Moz en los mas viejos) tampoco son una visita: se sirven normal,
+     * pero no suman.
+     */
+    private static function esVisitaReal(Request $request): bool
+    {
+        if (strtoupper($request->getMethod()) !== 'GET') {
+            return false;
+        }
+
+        foreach (['Sec-Purpose', 'Purpose', 'X-Moz'] as $cabecera) {
+            if (str_contains(strtolower($request->getHeaderLine($cabecera)), 'prefetch')) {
+                return false;
+            }
+        }
+
+        return true;
     }
 
     /**

@@ -60,7 +60,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
     {
         $id = $this->tramites->crear('PRES-2026-0102', 'Cauce SAS', 'MODELO');
         $tokenRevocado = $this->accesos->emitir($id, 'cliente');
-        $acceso = $this->accesos->resolver($tokenRevocado);
+        $acceso = $this->accesos->buscarPorToken($tokenRevocado);
         self::assertNotNull($acceso);
         $this->accesos->revocar($acceso->accesoId);
 
@@ -149,7 +149,55 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         self::assertStringNotContainsString('<input', $html);
     }
 
-    private function get(string $ruta): ResponseInterface
+    /**
+     * El contador de accesos solo sube con un GET real a /seguimiento/{token}. La home
+     * resuelve la misma cookie para la barra y no tiene que sumar nada.
+     */
+    public function testLaHomeConCookieValidaNoMueveElContador(): void
+    {
+        $id = $this->tramites->crear('PRES-2026-0105', 'Contador Home SAS', 'MODELO');
+        $token = $this->accesos->emitir($id, 'cliente');
+        $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
+        self::assertNotNull($accesoId);
+
+        $home1 = $this->get('/', cookies: ['ec_seg' => $token]);
+        $home2 = $this->get('/', cookies: ['ec_seg' => $token]);
+
+        // Que la barra efectivamente se haya resuelto: si no, el test pasaria aunque la
+        // home nunca tocara el token.
+        self::assertStringContainsString('PRES-2026-0105', (string) $home1->getBody());
+        self::assertStringContainsString('PRES-2026-0105', (string) $home2->getBody());
+        self::assertSame(0, $this->accesos->porId($accesoId)?->accesos);
+
+        $this->get('/seguimiento/' . $token);
+
+        self::assertSame(1, $this->accesos->porId($accesoId)?->accesos);
+    }
+
+    public function testHeadYPrefetchNoCuentanComoVisita(): void
+    {
+        $id = $this->tramites->crear('PRES-2026-0106', 'Prefetch SAS', 'MODELO');
+        $token = $this->accesos->emitir($id, 'cliente');
+        $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
+        self::assertNotNull($accesoId);
+
+        $head = $this->get('/seguimiento/' . $token, 'HEAD');
+        // HEAD llega a verEstado (FastRoute lo despacha a la ruta GET): tiene que
+        // responder, pero sin sumar.
+        self::assertSame(200, $head->getStatusCode());
+
+        $this->get('/seguimiento/' . $token, headers: ['Sec-Purpose' => 'prefetch']);
+        $this->get('/seguimiento/' . $token, headers: ['Sec-Purpose' => 'prefetch;prerender']);
+        $this->get('/seguimiento/' . $token, headers: ['Purpose' => 'prefetch']);
+
+        self::assertSame(0, $this->accesos->porId($accesoId)?->accesos);
+    }
+
+    /**
+     * @param array<string, string> $cookies
+     * @param array<string, string> $headers
+     */
+    private function get(string $ruta, string $metodo = 'GET', array $cookies = [], array $headers = []): ResponseInterface
     {
         self::definirAppPath();
 
@@ -178,6 +226,11 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
         (require APP_PATH . '/config/routes.php')($app, $twig);
 
-        return $app->handle((new ServerRequestFactory())->createServerRequest('GET', $ruta));
+        $request = (new ServerRequestFactory())->createServerRequest($metodo, $ruta)->withCookieParams($cookies);
+        foreach ($headers as $nombre => $valor) {
+            $request = $request->withHeader($nombre, $valor);
+        }
+
+        return $app->handle($request);
     }
 }

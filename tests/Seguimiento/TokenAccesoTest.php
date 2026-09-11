@@ -66,7 +66,7 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
     {
         foreach (['', 'corto', str_repeat('z', 32), bin2hex(random_bytes(20))] as $invalido) {
             self::assertFalse(TokenGenerator::formatoValido($invalido));
-            self::assertNull($this->accesos->resolver($invalido));
+            self::assertNull($this->accesos->buscarPorToken($invalido));
         }
     }
 
@@ -75,12 +75,12 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
         $id = $this->tramites->crear('PRES-2026-0302', 'Revoca SAS', 'MODELO');
         $token = $this->accesos->emitir($id, 'cliente');
 
-        $acceso = $this->accesos->resolver($token);
+        $acceso = $this->accesos->buscarPorToken($token);
         self::assertNotNull($acceso);
 
         $this->accesos->revocar($acceso->accesoId);
 
-        self::assertNull($this->accesos->resolver($token), 'Un token revocado sigue resolviendo.');
+        self::assertNull($this->accesos->buscarPorToken($token), 'Un token revocado sigue resolviendo.');
         // El registro queda, para poder auditar a quien se le habia dado el enlace.
         $registro = $this->accesos->porId($acceso->accesoId);
         self::assertNotNull($registro);
@@ -91,7 +91,7 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
     {
         $id = $this->tramites->crear('PRES-2026-0303', 'Contador SAS', 'MODELO');
         $token = $this->accesos->emitir($id, 'cliente');
-        $acceso = $this->accesos->resolver($token);
+        $acceso = $this->accesos->buscarPorToken($token);
         self::assertNotNull($acceso);
 
         self::assertSame(0, $this->accesos->porId($acceso->accesoId)?->accesos);

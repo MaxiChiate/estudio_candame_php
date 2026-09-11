@@ -49,14 +49,18 @@ final class AccesoRepository
     }
 
     /**
-     * Resuelve un token en claro a un acceso vigente.
+     * Busca el acceso vigente de un token en claro. SOLO LECTURA: no toca el contador
+     * ni la fecha de ultimo acceso -- para eso esta registrarAcceso(), que se llama
+     * aparte y a proposito. La barra de la home usa este metodo en cada carga, asi que
+     * si algun dia sumara la visita aca, el contador se inflaria con cada visita a la
+     * home.
      *
      * Devuelve null en los tres casos que el spec exige indistinguibles: formato
      * invalido, token inexistente y token revocado. El controller no puede diferenciar
      * aunque quisiera, asi que no hay forma de que se filtre por el status ni por el
      * texto de la respuesta.
      */
-    public function resolver(string $token): ?AccesoVigente
+    public function buscarPorToken(string $token): ?AccesoVigente
     {
         // Se chequea el formato ANTES de tocar la base: cualquier basura que venga en
         // la URL se descarta sin gastar una consulta.
@@ -73,7 +77,10 @@ final class AccesoRepository
         return $fila === false ? null : new AccesoVigente((int) $fila['id'], (int) $fila['tramite_id']);
     }
 
-    /** Suma la visita: contador y fecha del ultimo acceso. */
+    /**
+     * Suma una visita: contador y fecha del ultimo acceso. Lo llama unicamente
+     * SeguimientoController::verEstado, y solo para un GET real (ni HEAD ni prefetch).
+     */
     public function registrarAcceso(int $accesoId): void
     {
         $stmt = $this->conexion->pdo()->prepare(
