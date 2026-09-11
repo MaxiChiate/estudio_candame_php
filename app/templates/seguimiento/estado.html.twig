@@ -1,0 +1,60 @@
+{% extends 'layout/base.html.twig' %}
+{% block content %}
+<main>
+<section class="sectionPage surface centered seguimientoPage">
+    <div class="sectionHead">
+        <p class="eyebrow">Seguimiento de tr&aacute;mite</p>
+        <h1>{{ tramite.denominacion }}</h1>
+        <p class="lede">Tr&aacute;mite <strong>{{ tramite.codigo }}</strong> &mdash; constituci&oacute;n de {{ tramite.tipo }}.</p>
+    </div>
+
+    {% if tramite.observado %}
+        <div class="seguimientoAviso" role="status">
+            <p class="seguimientoAvisoTitulo">El tr&aacute;mite tiene una observaci&oacute;n pendiente</p>
+            {% if tramite.notaObservacion %}
+                <p>{{ tramite.notaObservacion }}</p>
+            {% endif %}
+            <p class="seguimientoAvisoPie">Contin&uacute;a en la etapa de {{ etapaActualLabel }}. Nos comunicamos con usted para resolverla.</p>
+        </div>
+    {% endif %}
+
+    <ol class="seguimientoLinea">
+        {% for etapa in linea %}
+            <li class="seguimientoEtapa is-{{ etapa.estado }}"{% if etapa.estado == 'actual' %} aria-current="step"{% endif %}>
+                <span class="seguimientoMarca" aria-hidden="true"></span>
+                <div class="seguimientoEtapaCuerpo">
+                    <p class="seguimientoEtapaLabel">{{ etapa.label }}</p>
+                    {% if etapa.estado == 'cumplida' %}
+                        <p class="seguimientoEtapaMeta">Cumplida{% if etapa.fecha %} el {{ etapa.fecha|date('d/m/Y') }}{% endif %}</p>
+                    {% elseif etapa.estado == 'actual' %}
+                        <p class="seguimientoEtapaMeta">Etapa actual{% if etapa.fecha %} desde el {{ etapa.fecha|date('d/m/Y') }}{% endif %}</p>
+                        {% if etapa.detalle %}<p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>{% endif %}
+                    {% else %}
+                        <p class="seguimientoEtapaMeta">Pendiente</p>
+                    {% endif %}
+                </div>
+            </li>
+        {% endfor %}
+    </ol>
+
+    {% if eventos is not empty %}
+        <div class="seguimientoNotas">
+            <h2>Novedades</h2>
+            <ul>
+                {% for evento in eventos %}
+                    <li>
+                        <p class="seguimientoNotaFecha">{{ evento.ocurridoEl|date('d/m/Y') }} &mdash; {{ etapasConfig[evento.etapa.value].label|default(evento.etapa.value) }}</p>
+                        <p>{{ evento.notaPublica }}</p>
+                    </li>
+                {% endfor %}
+            </ul>
+        </div>
+    {% endif %}
+
+    <p class="seguimientoPie">
+        Esta p&aacute;gina informa el avance del tr&aacute;mite y se actualiza a medida que avanza.
+        Ante cualquier duda puede <a class="inlineLink" href="{{ basePath }}/#contacto">escribirnos</a>.
+    </p>
+</section>
+</main>
+{% endblock %}

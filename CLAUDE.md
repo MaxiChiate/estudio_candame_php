@@ -35,10 +35,12 @@ pero el desarrollo activo es acá.
   compartido y esa config puede cambiar sin aviso.
 - Sin SSH. **Composer no corre en el servidor** — se instala en local y se sube
   `app/vendor/` ya armado por FTP.
-- Sin base de datos.
+- **Base de datos: MySQL/MariaDB, sólo para el portal de seguimiento** (`SEGUIMIENTO_ENABLED`).
+  Todo el resto del sitio sigue sin tocar la base y funciona con el flag apagado. Acceso
+  por PDO directo, sin ORM; migraciones a mano (`database/migrations/*.sql`). En prod la
+  base se crea desde cPanel y el esquema se pega en phpMyAdmin.
 - Extensiones disponibles: zip, gd, mbstring, dom, xmlwriter, xmlreader, SimpleXML,
-  iconv, fileinfo, intl, bcmath, xsl, imagick, curl, openssl, pdo_mysql (esta última sin
-  uso actual, no hay DB).
+  iconv, fileinfo, intl, bcmath, xsl, imagick, curl, openssl, pdo_mysql.
 
 ## Producción
 
@@ -89,10 +91,19 @@ public/         docroot real — esto es lo que va a public_html/ en cPanel
 
 ```bash
 composer install
-cp app/.env.example app/.env   # completar SMTP y CONFIGURADOR_ENABLED si hace falta
+cp app/.env.example app/.env   # completar SMTP y los feature flags si hacen falta
 php -S localhost:8000 -t public
 app/vendor/bin/phpunit
+
+# Sólo si vas a trabajar en el portal de seguimiento (SEGUIMIENTO_ENABLED=true):
+mysql -u candame_app -p candame_local < database/migrations/001_seguimiento.sql
+mysql -u candame_app -p candame_test  < database/migrations/001_seguimiento.sql
 ```
+
+Los tests que necesitan base corren contra `candame_test` y **la truncan en cada
+corrida**: nunca apuntarlos a `candame_local`. Sin base configurada se saltean
+(`skipped`) y el resto de la suite corre igual — ver `tests/Seguimiento/`. Setup
+completo de la base en el README.
 
 No hay linter/formatter configurado todavía. Los tests viven en `tests/` (fuera de
 `app/`, junto con `phpunit.xml` en la raíz) y cubren la consulta de constitución de
@@ -147,6 +158,37 @@ dev server built-in.
   - `Support/AntiAbuso/` — CSRF por sesión, honeypot, mínimo de 3s entre servido y
     envío, y rate limit por IP en archivo (mismo patrón de cache por archivo que
     `SmvmService`, ver el punto de "Cache de archivo" más abajo).
+- **Portal de seguimiento de trámites** (`/seguimiento`, `/admin/tramites`) — detrás del
+  flag `SEGUIMIENTO_ENABLED`. Es la **única** parte del sitio que usa base de datos.
+  Módulo propio en `app/src/Seguimiento/` (namespace `EstudioCandame\Seguimiento`,
+  siguiendo el precedente de `Pruebas/`).
+  - Le muestra al cliente en qué etapa está su trámite y **nada más**: ni socios, ni
+    documentos, ni identificaciones fiscales, ni descargas. Ver "Fuera de alcance".
+  - `Etapa` — enum de las 6 etapas en orden. **No tiene `etiqueta()` a propósito**: los
+    labels visibles viven en `app/config/etapas.php` porque la doctora los va a
+    renombrar, y renombrar no debe requerir tocar código ni migrar datos. El `value` del
+    enum es un identificador estable que nunca se muestra y que está guardado en la base.
+  - `observado` es un **flag ortogonal**, no una etapa: un trámite observado sigue
+    perteneciendo a su etapa. No meterlo en el enum.
+  - `Conexion` — PDO perezoso (abre recién en el primer `pdo()`). No hay container de DI
+    en este proyecto: el "singleton lazy" es esta clase, instanciada en `routes.php`.
+  - `TramiteRepository::eventosPublicos()` **no trae `nota_interna` en el SELECT**, y
+    devuelve `EventoPublico`, que no tiene esa propiedad. La separación entre lo que ve
+    el cliente y lo que ve la doctora se decide en el SQL y en el tipo, no en el
+    template. Hay tests que lo verifican por reflexión; no reemplazar `EventoPublico`
+    por `TramiteEvento` en la vista pública.
+  - `TokenGenerator` — 16 bytes → 32 hex. En base queda **sólo el sha256**; el token en
+    claro se muestra una única vez al emitirlo y no se puede recuperar. Nunca loguearlo
+    ni guardarlo en una `nota_interna`.
+  - `GET /seguimiento/{token}` devuelve **la misma respuesta byte a byte** para token
+    inexistente, revocado y malformado. Es deliberado: distinguirlos convierte la ruta
+    en un oráculo. Si se toca esa ruta, `PortalPublicoTest` compara los tres cuerpos.
+  - Panel bajo HTTP Basic (`AutenticacionBasica`, `ADMIN_USER` + `ADMIN_PASS_HASH`), sin
+    sistema de usuarios ni sesiones. Con cualquiera de las dos variables vacía niega
+    todo. Requiere la regla de `public/.htaccess` que propaga `Authorization`: con PHP en
+    CGI/FastCGI, sin esa regla `PHP_AUTH_USER` llega vacío y el login nunca entra.
+  - La barra de la home (`BarraSeguimiento`) **se traga cualquier fallo** (`Throwable`) y
+    devuelve `null`: la home no puede caerse porque la base esté caída.
 - **Cache de archivo** (`app/var/cache/*.json`, TTL por `filemtime()`) — reemplaza el
   cache en memoria (`@Volatile`) del proceso Kotlin, porque PHP-FPM/CGI no tiene un
   proceso long-lived. Es una decisión de arquitectura tomada durante el port, no
@@ -196,11 +238,21 @@ dev server built-in.
   en este port — no hay contenido fuente para portar. No construir nada acá sin
   instrucción explícita del usuario.
 
+## Fuera de alcance del portal de seguimiento (confirmado)
+
+El portal informa la etapa y nada más. NO hace, y no es un olvido: mails automáticos al
+cambiar de etapa (es el siguiente paso, no está hecho), descarga de documentos desde el
+portal, buscador público por número de trámite (sería enumerable, por eso `/seguimiento`
+no tiene ningún campo de ingreso), cuentas para profesionales que derivan, y SA/SRL (por
+ahora sólo SAS). La vista pública tampoco muestra socios, DNI, CUIT ni domicilios.
+
 ## Fuera de alcance (confirmado, no es un olvido)
 
 La consulta de constitución (SAS/SRL/SA) no genera ningún instrumento: ni estatuto, ni
 edicto, ni dictamen, ni presupuesto, ni numeración de expedientes, ni carpeta de Drive,
-ni portal de seguimiento, ni recordatorios anuales. Tampoco pide, valida, guarda ni
+ni recordatorios anuales. **Tampoco alimenta el portal de seguimiento**: son dos
+features separadas y no hay ningún vínculo entre ellas — un trámite del portal se carga
+a mano desde `/admin/tramites`, no sale de una consulta enviada. Tampoco pide, valida, guarda ni
 escribe en ningún archivo la clave fiscal ni el apellido materno de nadie — para eso
 alcanza con el checkbox de trámite urgente, la doctora junta esos datos por su cuenta.
 Ese pipeline aspiracional (el que describía `.claude/rules/configurador.md` del proyecto

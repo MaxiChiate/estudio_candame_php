@@ -1,0 +1,20 @@
+{% extends 'layout/base.html.twig' %}
+{% block content %}
+<main>
+<section class="sectionPage surface centered errorPage">
+    <div class="sectionHead">
+        <p class="eyebrow">Seguimiento de tr&aacute;mite</p>
+        <h1>El enlace no est&aacute; disponible</h1>
+        <p class="lede">
+            Este enlace de seguimiento no se encuentra disponible. Puede que haya sido reemplazado
+            por uno nuevo o que ya no est&eacute; vigente.
+        </p>
+        <p>Si necesita un enlace actualizado, escr&iacute;banos y se lo enviamos.</p>
+        <div class="heroActions">
+            <a class="btn" href="{{ basePath }}/#contacto">Escribirnos</a>
+            <a class="btnOutline" href="{{ basePath }}/">Volver al inicio</a>
+        </div>
+    </div>
+</section>
+</main>
+{% endblock %}

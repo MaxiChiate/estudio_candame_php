@@ -1,0 +1,196 @@
+/* Panel de seguimiento. Hoja aparte de main.css: el panel no comparte layout con el
+   sitio publico y no tiene sentido que el visitante se baje estos estilos. Deliberado
+   y sobrio -- es una herramienta de trabajo diaria, no una pagina de marca. */
+
+:root {
+    --admin-bg: #f6f3ee;
+    --admin-surface: #fffdfa;
+    --admin-ink: #1c1917;
+    --admin-text: #23201d;
+    --admin-soft: #6b645c;
+    --admin-label: #8a7f74;
+    --admin-border: #e2dbd1;
+    --admin-divider: #ece5db;
+    --admin-accent: #8a1524;
+    --admin-ok: #1f5136;
+    --admin-font: "Karla", "Segoe UI", Helvetica, Arial, sans-serif;
+}
+
+* { box-sizing: border-box; }
+
+body {
+    margin: 0;
+    background: var(--admin-bg);
+    color: var(--admin-text);
+    font-family: var(--admin-font);
+    font-size: 15px;
+    line-height: 1.5;
+}
+
+.adminHeader {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    padding: 12px 24px;
+    background: #2b1013;
+    color: #f0e7e2;
+}
+
+.adminMarca { color: #f0e7e2; text-decoration: none; font-weight: 600; }
+.adminHeader .adminLink { color: #d3c6c3; font-size: 0.9rem; }
+.adminLink { color: var(--admin-accent); text-decoration: none; font-size: 0.92rem; }
+.adminLink:hover { text-decoration: underline; }
+
+.adminMain { max-width: 1000px; margin: 0 auto; padding: 24px; }
+
+.adminTitulo {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+    margin-bottom: 8px;
+}
+
+.adminTitulo h1 { font-size: 1.6rem; margin: 0; color: var(--admin-ink); }
+.adminSubtitulo { margin: 0 0 24px; color: var(--admin-soft); }
+
+.adminFlash {
+    margin: 0 0 20px;
+    padding: 10px 16px;
+    border-left: 3px solid var(--admin-ok);
+    background: var(--admin-surface);
+}
+
+.adminFlash.is-error { border-left-color: var(--admin-accent); }
+
+.adminErrores {
+    margin: 0 0 20px;
+    padding: 12px 16px;
+    border-left: 3px solid var(--admin-accent);
+    background: var(--admin-surface);
+}
+
+.adminErrores ul { margin: 0; padding-left: 20px; }
+
+.adminTabla {
+    width: 100%;
+    border-collapse: collapse;
+    background: var(--admin-surface);
+    border: 1px solid var(--admin-border);
+    margin-bottom: 8px;
+}
+
+.adminTabla th, .adminTabla td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--admin-divider);
+    vertical-align: middle;
+}
+
+.adminTabla th { font-size: 0.82rem; text-transform: uppercase; letter-spacing: 0.04em; color: var(--admin-label); }
+.adminTabla tr:last-child td { border-bottom: none; }
+.adminTabla td a { color: var(--admin-accent); text-decoration: none; font-weight: 600; }
+.adminTabla tr.is-observado td:first-child { box-shadow: inset 3px 0 0 var(--admin-accent); }
+.adminTabla tr.is-revocado { opacity: 0.55; }
+.adminColAccion { text-align: right; }
+.adminColAccion form { margin: 0; display: inline; }
+
+.adminChip {
+    display: inline-block;
+    margin-left: 8px;
+    padding: 1px 8px;
+    border: 1px solid var(--admin-accent);
+    border-radius: 999px;
+    font-size: 0.75rem;
+    color: var(--admin-accent);
+}
+
+.adminBtn {
+    display: inline-block;
+    padding: 9px 18px;
+    border: 1px solid var(--admin-accent);
+    background: var(--admin-accent);
+    color: #fff;
+    font-family: inherit;
+    font-size: 0.92rem;
+    text-decoration: none;
+    cursor: pointer;
+}
+
+.adminBtn:hover { background: #5d0d18; border-color: #5d0d18; }
+.adminBtnChico { padding: 6px 12px; font-size: 0.86rem; }
+
+.adminBtnTexto {
+    border: none;
+    background: none;
+    padding: 0;
+    color: var(--admin-accent);
+    font-family: inherit;
+    font-size: 0.9rem;
+    cursor: pointer;
+    text-decoration: underline;
+}
+
+.adminSeccion {
+    margin-top: 32px;
+    padding-top: 20px;
+    border-top: 1px solid var(--admin-border);
+}
+
+.adminSeccion h2 { font-size: 1.1rem; margin: 0 0 14px; }
+
+.adminForm { display: flex; flex-direction: column; gap: 6px; max-width: 620px; }
+.adminForm label { font-size: 0.86rem; color: var(--admin-label); margin-top: 8px; }
+.adminForm input[type="text"], .adminForm select, .adminForm textarea {
+    padding: 9px 12px;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-surface);
+    font-family: inherit;
+    font-size: 0.95rem;
+    color: var(--admin-text);
+}
+
+.adminForm button { margin-top: 14px; align-self: flex-start; }
+.adminFormInline { max-width: 100%; margin-bottom: 20px; }
+.adminAyuda { font-size: 0.86rem; color: var(--admin-soft); margin: 10px 0 0; }
+.adminVacio { color: var(--admin-label); font-style: italic; }
+.adminTenue { color: var(--admin-label); font-size: 0.88rem; }
+
+.adminEventos { list-style: none; margin: 0; padding: 0; }
+.adminEventos li { padding: 12px 0; border-bottom: 1px solid var(--admin-divider); }
+.adminEventos li p { margin: 0; }
+.adminEventoCabecera { font-size: 0.85rem; color: var(--admin-label); margin-bottom: 4px !important; }
+.adminNotaPublica { margin-bottom: 4px !important; }
+.adminNotaInterna { color: var(--admin-soft); font-size: 0.9rem; border-left: 2px solid var(--admin-border); padding-left: 10px; }
+
+/* Bloque del token recien emitido: se ve una sola vez, tiene que gritar. */
+.adminTokenNuevo {
+    margin: 20px 0;
+    padding: 16px 20px;
+    border: 1px solid var(--admin-accent);
+    background: var(--admin-surface);
+}
+
+.adminTokenTitulo { margin: 0 0 4px; font-weight: 600; color: var(--admin-accent); }
+.adminTokenAviso { margin: 0 0 12px; font-size: 0.88rem; color: var(--admin-soft); }
+.adminTokenFila { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.adminTokenFila input {
+    flex: 1 1 380px;
+    padding: 9px 12px;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-bg);
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.88rem;
+    color: var(--admin-text);
+}
+
+@media (max-width: 640px) {
+    .adminTabla, .adminTabla thead, .adminTabla tbody, .adminTabla tr, .adminTabla td { display: block; width: 100%; }
+    .adminTabla thead { display: none; }
+    .adminTabla tr { border-bottom: 1px solid var(--admin-border); }
+    .adminTabla td { border-bottom: none; padding: 6px 14px; }
+    .adminColAccion { text-align: left; }
+}

@@ -4,6 +4,8 @@ declare(strict_types=1);
 
 namespace EstudioCandame\Controller;
 
+use EstudioCandame\Seguimiento\BarraSeguimiento;
+use EstudioCandame\Seguimiento\CookieSeguimiento;
 use EstudioCandame\Support\SiteMeta;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -14,6 +16,9 @@ final class PageController
     public function __construct(
         private readonly Twig $twig,
         private readonly string $basePath = '',
+        // null cuando SEGUIMIENTO_ENABLED esta apagado: la home no sabe nada del portal
+        // y, sobre todo, no se construye ninguna Conexion.
+        private readonly ?BarraSeguimiento $barraSeguimiento = null,
     ) {
     }
 
@@ -30,7 +35,25 @@ final class PageController
             unset($_SESSION['contactSent'], $_SESSION['contactForm']);
         }
 
-        return $this->twig->render($response, 'index.html.twig', $data);
+        // Barra de acceso al portal, si el visitante ya entro con un token valido.
+        // paraToken() se traga cualquier fallo (base caida incluida) y devuelve null:
+        // la home nunca se cae por esto.
+        $tokenCookie = CookieSeguimiento::leer($request);
+        $barra = $this->barraSeguimiento?->paraToken($tokenCookie);
+        $data['barraSeguimiento'] = $barra;
+
+        $response = $this->twig->render($response, 'index.html.twig', $data);
+
+        // El visitante trae una cookie que ya no resuelve (token revocado, tramite
+        // borrado): se la sacamos para no volver a consultar la base en cada visita.
+        if ($tokenCookie !== null && $barra === null && $this->barraSeguimiento !== null) {
+            $response = $response->withHeader(
+                'Set-Cookie',
+                CookieSeguimiento::valorBorrar(CookieSeguimiento::esHttps($request)),
+            );
+        }
+
+        return $response;
     }
 
     public function redirectToAnchor(Request $request, Response $response, string $anchor): Response

@@ -1,0 +1,34 @@
+{% extends 'layout/base.html.twig' %}
+{% block content %}
+<main>
+<section class="sectionPage surface centered seguimientoInfoPage">
+    <div class="sectionHead">
+        <p class="eyebrow">Seguimiento de tr&aacute;mites</p>
+        <h1>C&oacute;mo seguir su tr&aacute;mite</h1>
+        <p class="lede">
+            Al abrir un tr&aacute;mite de constituci&oacute;n le enviamos un enlace personal.
+            Con ese enlace puede consultar, cuando quiera, en qu&eacute; etapa se encuentra.
+        </p>
+    </div>
+
+    <div class="seguimientoInfoEtapas">
+        <h2>Las etapas</h2>
+        <ol>
+            {% for valor, etapa in etapas %}
+                <li>
+                    <p class="seguimientoInfoEtapaLabel">{{ etapa.label }}</p>
+                    <p>{{ etapa.detalle }}</p>
+                </li>
+            {% endfor %}
+        </ol>
+    </div>
+
+    <div class="calloutBox">
+        <p>
+            El enlace se env&iacute;a al abrir el tr&aacute;mite. Si no lo encuentra o dej&oacute; de funcionar,
+            <a class="inlineLink" href="{{ basePath }}/#contacto">escr&iacute;banos</a> y se lo reenviamos.
+        </p>
+    </div>
+</section>
+</main>
+{% endblock %}

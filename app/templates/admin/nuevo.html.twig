@@ -1,0 +1,34 @@
+{% extends 'admin/layout.html.twig' %}
+{% block content %}
+<div class="adminTitulo">
+    <h1>Nuevo tr&aacute;mite</h1>
+    <a class="adminLink" href="{{ basePath }}/admin/tramites">Volver al listado</a>
+</div>
+
+{% if errores %}
+    <div class="adminErrores">
+        <ul>{% for error in errores %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+{% endif %}
+
+<form method="post" action="{{ basePath }}/admin/tramites/nuevo" class="adminForm">
+    <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+
+    <label for="codigo">C&oacute;digo</label>
+    <input type="text" id="codigo" name="codigo" maxlength="20" required
+           placeholder="PRES-2026-0001" value="{{ valores.codigo }}"/>
+
+    <label for="denominacion">Denominaci&oacute;n</label>
+    <input type="text" id="denominacion" name="denominacion" maxlength="255" required
+           value="{{ valores.denominacion }}"/>
+
+    <label for="ruta_estatuto">Estatuto</label>
+    <select id="ruta_estatuto" name="ruta_estatuto">
+        <option value="MODELO"{% if valores.ruta_estatuto == 'MODELO' %} selected{% endif %}>Modelo</option>
+        <option value="LIBRE"{% if valores.ruta_estatuto == 'LIBRE' %} selected{% endif %}>Libre</option>
+    </select>
+
+    <p class="adminAyuda">Se crea en la primera etapa y queda registrado el evento inicial.</p>
+    <button type="submit" class="adminBtn">Crear tr&aacute;mite</button>
+</form>
+{% endblock %}

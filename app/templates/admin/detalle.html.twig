@@ -1,0 +1,131 @@
+{% extends 'admin/layout.html.twig' %}
+{% block content %}
+<div class="adminTitulo">
+    <h1>{{ tramite.codigo }}</h1>
+    <a class="adminLink" href="{{ basePath }}/admin/tramites">Volver al listado</a>
+</div>
+
+<p class="adminSubtitulo">
+    {{ tramite.denominacion }} &mdash; {{ tramite.tipo }}, estatuto {{ tramite.rutaEstatuto|lower }}.
+    Etapa actual: <strong>{{ etapaLabel }}</strong>{% if tramite.observado %} &middot; <span class="adminChip">observado</span>{% endif %}
+</p>
+
+{% if tokenNuevo %}
+    {# Unica vez que se puede ver este token: en base solo queda el sha256. #}
+    <div class="adminTokenNuevo">
+        <p class="adminTokenTitulo">Enlace generado &mdash; copialo ahora</p>
+        <p class="adminTokenAviso">Es la <strong>&uacute;nica vez</strong> que se muestra. Despu&eacute;s solo queda el hash y no se puede recuperar.</p>
+        <div class="adminTokenFila">
+            <input type="text" id="tokenNuevo" readonly value="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}"/>
+            <button type="button" class="adminBtn" id="copiarToken">Copiar</button>
+        </div>
+    </div>
+    <script>
+        document.getElementById('copiarToken').addEventListener('click', function () {
+            var campo = document.getElementById('tokenNuevo');
+            campo.select();
+            campo.setSelectionRange(0, 99999);
+            navigator.clipboard.writeText(campo.value).then(function () {
+                document.getElementById('copiarToken').textContent = 'Copiado';
+            });
+        });
+    </script>
+{% endif %}
+
+<section class="adminSeccion">
+    <h2>Avanzar de etapa</h2>
+    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/avanzar" class="adminForm">
+        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+
+        <label for="etapa">Etapa</label>
+        <select id="etapa" name="etapa">
+            {% for etapa in etapas %}
+                <option value="{{ etapa.value }}"{% if etapa.value == tramite.etapaActual.value %} selected{% endif %}>
+                    {{ etapasConfig[etapa.value].label|default(etapa.value) }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <label for="nota_publica">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
+        <textarea id="nota_publica" name="nota_publica" rows="2"></textarea>
+
+        <label for="nota_interna">Nota interna <span class="adminTenue">(nunca sale del panel)</span></label>
+        <textarea id="nota_interna" name="nota_interna" rows="2"></textarea>
+
+        <button type="submit" class="adminBtn">Registrar</button>
+    </form>
+</section>
+
+<section class="adminSeccion">
+    <h2>Observaci&oacute;n</h2>
+    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/observacion" class="adminForm">
+        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+        <label for="nota_observacion">Nota de la observaci&oacute;n <span class="adminTenue">(la ve el cliente)</span></label>
+        <textarea id="nota_observacion" name="nota_observacion" rows="2">{{ tramite.notaObservacion }}</textarea>
+        <button type="submit" class="adminBtn">
+            {% if tramite.observado %}Levantar la observaci&oacute;n{% else %}Marcar como observado{% endif %}
+        </button>
+    </form>
+</section>
+
+<section class="adminSeccion">
+    <h2>Historial</h2>
+    {% if eventos is empty %}
+        <p class="adminVacio">Sin eventos.</p>
+    {% else %}
+        <ul class="adminEventos">
+            {% for evento in eventos %}
+                <li>
+                    <p class="adminEventoCabecera">
+                        {{ evento.ocurridoEl|date('d/m/Y H:i') }} &middot;
+                        {{ etapasConfig[evento.etapa.value].label|default(evento.etapa.value) }}
+                    </p>
+                    {% if evento.notaPublica %}<p class="adminNotaPublica">{{ evento.notaPublica }}</p>{% endif %}
+                    {% if evento.notaInterna %}<p class="adminNotaInterna">Interna: {{ evento.notaInterna }}</p>{% endif %}
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+
+<section class="adminSeccion">
+    <h2>Enlaces de acceso</h2>
+
+    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/accesos" class="adminForm adminFormInline">
+        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+        <label for="etiqueta">Para qui&eacute;n</label>
+        <input type="text" id="etiqueta" name="etiqueta" maxlength="120" required placeholder="cliente Juan P&eacute;rez"/>
+        <button type="submit" class="adminBtn">Emitir enlace</button>
+    </form>
+
+    {% if accesos is empty %}
+        <p class="adminVacio">Sin enlaces emitidos.</p>
+    {% else %}
+        <table class="adminTabla">
+            <thead>
+                <tr><th>Etiqueta</th><th>Emitido</th><th>&Uacute;ltimo acceso</th><th>Accesos</th><th>Estado</th></tr>
+            </thead>
+            <tbody>
+                {% for acceso in accesos %}
+                    <tr{% if acceso.estaRevocado %} class="is-revocado"{% endif %}>
+                        <td>{{ acceso.etiqueta }}</td>
+                        <td>{{ acceso.creadoEl|date('d/m/Y') }}</td>
+                        <td>{% if acceso.ultimoAccesoEl %}{{ acceso.ultimoAccesoEl|date('d/m/Y H:i') }}{% else %}<span class="adminTenue">nunca</span>{% endif %}</td>
+                        <td>{{ acceso.accesos }}</td>
+                        <td>
+                            {% if acceso.estaRevocado %}
+                                <span class="adminTenue">revocado el {{ acceso.revocadoEl|date('d/m/Y') }}</span>
+                            {% else %}
+                                <form method="post" action="{{ basePath }}/admin/accesos/{{ acceso.id }}/revocar">
+                                    <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+                                    <button type="submit" class="adminBtnTexto">Revocar</button>
+                                </form>
+                            {% endif %}
+                        </td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% endif %}
+</section>
+{% endblock %}

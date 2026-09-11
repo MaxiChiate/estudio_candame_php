@@ -1220,3 +1220,104 @@ section[id] {
         gap: 32px;
     }
 }
+
+/* --- Portal de seguimiento -------------------------------------------------- */
+/* Reusa la paleta de :root. Registro sobrio: la linea de etapas informa avance,
+   no celebra ni promete plazos. */
+
+.barraSeguimiento {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    background: var(--color-dark);
+    color: var(--color-dark-text);
+    text-decoration: none;
+    font-size: 0.92rem;
+}
+
+.barraSeguimiento:hover .barraSeguimientoCta { text-decoration: underline; }
+.barraSeguimientoTexto { color: var(--color-dark-text-soft); }
+.barraSeguimientoTexto strong { color: var(--color-dark-text); }
+.barraSeguimientoCta { color: var(--color-dark-text); white-space: nowrap; }
+
+.barraSeguimientoChip {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border: 1px solid var(--color-dark-border);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    color: var(--color-dark-text-muted);
+}
+
+.seguimientoAviso {
+    margin: 0 0 32px;
+    padding: 18px 22px;
+    border: 1px solid var(--color-border-strong);
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-bg);
+}
+
+.seguimientoAvisoTitulo { margin: 0 0 6px; font-weight: 600; color: var(--color-accent-dark); }
+.seguimientoAvisoPie { margin: 8px 0 0; color: var(--color-text-soft); font-size: 0.92rem; }
+
+.seguimientoLinea { list-style: none; margin: 0 0 36px; padding: 0; text-align: left; }
+
+.seguimientoEtapa {
+    position: relative;
+    display: flex;
+    gap: 16px;
+    padding: 0 0 24px 0;
+}
+
+/* La linea que une las marcas; la ultima etapa no la lleva. */
+.seguimientoEtapa::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 18px;
+    bottom: 0;
+    width: 1px;
+    background: var(--color-divider);
+}
+
+.seguimientoEtapa:last-child { padding-bottom: 0; }
+.seguimientoEtapa:last-child::before { display: none; }
+
+.seguimientoMarca {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    margin-top: 3px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border-strong);
+    background: var(--color-surface);
+}
+
+.seguimientoEtapa.is-cumplida .seguimientoMarca { background: var(--color-text-soft); border-color: var(--color-text-soft); }
+.seguimientoEtapa.is-actual .seguimientoMarca { background: var(--color-accent); border-color: var(--color-accent); }
+
+.seguimientoEtapaLabel { margin: 0; font-weight: 600; color: var(--color-text-soft); }
+.seguimientoEtapa.is-actual .seguimientoEtapaLabel { color: var(--color-ink); }
+.seguimientoEtapa.is-pendiente .seguimientoEtapaLabel { color: var(--color-label); }
+.seguimientoEtapaMeta { margin: 2px 0 0; font-size: 0.88rem; color: var(--color-label); }
+.seguimientoEtapaDetalle { margin: 6px 0 0; color: var(--color-text-muted); }
+
+.seguimientoNotas { text-align: left; margin: 0 0 32px; }
+.seguimientoNotas h2 { font-size: 1.25rem; margin: 0 0 12px; }
+.seguimientoNotas ul { list-style: none; margin: 0; padding: 0; }
+.seguimientoNotas li { padding: 12px 0; border-top: 1px solid var(--color-divider); }
+.seguimientoNotas li p { margin: 0; }
+.seguimientoNotaFecha { font-size: 0.85rem; color: var(--color-label); margin-bottom: 4px !important; }
+
+.seguimientoPie { color: var(--color-text-soft); font-size: 0.92rem; }
+
+.seguimientoInfoEtapas { text-align: left; margin: 0 0 28px; }
+.seguimientoInfoEtapas h2 { font-size: 1.25rem; margin: 0 0 12px; }
+.seguimientoInfoEtapas ol { margin: 0; padding-left: 20px; }
+.seguimientoInfoEtapas li { margin-bottom: 14px; }
+.seguimientoInfoEtapas li p { margin: 0; }
+.seguimientoInfoEtapaLabel { font-weight: 600; }
