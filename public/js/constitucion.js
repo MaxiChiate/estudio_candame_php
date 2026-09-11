@@ -507,8 +507,30 @@ document.addEventListener("DOMContentLoaded", function () {
         errorBox.scrollIntoView({ behavior: "smooth", block: "start" });
     }
 
+    // Feedback de envio: generar la ficha y mandar los dos mails tarda. envio-form.js
+    // se carga despues que este archivo (va en el layout), por eso se busca en el
+    // momento del submit y no al cargar. Si no esta, el flag local igual frena el
+    // doble envio, solo que sin spinner.
+    var botonEnviar = form.querySelector('button[type="submit"]');
+    var envioEnCurso = false;
+
+    function terminarEnvio() {
+        envioEnCurso = false;
+        if (window.EnvioForm) {
+            window.EnvioForm.restaurar(botonEnviar);
+        }
+    }
+
     form.addEventListener("submit", function (event) {
         event.preventDefault();
+        if (envioEnCurso) {
+            return;
+        }
+        envioEnCurso = true;
+        if (window.EnvioForm) {
+            window.EnvioForm.iniciar(botonEnviar);
+        }
+
         limpiarErrores();
         successBox.style.display = "none";
 
@@ -533,9 +555,12 @@ document.addEventListener("DOMContentLoaded", function () {
                     if (titulo) {
                         titulo.focus();
                     }
+                    // Exito: el form se oculta y el boton queda deshabilitado a
+                    // proposito -- no hay nada mas que enviar.
                     return;
                 }
 
+                terminarEnvio();
                 if (data && Array.isArray(data.errores) && data.errores.length) {
                     mostrarErrores(data.errores);
                 } else {
@@ -543,6 +568,7 @@ document.addEventListener("DOMContentLoaded", function () {
                 }
             });
         }).catch(function () {
+            terminarEnvio();
             mostrarErrores([{ campo: "", mensaje: "No se pudo conectar con el servidor. Intente nuevamente." }]);
         });
     });
