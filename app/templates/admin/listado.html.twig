@@ -20,14 +20,22 @@
     </thead>
     <tbody>
         {% for fila in filas %}
-            <tr{% if fila.tramite.observado %} class="is-observado"{% endif %}>
-                <td><a href="{{ basePath }}/admin/tramites/{{ fila.tramite.id }}">{{ fila.tramite.codigo }}</a></td>
+            {# Toda la fila lleva al detalle con <a> reales (click derecho, pestana nueva),
+               uno por celda de datos porque un <a> no puede envolver un <tr>. Solo el
+               primero es foco/lector de pantalla: los demas son el mismo destino repetido.
+               La celda de "Avanzar" queda afuera a proposito: su form no puede quedar
+               anidado dentro de un link. #}
+            {% set urlDetalle = basePath ~ '/admin/tramites/' ~ fila.tramite.id %}
+            <tr class="adminFilaLink{% if fila.tramite.observado %} is-observado{% endif %}">
+                <td><a href="{{ urlDetalle }}">{{ fila.tramite.codigo }}</a></td>
                 <td>
-                    {{ fila.tramite.denominacion }}
-                    {% if fila.tramite.observado %}<span class="adminChip">observado</span>{% endif %}
+                    <a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">
+                        {{ fila.tramite.denominacion }}
+                        {% if fila.tramite.observado %}<span class="adminChip">observado</span>{% endif %}
+                    </a>
                 </td>
-                <td>{{ fila.etapaLabel }}</td>
-                <td>{{ fila.tramite.actualizadoEl|date('d/m/Y') }}</td>
+                <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.etapaLabel }}</a></td>
+                <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.tramite.actualizadoEl|date('d/m/Y') }}</a></td>
                 <td class="adminColAccion">
                     {% if fila.siguiente %}
                         {# Un click: sin etapa explicita, avanzar() toma la siguiente. #}
