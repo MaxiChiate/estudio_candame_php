@@ -194,6 +194,26 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
     }
 
     /**
+     * El portal va con no-store, asi que recargar o ir atras/adelante es un GET real
+     * cada vez. Varios seguidos son la misma visita.
+     */
+    public function testRecargarElPortalNoSumaDeNuevo(): void
+    {
+        $id = $this->tramites->crear('PRES-2026-0107', 'Recarga SAS');
+        $token = $this->accesos->emitir($id, 'cliente');
+        $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
+        self::assertNotNull($accesoId);
+
+        for ($i = 0; $i < 3; $i++) {
+            self::assertSame(200, $this->get('/seguimiento/' . $token)->getStatusCode());
+        }
+
+        $registro = $this->accesos->porId($accesoId);
+        self::assertSame(1, $registro?->accesos);
+        self::assertNotNull($registro->ultimoAccesoEl);
+    }
+
+    /**
      * @param array<string, string> $cookies
      * @param array<string, string> $headers
      */

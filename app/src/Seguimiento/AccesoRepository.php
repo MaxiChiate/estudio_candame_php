@@ -18,6 +18,9 @@ final class AccesoRepository
 {
     private const FORMATO_FECHA = 'Y-m-d H:i:s';
 
+    /** Accesos del mismo enlace dentro de esta ventana cuentan como una sola visita. */
+    public const VENTANA_VISITA_MINUTOS = 30;
+
     public function __construct(
         private readonly Conexion $conexion,
         private readonly Reloj $reloj,
@@ -78,16 +81,30 @@ final class AccesoRepository
     }
 
     /**
-     * Suma una visita: contador y fecha del ultimo acceso. Lo llama unicamente
-     * SeguimientoController::verEstado, y solo para un GET real (ni HEAD ni prefetch).
+     * Registra una visita: la fecha del ultimo acceso se actualiza siempre, pero el
+     * contador solo suma si pasaron mas de VENTANA_VISITA_MINUTOS desde el acceso
+     * anterior. El portal va con Cache-Control: no-store, asi que el navegador no guarda
+     * la pagina para atras/adelante: cada recarga o atras/adelante es un GET real. Sin
+     * la ventana, un cliente mirando un rato inflaba el contador de a varios.
+     *
+     * Lo llama unicamente SeguimientoController::verEstado, y solo para un GET real (ni
+     * HEAD ni prefetch).
      */
     public function registrarAcceso(int $accesoId): void
     {
+        $ahora = $this->reloj->ahora();
+
+        // MySQL evalua las asignaciones del SET de izquierda a derecha: accesos tiene que
+        // ir primero para comparar contra el ultimo_acceso_el ANTERIOR, no el nuevo.
         $stmt = $this->conexion->pdo()->prepare(
-            'UPDATE tramite_acceso SET accesos = accesos + 1, ultimo_acceso_el = :ahora WHERE id = :id'
+            'UPDATE tramite_acceso
+             SET accesos = accesos + (ultimo_acceso_el IS NULL OR ultimo_acceso_el <= :limite),
+                 ultimo_acceso_el = :ahora
+             WHERE id = :id'
         );
         $stmt->execute([
-            'ahora' => $this->reloj->ahora()->format(self::FORMATO_FECHA),
+            'limite' => $ahora->modify(sprintf('-%d minutes', self::VENTANA_VISITA_MINUTOS))->format(self::FORMATO_FECHA),
+            'ahora' => $ahora->format(self::FORMATO_FECHA),
             'id' => $accesoId,
         ]);
     }
