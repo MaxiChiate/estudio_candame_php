@@ -64,7 +64,7 @@ final class TramiteRepository
      *
      * @return int id del tramite creado
      */
-    public function crear(string $codigo, string $denominacion, string $rutaEstatuto, string $tipo = 'SAS'): int
+    public function crear(string $codigo, string $denominacion, string $tipo = 'SAS'): int
     {
         $pdo = $this->conexion->pdo();
         $ahora = $this->reloj->ahora()->format(self::FORMATO_FECHA);
@@ -73,13 +73,12 @@ final class TramiteRepository
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO tramite (codigo, tipo, ruta_estatuto, denominacion, etapa_actual, observado, creado_el, actualizado_el)
-                 VALUES (:codigo, :tipo, :ruta, :denominacion, :etapa, 0, :creado, :actualizado)'
+                'INSERT INTO tramite (codigo, tipo, denominacion, etapa_actual, observado, creado_el, actualizado_el)
+                 VALUES (:codigo, :tipo, :denominacion, :etapa, 0, :creado, :actualizado)'
             );
             $stmt->execute([
                 'codigo' => $codigo,
                 'tipo' => $tipo,
-                'ruta' => $rutaEstatuto,
                 'denominacion' => $denominacion,
                 'etapa' => $etapa->value,
                 'creado' => $ahora,

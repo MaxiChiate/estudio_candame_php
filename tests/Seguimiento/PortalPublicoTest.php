@@ -19,7 +19,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 {
     public function testTokenValidoDevuelve200YLaEtapaCorrecta(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0100', 'Cerro Alto SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0100', 'Cerro Alto SAS');
         $this->tramites->avanzar($id, Etapa::PRESENTACION, null, null);
         $token = $this->accesos->emitir($id, 'cliente de prueba');
 
@@ -39,7 +39,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testTokenValidoTraeLasCabecerasDePrivacidad(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0101', 'Meridiano SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0101', 'Meridiano SAS');
         $token = $this->accesos->emitir($id, 'cliente');
 
         $response = $this->get('/seguimiento/' . $token);
@@ -58,7 +58,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
      */
     public function testInexistenteRevocadoYMalformadoDevuelvenLaMismaRespuesta(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0102', 'Cauce SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0102', 'Cauce SAS');
         $tokenRevocado = $this->accesos->emitir($id, 'cliente');
         $acceso = $this->accesos->buscarPorToken($tokenRevocado);
         self::assertNotNull($acceso);
@@ -89,7 +89,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testLaNotaInternaNoLlegaALaVistaPublica(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0103', 'Rosas del Sur SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0103', 'Rosas del Sur SAS');
         $this->tramites->avanzar(
             $id,
             Etapa::FIRMA,
@@ -109,7 +109,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testNingunDatoPersonalLlegaALaVistaPublica(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0104', 'Litoral Norte SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0104', 'Litoral Norte SAS');
         $this->tramites->avanzar(
             $id,
             Etapa::INSCRIPCION,
@@ -155,7 +155,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
      */
     public function testLaHomeConCookieValidaNoMueveElContador(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0105', 'Contador Home SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0105', 'Contador Home SAS');
         $token = $this->accesos->emitir($id, 'cliente');
         $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
         self::assertNotNull($accesoId);
@@ -176,7 +176,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testHeadYPrefetchNoCuentanComoVisita(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0106', 'Prefetch SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0106', 'Prefetch SAS');
         $token = $this->accesos->emitir($id, 'cliente');
         $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
         self::assertNotNull($accesoId);

@@ -22,12 +22,6 @@
     <input type="text" id="denominacion" name="denominacion" maxlength="255" required
            value="{{ valores.denominacion }}"/>
 
-    <label for="ruta_estatuto">Estatuto</label>
-    <select id="ruta_estatuto" name="ruta_estatuto">
-        <option value="MODELO"{% if valores.ruta_estatuto == 'MODELO' %} selected{% endif %}>Modelo</option>
-        <option value="LIBRE"{% if valores.ruta_estatuto == 'LIBRE' %} selected{% endif %}>Libre</option>
-    </select>
-
     <p class="adminAyuda">Se crea en la primera etapa y queda registrado el evento inicial.</p>
     <button type="submit" class="adminBtn">Crear tr&aacute;mite</button>
 </form>

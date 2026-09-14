@@ -13,7 +13,7 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
 {
     public function testElTokenNoQuedaEnClaroEnNingunaColumna(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0300', 'Token SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0300', 'Token SAS');
         $token = $this->accesos->emitir($id, 'cliente de prueba');
 
         // Se barren TODAS las columnas de texto de las tres tablas, no solo token_hash:
@@ -38,7 +38,7 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
 
     public function testEnBaseQuedaElSha256DelToken(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0301', 'Hash SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0301', 'Hash SAS');
         $token = $this->accesos->emitir($id, 'cliente');
 
         $guardado = $this->conexion->pdo()->query('SELECT token_hash FROM tramite_acceso')->fetchColumn();
@@ -72,7 +72,7 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
 
     public function testRevocarInvalidaElTokenSinBorrarElRegistro(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0302', 'Revoca SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0302', 'Revoca SAS');
         $token = $this->accesos->emitir($id, 'cliente');
 
         $acceso = $this->accesos->buscarPorToken($token);
@@ -89,7 +89,7 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
 
     public function testRegistrarAccesoCuentaLasVisitas(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0303', 'Contador SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0303', 'Contador SAS');
         $token = $this->accesos->emitir($id, 'cliente');
         $acceso = $this->accesos->buscarPorToken($token);
         self::assertNotNull($acceso);

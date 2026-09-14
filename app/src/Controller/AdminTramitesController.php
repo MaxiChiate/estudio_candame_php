@@ -67,7 +67,7 @@ final class AdminTramitesController
         return $this->render($response, 'admin/nuevo.html.twig', [
             'pageTitle' => 'Nuevo trámite - Panel',
             'errores' => [],
-            'valores' => ['codigo' => '', 'denominacion' => '', 'ruta_estatuto' => 'MODELO'],
+            'valores' => ['codigo' => '', 'denominacion' => ''],
         ]);
     }
 
@@ -81,7 +81,6 @@ final class AdminTramitesController
 
         $codigo = $this->campo($datos, 'codigo');
         $denominacion = $this->campo($datos, 'denominacion');
-        $rutaEstatuto = $this->campo($datos, 'ruta_estatuto') === 'LIBRE' ? 'LIBRE' : 'MODELO';
 
         // Se juntan todos los errores, nunca se corta en el primero: mismo criterio que
         // la validacion de la consulta de constitucion.
@@ -104,11 +103,11 @@ final class AdminTramitesController
             return $this->render($response->withStatus(422), 'admin/nuevo.html.twig', [
                 'pageTitle' => 'Nuevo trámite - Panel',
                 'errores' => $errores,
-                'valores' => ['codigo' => $codigo, 'denominacion' => $denominacion, 'ruta_estatuto' => $rutaEstatuto],
+                'valores' => ['codigo' => $codigo, 'denominacion' => $denominacion],
             ]);
         }
 
-        $id = $this->tramites->crear($codigo, $denominacion, $rutaEstatuto);
+        $id = $this->tramites->crear($codigo, $denominacion);
         $this->flash(sprintf('Trámite %s creado.', $codigo));
 
         return $this->redirigir($response, '/admin/tramites/' . $id);

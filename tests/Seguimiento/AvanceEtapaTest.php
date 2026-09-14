@@ -14,7 +14,7 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
 {
     public function testElAltaDejaElTramiteEnLaEtapaInicialConSuEvento(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0200', 'Alta SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0200', 'Alta SAS');
 
         $tramite = $this->tramites->porId($id);
         self::assertNotNull($tramite);
@@ -28,7 +28,7 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
 
     public function testAvanzarCreaElEventoYActualizaLaEtapaActual(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0201', 'Avance SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0201', 'Avance SAS');
 
         $this->tramites->avanzar($id, Etapa::FIRMA, 'Firmado.', 'nota interna');
 
@@ -46,7 +46,7 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
 
     public function testLaEtapaActualSiempreCoincideConElUltimoEvento(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0202', 'Recorrido SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0202', 'Recorrido SAS');
 
         foreach ([Etapa::FIRMA, Etapa::PRESENTACION, Etapa::INSCRIPCION, Etapa::CUIT, Etapa::LIBROS] as $etapa) {
             $this->tramites->avanzar($id, $etapa, null, null);
@@ -67,7 +67,7 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
 
     public function testObservadoEsOrtogonalALaEtapa(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0203', 'Observada SAS', 'MODELO');
+        $id = $this->tramites->crear('PRES-2026-0203', 'Observada SAS');
         $this->tramites->avanzar($id, Etapa::PRESENTACION, null, null);
 
         $this->tramites->actualizarObservacion($id, true, 'Falta acompañar la reserva de nombre.');
