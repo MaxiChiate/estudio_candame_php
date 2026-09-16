@@ -5,8 +5,19 @@ declare(strict_types=1);
 namespace EstudioCandame\Seguimiento;
 
 /**
- * Etapas del tramite de constitucion de SAS, en orden. El valor del case es lo que se
- * guarda en tramite.etapa_actual y tramite_evento.etapa.
+ * Etapas del pipeline de IGJ, en orden. El valor del case es lo que se guarda en
+ * tramite.etapa_actual y tramite_evento.etapa.
+ *
+ * El pipeline es GENERICO para todo tipo de tramite: no hay secuencias por tipo de
+ * sociedad ni por ruta de estatuto. Hay etapas que no aplican a un tramite dado (p. ej.
+ * DICTAMENES en una SAS por estatuto modelo) y simplemente se saltean.
+ *
+ * El orden define como se dibuja la linea de tiempo y cual es la etapa siguiente por
+ * default, pero NO restringe a cuales se puede ir: recorrer el pipeline no es lineal.
+ * El caso claro es la vista, que es un loop -- el inspector puede despachar mas de una,
+ * asi que un tramite vuelve de VISTA_CONTESTADA a VISTA tantas veces como haga falta.
+ * Por eso el "cumplida" de la linea sale de los eventos registrados y no de comparar
+ * posiciones contra la etapa actual (ver LineaEtapas).
  *
  * A diferencia de los otros enums del proyecto (ver Model/RolContacto), este NO tiene
  * un metodo etiqueta(): los labels visibles y las descripciones viven en
@@ -15,26 +26,33 @@ namespace EstudioCandame\Seguimiento;
  * value del enum es un identificador estable que nunca se muestra.
  *
  * "Observado" NO es una etapa: es un flag ortogonal (tramite.observado) que puede
- * convivir con cualquiera de estas. No agregarlo aca.
+ * convivir con cualquiera de estas, y que cubre observaciones de FUERA de IGJ. Las
+ * vistas de IGJ son etapas propias. No agregar observado aca.
  */
 enum Etapa: string
 {
-    case DOCUMENTACION = 'DOCUMENTACION';
-    case FIRMA = 'FIRMA';
-    case PRESENTACION = 'PRESENTACION';
-    case INSCRIPCION = 'INSCRIPCION';
-    case CUIT = 'CUIT';
-    case LIBROS = 'LIBROS';
+    case REUNIENDO_DOCUMENTACION = 'REUNIENDO_DOCUMENTACION';
+    case PROCESANDO_DOCUMENTACION = 'PROCESANDO_DOCUMENTACION';
+    case ESPERANDO_CONFIRMACION = 'ESPERANDO_CONFIRMACION';
+    case HABILITADO_ESCRIBANIA = 'HABILITADO_ESCRIBANIA';
+    case ESPERANDO_ESCRIBANIA = 'ESPERANDO_ESCRIBANIA';
+    case EDICTO_PUBLICADO = 'EDICTO_PUBLICADO';
+    case DICTAMENES = 'DICTAMENES';
+    case TRAMITE_INICIADO = 'TRAMITE_INICIADO';
+    case VISTA = 'VISTA';
+    case VISTA_CONTESTADA = 'VISTA_CONTESTADA';
+    case TERMINADO = 'TERMINADO';
+    case PARA_RETIRAR = 'PARA_RETIRAR';
 
     /** Primera etapa de todo tramite nuevo. */
     public static function inicial(): self
     {
-        return self::DOCUMENTACION;
+        return self::REUNIENDO_DOCUMENTACION;
     }
 
     /**
-     * Posicion en la linea de etapas, arrancando en 1. Sirve para comparar avance sin
-     * depender del orden de declaracion en el codigo que consume.
+     * Posicion en la linea de etapas, arrancando en 1. Es el orden en que se dibujan,
+     * no una restriccion: se puede ir a cualquier etapa desde cualquier otra.
      */
     public function orden(): int
     {
@@ -50,6 +68,30 @@ enum Etapa: string
     public function siguiente(): ?self
     {
         return self::cases()[$this->orden()] ?? null;
+    }
+
+    /**
+     * Etapas que el panel ofrece como "proximo paso" de un click.
+     *
+     * Normalmente es una sola: la siguiente del enum. La excepcion es VISTA_CONTESTADA,
+     * donde "siguiente" es ambiguo -- por orden daria TERMINADO, pero el caso frecuente
+     * es que el inspector despache otra vista y el tramite vuelva a VISTA. Ahi se
+     * ofrecen las dos y decide quien carga, en vez de adivinar.
+     *
+     * Para saltear a cualquier otra etapa esta el select del detalle; esto es solo el
+     * atajo del caso habitual.
+     *
+     * @return list<self>
+     */
+    public function siguientesSugeridas(): array
+    {
+        if ($this === self::VISTA_CONTESTADA) {
+            return [self::VISTA, self::TERMINADO];
+        }
+
+        $siguiente = $this->siguiente();
+
+        return $siguiente === null ? [] : [$siguiente];
     }
 
     public function esUltima(): bool

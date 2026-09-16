@@ -20,7 +20,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
     public function testTokenValidoDevuelve200YLaEtapaCorrecta(): void
     {
         $id = $this->tramites->crear('PRES-2026-0100', 'Cerro Alto SAS');
-        $this->tramites->avanzar($id, Etapa::PRESENTACION, null, null);
+        $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
         $token = $this->accesos->emitir($id, 'cliente de prueba');
 
         $response = $this->get('/seguimiento/' . $token);
@@ -31,9 +31,9 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
         // La etapa actual tiene que ser la que quedo, no otra de la linea.
         self::assertMatchesRegularExpression(
-            '/is-actual.*?Presentaci&oacute;n|is-actual.*?Presentación/s',
+            '/is-actual.*?Trámite iniciado/s',
             $html,
-            'La etapa marcada como actual no es Presentación.',
+            'La etapa marcada como actual no es Trámite iniciado.',
         );
     }
 
@@ -92,7 +92,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         $id = $this->tramites->crear('PRES-2026-0103', 'Rosas del Sur SAS');
         $this->tramites->avanzar(
             $id,
-            Etapa::FIRMA,
+            Etapa::HABILITADO_ESCRIBANIA,
             'Se firmó el instrumento constitutivo.',
             'INTERNO: el socio 2 todavía no mandó el DNI, reclamar por teléfono.',
         );
@@ -112,7 +112,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         $id = $this->tramites->crear('PRES-2026-0104', 'Litoral Norte SAS');
         $this->tramites->avanzar(
             $id,
-            Etapa::INSCRIPCION,
+            Etapa::TRAMITE_INICIADO,
             'La IGJ inscribió la sociedad.',
             'CUIT 30-71234567-8, DNI del presidente 28.456.789, domicilio Av. Siempreviva 742.',
         );
@@ -128,11 +128,8 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         self::assertStringNotContainsString('contador Juan Pérez', $html);
 
         // Mas general que buscar los valores del fixture: que no haya NADA con forma de
-        // CUIT ni de DNI en la pagina, venga de donde venga.
-        //
-        // Ojo: no se puede buscar la palabra "CUIT" a secas, porque es el nombre de una
-        // de las etapas y aparece legitimamente en la linea de avance. Lo que no puede
-        // aparecer son numeros con esa forma.
+        // CUIT ni de DNI en la pagina, venga de donde venga. Se buscan las formas y no
+        // la palabra "CUIT": lo que no puede filtrarse son los numeros.
         self::assertDoesNotMatchRegularExpression('/\b\d{2}-\d{8}-\d\b/', $html, 'Hay algo con forma de CUIT.');
         self::assertDoesNotMatchRegularExpression('/\b\d{1,2}\.\d{3}\.\d{3}\b/', $html, 'Hay algo con forma de DNI.');
     }
