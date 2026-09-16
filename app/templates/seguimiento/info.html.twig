@@ -18,9 +18,13 @@
                lista se pueda barrer de un vistazo. #}
             {% for valor, etapa in etapas %}
                 <li>
-                    <p class="seguimientoInfoEtapaLabel">{{ etapa.label }}</p>
                     <details class="seguimientoEtapaQue">
-                        <summary>&iquest;Qu&eacute; significa?</summary>
+                        <summary>
+                            <span class="seguimientoInfoEtapaLabel">
+                                {{- etapa.label }}
+                                <span class="seguimientoEtapaQueMarca" aria-hidden="true">?</span>
+                            </span>
+                        </summary>
                         <p>{{ etapa.detalle }}</p>
                     </details>
                 </li>

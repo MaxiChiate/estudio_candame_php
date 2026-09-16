@@ -1323,27 +1323,39 @@ section[id] {
 /* Cuantas veces se registro una etapa que puede repetirse ("2ª vista"). */
 .seguimientoEtapaRepeticion { font-size: 0.85rem; font-weight: 500; color: var(--color-label); }
 
-/* Colapsable nativo, sin JS: el detalle de las etapas cumplidas y pendientes. */
-.seguimientoEtapaQue { margin: 6px 0 0; }
-
-.seguimientoEtapaQue > summary {
-    cursor: pointer;
-    font-size: 0.88rem;
-    color: var(--color-text-soft);
-    list-style: none;
-}
-
+/* Colapsable nativo, sin JS: el nombre de la etapa abre su explicacion. El detalle de
+   la etapa actual NO usa esto -- va siempre visible. */
+.seguimientoEtapaQue > summary { cursor: pointer; list-style: none; }
 .seguimientoEtapaQue > summary::-webkit-details-marker { display: none; }
+.seguimientoEtapaQue > summary .seguimientoEtapaLabel,
+.seguimientoEtapaQue > summary .seguimientoEtapaMeta { display: block; }
 
-.seguimientoEtapaQue > summary::before {
-    content: "+";
-    display: inline-block;
-    width: 1em;
+/* El signo de pregunta al lado del nombre: chico, redondo y del color del acento, para
+   que se lea como "esto se abre" y no como un adorno. */
+.seguimientoEtapaQueMarca {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1;
     color: var(--color-accent);
+    vertical-align: middle;
 }
 
-.seguimientoEtapaQue[open] > summary::before { content: "\2212"; }
-.seguimientoEtapaQue > summary:hover { color: var(--color-ink); }
+.seguimientoEtapaQue > summary:hover .seguimientoEtapaQueMarca,
+.seguimientoEtapaQue[open] > summary .seguimientoEtapaQueMarca {
+    background: var(--color-accent);
+    color: var(--color-surface);
+}
+
+.seguimientoEtapaQue > summary .seguimientoEtapaDetalle,
+.seguimientoEtapaQue > p.seguimientoEtapaDetalle { margin-top: 6px; }
 
 .seguimientoNotas { text-align: left; margin: 0 0 32px; }
 .seguimientoNotas h2 { font-size: 1.25rem; margin: 0 0 12px; }

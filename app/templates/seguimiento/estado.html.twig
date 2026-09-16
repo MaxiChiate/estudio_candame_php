@@ -33,29 +33,35 @@
             <li class="seguimientoEtapa is-{{ etapa.estado }}"{% if etapa.estado == 'actual' %} aria-current="step"{% endif %}>
                 <span class="seguimientoMarca" aria-hidden="true"></span>
                 <div class="seguimientoEtapaCuerpo">
-                    <p class="seguimientoEtapaLabel">
-                        {{ etapa.label }}
-                        {%- if etapa.repeticion %} <span class="seguimientoEtapaRepeticion">{{ etapa.repeticion }}</span>{% endif %}
-                    </p>
+                    {% set marca %}{%- if etapa.repeticion %} <span class="seguimientoEtapaRepeticion">{{ etapa.repeticion }}</span>{% endif %}{% endset %}
+                    {% set meta %}
+                        {%- if etapa.estado == 'cumplida' -%}
+                            Cumplida{% if etapa.fecha %} el {{ etapa.fecha|date('d/m/Y') }}{% endif %}
+                        {%- elseif etapa.estado == 'actual' -%}
+                            Etapa actual{% if etapa.fecha %} desde el {{ etapa.fecha|date('d/m/Y') }}{% endif %}
+                        {%- else -%}
+                            Pendiente
+                        {%- endif -%}
+                    {% endset %}
 
-                    {% if etapa.estado == 'cumplida' %}
-                        <p class="seguimientoEtapaMeta">Cumplida{% if etapa.fecha %} el {{ etapa.fecha|date('d/m/Y') }}{% endif %}</p>
-                    {% elseif etapa.estado == 'actual' %}
-                        <p class="seguimientoEtapaMeta">Etapa actual{% if etapa.fecha %} desde el {{ etapa.fecha|date('d/m/Y') }}{% endif %}</p>
+                    {% if etapa.estado == 'actual' or not etapa.detalle %}
+                        {# La etapa actual no se colapsa: es la respuesta a "como viene lo
+                           mio" y, si se esconde, el cliente escribe igual. #}
+                        <p class="seguimientoEtapaLabel">{{ etapa.label }}{{ marca }}</p>
+                        <p class="seguimientoEtapaMeta">{{ meta }}</p>
+                        {% if etapa.detalle %}<p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>{% endif %}
                     {% else %}
-                        <p class="seguimientoEtapaMeta">Pendiente</p>
-                    {% endif %}
-
-                    {% if etapa.detalle %}
-                        {% if etapa.estado == 'actual' %}
-                            {# La respuesta a "como viene lo mio": si se esconde, el cliente escribe igual. #}
+                        {# Cumplidas y pendientes: el nombre abre la explicacion. #}
+                        <details class="seguimientoEtapaQue">
+                            <summary>
+                                <span class="seguimientoEtapaLabel">
+                                    {{- etapa.label }}{{ marca }}
+                                    <span class="seguimientoEtapaQueMarca" aria-hidden="true">?</span>
+                                </span>
+                                <span class="seguimientoEtapaMeta">{{ meta }}</span>
+                            </summary>
                             <p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>
-                        {% else %}
-                            <details class="seguimientoEtapaQue">
-                                <summary>&iquest;Qu&eacute; significa?</summary>
-                                <p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>
-                            </details>
-                        {% endif %}
+                        </details>
                     {% endif %}
                 </div>
             </li>
