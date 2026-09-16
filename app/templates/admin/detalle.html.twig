@@ -34,10 +34,26 @@
 
 <section class="adminSeccion">
     <h2>Avanzar de etapa</h2>
+
+    {# El caso del 90%: un click. En Vista contestada son dos botones, porque el
+       inspector puede despachar otra vista en vez de dar por terminado el tramite. #}
+    {% if siguientes is not empty %}
+        <div class="adminAccionesEtapa">
+            {% for siguiente in siguientes %}
+                <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/avanzar">
+                    <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+                    <input type="hidden" name="etapa" value="{{ siguiente.valor }}"/>
+                    <button type="submit" class="adminBtn">Siguiente: {{ siguiente.label }}</button>
+                </form>
+            {% endfor %}
+        </div>
+    {% endif %}
+
+    {# Escape: saltear las etapas que no aplican a este tramite, o volver atras. #}
     <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/avanzar" class="adminForm">
         <input type="hidden" name="_csrf" value="{{ csrf }}"/>
 
-        <label for="etapa">Etapa</label>
+        <label for="etapa">Otra etapa <span class="adminTenue">(saltear o volver)</span></label>
         <select id="etapa" name="etapa">
             {% for etapa in etapas %}
                 <option value="{{ etapa.value }}"{% if etapa.value == tramite.etapaActual.value %} selected{% endif %}>
@@ -60,6 +76,10 @@
     <h2>Observaci&oacute;n</h2>
     <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/observacion" class="adminForm">
         <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+        <p class="adminAyuda">
+            Para observaciones de fuera de IGJ: escriban&iacute;a que rechaza algo, documentaci&oacute;n incompleta.
+            Para vistas de IGJ us&aacute; las etapas Tr&aacute;mite con vista / Vista contestada.
+        </p>
         <label for="nota_observacion">Nota de la observaci&oacute;n <span class="adminTenue">(la ve el cliente)</span></label>
         <textarea id="nota_observacion" name="nota_observacion" rows="2">{{ tramite.notaObservacion }}</textarea>
         <button type="submit" class="adminBtn">

@@ -37,15 +37,19 @@
                 <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.etapaLabel }}</a></td>
                 <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.tramite.actualizadoEl|date('d/m/Y') }}</a></td>
                 <td class="adminColAccion">
-                    {% if fila.siguiente %}
-                        {# Un click: sin etapa explicita, avanzar() toma la siguiente. #}
-                        <form method="post" action="{{ basePath }}/admin/tramites/{{ fila.tramite.id }}/avanzar">
-                            <input type="hidden" name="_csrf" value="{{ csrf }}"/>
-                            <input type="hidden" name="volver" value="listado"/>
-                            <button type="submit" class="adminBtn adminBtnChico">&rarr; {{ fila.siguienteLabel }}</button>
-                        </form>
-                    {% else %}
+                    {% if fila.siguientes is empty %}
                         <span class="adminTenue">completado</span>
+                    {% else %}
+                        {# Un click. Normalmente un boton; en Vista contestada son dos,
+                           porque "siguiente" ahi es ambiguo (otra vista o terminado). #}
+                        {% for siguiente in fila.siguientes %}
+                            <form method="post" action="{{ basePath }}/admin/tramites/{{ fila.tramite.id }}/avanzar">
+                                <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+                                <input type="hidden" name="volver" value="listado"/>
+                                <input type="hidden" name="etapa" value="{{ siguiente.valor }}"/>
+                                <button type="submit" class="adminBtn adminBtnChico">&rarr; {{ siguiente.label }}</button>
+                            </form>
+                        {% endfor %}
                     {% endif %}
                 </td>
             </tr>

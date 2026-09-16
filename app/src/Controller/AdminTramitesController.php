@@ -28,7 +28,10 @@ final class AdminTramitesController
 {
     private const CLAVE_CSRF = CsrfToken::CLAVE_ADMIN_SEGUIMIENTO;
 
-    /** @param array<string, array{label: string, detalle: string}> $etapasConfig */
+    /**
+     * @param array<string, array{label: string, detalle: string, accion?: string,
+     *                            repeticion?: string}> $etapasConfig
+     */
     public function __construct(
         private readonly Twig $twig,
         private readonly TramiteRepository $tramites,
@@ -48,10 +51,7 @@ final class AdminTramitesController
             $filas[] = [
                 'tramite' => $tramite,
                 'etapaLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
-                'siguiente' => $tramite->etapaActual->siguiente(),
-                'siguienteLabel' => $tramite->etapaActual->siguiente() !== null
-                    ? LineaEtapas::label($tramite->etapaActual->siguiente(), $this->etapasConfig)
-                    : null,
+                'siguientes' => $this->siguientes($tramite->etapaActual),
             ];
         }
 
@@ -128,6 +128,7 @@ final class AdminTramitesController
             'eventos' => $this->tramites->eventos($tramite->id),
             'accesos' => $this->accesos->porTramite($tramite->id),
             'etapas' => Etapa::cases(),
+            'siguientes' => $this->siguientes($tramite->etapaActual),
             'etapasConfig' => $this->etapasConfig,
             'flash' => $this->tomarFlash(),
             // El token en claro se muestra UNA vez, en el redirect posterior a emitirlo.
@@ -151,15 +152,26 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites');
         }
 
-        // Si no viene etapa explicita, avanza a la siguiente: ese es el camino de un
-        // click desde el listado.
+        // Si no viene etapa explicita, avanza a la siguiente del enum: ese es el camino
+        // de un click desde el listado. Con etapa explicita se puede ir a CUALQUIERA,
+        // incluidas anteriores (el loop de la vista) y salteando las que no aplican al
+        // tramite. Lo unico que se valida es que sea un valor del enum.
         $etapaPedida = $this->campo($datos, 'etapa');
-        $etapa = $etapaPedida !== '' ? Etapa::tryFrom($etapaPedida) : $tramite->etapaActual->siguiente();
 
-        if ($etapa === null) {
-            $this->flash(sprintf('El trámite %s ya está en la última etapa.', $tramite->codigo), 'error');
+        if ($etapaPedida !== '') {
+            $etapa = Etapa::tryFrom($etapaPedida);
+            if ($etapa === null) {
+                $this->flash('La etapa indicada no existe.', 'error');
 
-            return $this->redirigir($response, $this->volverA($datos, $id));
+                return $this->redirigir($response, $this->volverA($datos, $id));
+            }
+        } else {
+            $etapa = $tramite->etapaActual->siguiente();
+            if ($etapa === null) {
+                $this->flash(sprintf('El trámite %s ya está en la última etapa.', $tramite->codigo), 'error');
+
+                return $this->redirigir($response, $this->volverA($datos, $id));
+            }
         }
 
         $this->tramites->avanzar(
@@ -176,6 +188,23 @@ final class AdminTramitesController
         ));
 
         return $this->redirigir($response, $this->volverA($datos, $id));
+    }
+
+    /**
+     * Atajos de "proximo paso" para los botones del panel: normalmente uno solo, dos en
+     * VISTA_CONTESTADA (ver Etapa::siguientesSugeridas).
+     *
+     * @return list<array{valor: string, label: string}>
+     */
+    private function siguientes(Etapa $actual): array
+    {
+        return array_map(
+            fn (Etapa $etapa): array => [
+                'valor' => $etapa->value,
+                'label' => LineaEtapas::label($etapa, $this->etapasConfig),
+            ],
+            $actual->siguientesSugeridas(),
+        );
     }
 
     /** @param array<string, string> $args */
