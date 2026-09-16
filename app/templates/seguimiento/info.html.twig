@@ -14,10 +14,15 @@
     <div class="seguimientoInfoEtapas">
         <h2>Las etapas</h2>
         <ol>
+            {# Son 12: el label siempre visible y el detalle a un click, para que la
+               lista se pueda barrer de un vistazo. #}
             {% for valor, etapa in etapas %}
                 <li>
                     <p class="seguimientoInfoEtapaLabel">{{ etapa.label }}</p>
-                    <p>{{ etapa.detalle }}</p>
+                    <details class="seguimientoEtapaQue">
+                        <summary>&iquest;Qu&eacute; significa?</summary>
+                        <p>{{ etapa.detalle }}</p>
+                    </details>
                 </li>
             {% endfor %}
         </ol>

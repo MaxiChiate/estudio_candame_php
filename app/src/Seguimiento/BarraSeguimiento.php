@@ -18,7 +18,10 @@ use Throwable;
  */
 final class BarraSeguimiento
 {
-    /** @param array<string, array{label: string, detalle: string}> $etapasConfig */
+    /**
+     * @param array<string, array{label: string, detalle: string, accion?: string,
+     *                            repeticion?: string}> $etapasConfig
+     */
     public function __construct(
         private readonly AccesoRepository $accesos,
         private readonly TramiteRepository $tramites,

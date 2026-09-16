@@ -1253,6 +1253,20 @@ section[id] {
     color: var(--color-dark-text-muted);
 }
 
+/* Pedido concreto al cliente en la etapa actual. Mismo recuadro que el aviso de
+   observacion, con el acento lleno: es lo unico de la pagina que pide una accion. */
+.seguimientoAccion {
+    margin: 0 0 24px;
+    padding: 18px 22px;
+    border: 1px solid var(--color-accent);
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-bg);
+    text-align: left;
+}
+
+.seguimientoAccion p { margin: 0; }
+.seguimientoAccionTitulo { margin: 0 0 6px !important; font-weight: 600; color: var(--color-accent-dark); }
+
 .seguimientoAviso {
     margin: 0 0 32px;
     padding: 18px 22px;
@@ -1305,6 +1319,31 @@ section[id] {
 .seguimientoEtapa.is-pendiente .seguimientoEtapaLabel { color: var(--color-label); }
 .seguimientoEtapaMeta { margin: 2px 0 0; font-size: 0.88rem; color: var(--color-label); }
 .seguimientoEtapaDetalle { margin: 6px 0 0; color: var(--color-text-muted); }
+
+/* Cuantas veces se registro una etapa que puede repetirse ("2ª vista"). */
+.seguimientoEtapaRepeticion { font-size: 0.85rem; font-weight: 500; color: var(--color-label); }
+
+/* Colapsable nativo, sin JS: el detalle de las etapas cumplidas y pendientes. */
+.seguimientoEtapaQue { margin: 6px 0 0; }
+
+.seguimientoEtapaQue > summary {
+    cursor: pointer;
+    font-size: 0.88rem;
+    color: var(--color-text-soft);
+    list-style: none;
+}
+
+.seguimientoEtapaQue > summary::-webkit-details-marker { display: none; }
+
+.seguimientoEtapaQue > summary::before {
+    content: "+";
+    display: inline-block;
+    width: 1em;
+    color: var(--color-accent);
+}
+
+.seguimientoEtapaQue[open] > summary::before { content: "\2212"; }
+.seguimientoEtapaQue > summary:hover { color: var(--color-ink); }
 
 .seguimientoNotas { text-align: left; margin: 0 0 32px; }
 .seguimientoNotas h2 { font-size: 1.25rem; margin: 0 0 12px; }

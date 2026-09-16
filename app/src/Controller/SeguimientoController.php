@@ -22,7 +22,10 @@ use Slim\Views\Twig;
  */
 final class SeguimientoController
 {
-    /** @param array<string, array{label: string, detalle: string}> $etapasConfig */
+    /**
+     * @param array<string, array{label: string, detalle: string, accion?: string,
+     *                            repeticion?: string}> $etapasConfig
+     */
     public function __construct(
         private readonly Twig $twig,
         private readonly AccesoRepository $accesos,
@@ -63,6 +66,9 @@ final class SeguimientoController
             'tramite' => $tramite,
             'linea' => LineaEtapas::construir($tramite->etapaActual, $eventos, $this->etapasConfig),
             'etapaActualLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
+            // Lo unico de la pagina que le pide algo al cliente: va destacado arriba de
+            // todo y nunca colapsado.
+            'accionActual' => LineaEtapas::accion($tramite->etapaActual, $this->etapasConfig),
             // Para el detalle bajo la linea: solo los eventos que tienen algo que decir.
             'eventos' => array_values(array_filter(
                 $eventos,

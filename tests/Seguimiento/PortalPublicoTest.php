@@ -134,6 +134,30 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         self::assertDoesNotMatchRegularExpression('/\b\d{1,2}\.\d{3}\.\d{3}\b/', $html, 'Hay algo con forma de DNI.');
     }
 
+    /**
+     * La 'accion' de la etapa actual es lo unico que le pide algo al cliente: va
+     * destacada y NUNCA dentro de un <details>, que nadie abre.
+     */
+    public function testLaAccionDeLaEtapaActualNoVaColapsada(): void
+    {
+        $config = require APP_PATH . '/config/etapas.php';
+        $accion = $config['ESPERANDO_CONFIRMACION']['accion'];
+
+        $id = $this->tramites->crear('PRES-2026-0108', 'Acción SAS');
+        $this->tramites->avanzar($id, Etapa::ESPERANDO_CONFIRMACION, null, null);
+        $token = $this->accesos->emitir($id, 'cliente');
+
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+        self::assertStringContainsString($accion, $html);
+
+        // Sin los bloques colapsables, el texto tiene que seguir estando.
+        $sinDetails = preg_replace('#<details.*?</details>#s', '', $html) ?? '';
+        self::assertStringContainsString($accion, $sinDetails, 'La acción quedó dentro de un <details>.');
+
+        // El detalle de una etapa que NO es la actual si va colapsado.
+        self::assertStringNotContainsString($config['PARA_RETIRAR']['detalle'], $sinDetails);
+    }
+
     public function testLaPaginaInformativaNoTieneCampoParaIngresarCodigo(): void
     {
         $response = $this->get('/seguimiento');

@@ -8,6 +8,14 @@
         <p class="lede">Tr&aacute;mite <strong>{{ tramite.codigo }}</strong>.</p>
     </div>
 
+    {# Lo unico de la pagina que le pide algo al cliente: va primero y nunca colapsado. #}
+    {% if accionActual %}
+        <div class="seguimientoAccion" role="note">
+            <p class="seguimientoAccionTitulo">{{ etapaActualLabel }}</p>
+            <p>{{ accionActual }}</p>
+        </div>
+    {% endif %}
+
     {% if tramite.observado %}
         <div class="seguimientoAviso" role="status">
             <p class="seguimientoAvisoTitulo">El tr&aacute;mite tiene una observaci&oacute;n pendiente</p>
@@ -18,19 +26,36 @@
         </div>
     {% endif %}
 
+    {# Linea vertical. Una etapa figura cumplida si el tramite paso por ahi, aunque
+       despues haya vuelto atras: la vista es un loop y se puede correr mas de una. #}
     <ol class="seguimientoLinea">
         {% for etapa in linea %}
             <li class="seguimientoEtapa is-{{ etapa.estado }}"{% if etapa.estado == 'actual' %} aria-current="step"{% endif %}>
                 <span class="seguimientoMarca" aria-hidden="true"></span>
                 <div class="seguimientoEtapaCuerpo">
-                    <p class="seguimientoEtapaLabel">{{ etapa.label }}</p>
+                    <p class="seguimientoEtapaLabel">
+                        {{ etapa.label }}
+                        {%- if etapa.repeticion %} <span class="seguimientoEtapaRepeticion">{{ etapa.repeticion }}</span>{% endif %}
+                    </p>
+
                     {% if etapa.estado == 'cumplida' %}
                         <p class="seguimientoEtapaMeta">Cumplida{% if etapa.fecha %} el {{ etapa.fecha|date('d/m/Y') }}{% endif %}</p>
                     {% elseif etapa.estado == 'actual' %}
                         <p class="seguimientoEtapaMeta">Etapa actual{% if etapa.fecha %} desde el {{ etapa.fecha|date('d/m/Y') }}{% endif %}</p>
-                        {% if etapa.detalle %}<p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>{% endif %}
                     {% else %}
                         <p class="seguimientoEtapaMeta">Pendiente</p>
+                    {% endif %}
+
+                    {% if etapa.detalle %}
+                        {% if etapa.estado == 'actual' %}
+                            {# La respuesta a "como viene lo mio": si se esconde, el cliente escribe igual. #}
+                            <p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>
+                        {% else %}
+                            <details class="seguimientoEtapaQue">
+                                <summary>&iquest;Qu&eacute; significa?</summary>
+                                <p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>
+                            </details>
+                        {% endif %}
                     {% endif %}
                 </div>
             </li>
