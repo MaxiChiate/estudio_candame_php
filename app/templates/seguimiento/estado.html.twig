@@ -34,12 +34,14 @@
                 <span class="seguimientoMarca" aria-hidden="true"></span>
                 <div class="seguimientoEtapaCuerpo">
                     {% set marca %}{%- if etapa.repeticion %} <span class="seguimientoEtapaRepeticion">{{ etapa.repeticion }}</span>{% endif %}{% endset %}
+                    {# Una salteada no lleva linea de estado: el punto pintado ya dice que
+                       quedo atras, y no hay fecha que mostrar porque nunca pasó por ahí. #}
                     {% set meta %}
                         {%- if etapa.estado == 'cumplida' -%}
                             Cumplida{% if etapa.fecha %} el {{ etapa.fecha|date('d/m/Y') }}{% endif %}
                         {%- elseif etapa.estado == 'actual' -%}
                             Etapa actual{% if etapa.fecha %} desde el {{ etapa.fecha|date('d/m/Y') }}{% endif %}
-                        {%- else -%}
+                        {%- elseif etapa.estado == 'pendiente' -%}
                             Pendiente
                         {%- endif -%}
                     {% endset %}
@@ -48,7 +50,7 @@
                         {# La etapa actual no se colapsa: es la respuesta a "como viene lo
                            mio" y, si se esconde, el cliente escribe igual. #}
                         <p class="seguimientoEtapaLabel">{{ etapa.label }}{{ marca }}</p>
-                        <p class="seguimientoEtapaMeta">{{ meta }}</p>
+                        {% if meta|trim %}<p class="seguimientoEtapaMeta">{{ meta }}</p>{% endif %}
                         {% if etapa.detalle %}<p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>{% endif %}
                     {% else %}
                         {# Cumplidas y pendientes: el nombre abre la explicacion. #}
@@ -58,7 +60,7 @@
                                     {{- etapa.label }}{{ marca }}
                                     <span class="seguimientoEtapaQueMarca" aria-hidden="true">?</span>
                                 </span>
-                                <span class="seguimientoEtapaMeta">{{ meta }}</span>
+                                {% if meta|trim %}<span class="seguimientoEtapaMeta">{{ meta }}</span>{% endif %}
                             </summary>
                             <p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>
                         </details>

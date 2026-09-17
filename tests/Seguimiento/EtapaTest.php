@@ -75,12 +75,47 @@ final class EtapaTest extends TestCase
         self::assertSame(LineaEtapas::CUMPLIDA, $estados['REUNIENDO_DOCUMENTACION']);
         self::assertSame(LineaEtapas::CUMPLIDA, $estados['PROCESANDO_DOCUMENTACION']);
         self::assertSame(LineaEtapas::ACTUAL, $estados['TRAMITE_INICIADO']);
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['VISTA']);
         self::assertSame(LineaEtapas::PENDIENTE, $estados['PARA_RETIRAR']);
 
         $fechas = array_column($linea, 'fecha', 'valor');
         self::assertSame('2026-03-10', $fechas['PROCESANDO_DOCUMENTACION']?->format('Y-m-d'));
-        self::assertNull($fechas['VISTA'], 'Una etapa pendiente no puede tener fecha.');
+        self::assertNull($fechas['PARA_RETIRAR'], 'Una etapa pendiente no puede tener fecha.');
+    }
+
+    /**
+     * Las etapas de la vista pueden no ocurrir nunca: un tramite puede terminar sin
+     * ninguna. Anunciarlas pendientes le avisaria al cliente de una vista que quizas no
+     * exista, asi que no aparecen hasta que pasan.
+     */
+    public function testLasEtapasOpcionalesNoSeAnuncianDeAntemano(): void
+    {
+        $config = self::config();
+        $eventos = [
+            new EventoPublico(Etapa::TRAMITE_INICIADO, new DateTimeImmutable('2026-03-20'), null),
+        ];
+
+        $valores = array_column(LineaEtapas::construir(Etapa::TRAMITE_INICIADO, $eventos, $config), 'valor');
+
+        self::assertNotContains('VISTA', $valores);
+        self::assertNotContains('VISTA_CONTESTADA', $valores);
+        // El resto de la linea sigue completa.
+        self::assertContains('TERMINADO', $valores);
+        self::assertContains('PARA_RETIRAR', $valores);
+    }
+
+    public function testLaEtapaOpcionalApareceUnaVezQueOcurrio(): void
+    {
+        $config = self::config();
+        $eventos = [
+            new EventoPublico(Etapa::TRAMITE_INICIADO, new DateTimeImmutable('2026-03-20'), null),
+            new EventoPublico(Etapa::VISTA, new DateTimeImmutable('2026-03-25'), null),
+        ];
+
+        $estados = array_column(LineaEtapas::construir(Etapa::VISTA, $eventos, $config), 'estado', 'valor');
+
+        self::assertSame(LineaEtapas::ACTUAL, $estados['VISTA']);
+        // La contestacion todavia no ocurrio: sigue sin anunciarse.
+        self::assertArrayNotHasKey('VISTA_CONTESTADA', $estados);
     }
 
     /**
@@ -134,7 +169,8 @@ final class EtapaTest extends TestCase
 
     /**
      * El pipeline es generico: hay etapas que no aplican a un tramite (DICTAMENES en una
-     * SAS por estatuto modelo) y se saltean. Saltear no las da por cumplidas.
+     * SAS por estatuto modelo) y se saltean. Una salteada se pinta como recorrida, para
+     * que la linea se lea como avance, pero no es CUMPLIDA: no tiene fecha.
      */
     public function testSaltearEtapasNoLasMarcaCumplidas(): void
     {
@@ -149,11 +185,16 @@ final class EtapaTest extends TestCase
 
         self::assertSame(LineaEtapas::CUMPLIDA, $estados['ESPERANDO_ESCRIBANIA']);
         self::assertSame(LineaEtapas::ACTUAL, $estados['TRAMITE_INICIADO']);
-        // Salteadas: quedan pendientes para siempre y no traban nada.
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['EDICTO_PUBLICADO']);
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['DICTAMENES']);
-        // Tampoco se completan las anteriores por las que el tramite nunca paso.
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['REUNIENDO_DOCUMENTACION']);
+        // Salteadas: punto pintado, pero ni cumplidas ni con fecha.
+        self::assertSame(LineaEtapas::SALTEADA, $estados['EDICTO_PUBLICADO']);
+        self::assertSame(LineaEtapas::SALTEADA, $estados['DICTAMENES']);
+        self::assertSame(LineaEtapas::SALTEADA, $estados['REUNIENDO_DOCUMENTACION']);
+
+        $fechas = array_column($linea, 'fecha', 'valor');
+        self::assertNull($fechas['DICTAMENES'], 'Una etapa salteada no puede tener fecha: nunca pasó por ahí.');
+
+        // Lo que todavia no se alcanzo sigue pendiente, no salteado.
+        self::assertSame(LineaEtapas::PENDIENTE, $estados['TERMINADO']);
     }
 
     public function testSiguienteYUltima(): void
@@ -173,8 +214,12 @@ final class EtapaTest extends TestCase
     public function testVistaContestadaOfreceDosProximosPasos(): void
     {
         self::assertSame([Etapa::PROCESANDO_DOCUMENTACION], Etapa::REUNIENDO_DOCUMENTACION->siguientesSugeridas());
-        self::assertSame([Etapa::VISTA, Etapa::TERMINADO], Etapa::VISTA_CONTESTADA->siguientesSugeridas());
         self::assertSame([], Etapa::PARA_RETIRAR->siguientesSugeridas());
+
+        // Desde TRAMITE_INICIADO puede haber vista o no: el tramite puede terminar sin
+        // ninguna, asi que ofrecer solo VISTA daria por hecho que la hay.
+        self::assertSame([Etapa::VISTA, Etapa::TERMINADO], Etapa::TRAMITE_INICIADO->siguientesSugeridas());
+        self::assertSame([Etapa::VISTA, Etapa::TERMINADO], Etapa::VISTA_CONTESTADA->siguientesSugeridas());
     }
 
     /** @return array<string, array{label: string, detalle: string, accion?: string, repeticion?: string}> */

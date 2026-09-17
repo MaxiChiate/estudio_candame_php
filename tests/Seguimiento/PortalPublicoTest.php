@@ -158,6 +158,32 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         self::assertStringNotContainsString($config['PARA_RETIRAR']['detalle'], $sinDetails);
     }
 
+    /**
+     * Un trámite puede terminar sin ninguna vista. Hasta que ocurra, la vista no se
+     * anuncia: decir "Trámite con vista - Pendiente" le avisaría al cliente de algo que
+     * quizás no pase.
+     */
+    public function testLaVistaNoSeAnunciaHastaQueOcurre(): void
+    {
+        $config = require APP_PATH . '/config/etapas.php';
+
+        $id = $this->tramites->crear('PRES-2026-0109', 'Sin vista SAS');
+        $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
+        $token = $this->accesos->emitir($id, 'cliente');
+
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+
+        self::assertStringNotContainsString($config['VISTA']['label'], $html);
+        self::assertStringNotContainsString($config['VISTA_CONTESTADA']['label'], $html);
+        // El resto de la línea sí está.
+        self::assertStringContainsString($config['TERMINADO']['label'], $html);
+
+        // Una vez que la vista ocurre, aparece.
+        $this->tramites->avanzar($id, Etapa::VISTA, null, null);
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+        self::assertStringContainsString($config['VISTA']['label'], $html);
+    }
+
     public function testLaPaginaInformativaNoTieneCampoParaIngresarCodigo(): void
     {
         $response = $this->get('/seguimiento');

@@ -73,19 +73,23 @@ enum Etapa: string
     /**
      * Etapas que el panel ofrece como "proximo paso" de un click.
      *
-     * Normalmente es una sola: la siguiente del enum. La excepcion es VISTA_CONTESTADA,
-     * donde "siguiente" es ambiguo -- por orden daria TERMINADO, pero el caso frecuente
-     * es que el inspector despache otra vista y el tramite vuelva a VISTA. Ahi se
-     * ofrecen las dos y decide quien carga, en vez de adivinar.
+     * Normalmente es una sola: la siguiente del enum. Las excepciones son las dos etapas
+     * donde la vista hace ambiguo el "siguiente", y en las dos se ofrece lo mismo --
+     * que haya vista, o que el tramite termine:
      *
-     * Para saltear a cualquier otra etapa esta el select del detalle; esto es solo el
-     * atajo del caso habitual.
+     * - TRAMITE_INICIADO: el inspector puede correr una vista o no. Un tramite puede
+     *   terminar sin ninguna, asi que ofrecer solo VISTA daria por hecho que la hay.
+     * - VISTA_CONTESTADA: por orden del enum daria TERMINADO, pero el caso frecuente es
+     *   que el inspector despache otra vista y el tramite vuelva a VISTA.
+     *
+     * Para ir a cualquier otra etapa esta el select del detalle; esto es solo el atajo
+     * del caso habitual.
      *
      * @return list<self>
      */
     public function siguientesSugeridas(): array
     {
-        if ($this === self::VISTA_CONTESTADA) {
+        if ($this === self::TRAMITE_INICIADO || $this === self::VISTA_CONTESTADA) {
             return [self::VISTA, self::TERMINADO];
         }
 

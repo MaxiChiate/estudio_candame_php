@@ -110,8 +110,8 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
         $linea = LineaEtapas::construir($tramite->etapaActual, $this->tramites->eventosPublicos($id), $config);
         $estados = array_column($linea, 'estado', 'valor');
 
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['EDICTO_PUBLICADO']);
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['DICTAMENES']);
+        self::assertSame(LineaEtapas::SALTEADA, $estados['EDICTO_PUBLICADO']);
+        self::assertSame(LineaEtapas::SALTEADA, $estados['DICTAMENES']);
     }
 
     public function testObservadoEsOrtogonalALaEtapa(): void

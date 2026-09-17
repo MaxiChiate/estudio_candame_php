@@ -19,8 +19,14 @@ use DateTimeImmutable;
  * figurar cumplida -- y es lo correcto: el tramite efectivamente paso por ahi.
  *
  * Tambien hay etapas que no aplican a un tramite (DICTAMENES en una SAS por estatuto
- * modelo, por ejemplo) y se saltean: quedan pendientes para siempre, sin evento, y eso
- * no traba nada.
+ * modelo, por ejemplo) y se saltean. Una salteada -- sin evento, pero anterior a la
+ * actual -- se pinta como recorrida para que la linea se lea como avance, pero no es
+ * CUMPLIDA: no lleva fecha, porque el tramite nunca paso por ahi.
+ *
+ * Las etapas marcadas 'opcional' en la config (las de la vista) no se anuncian de
+ * antemano: si no ocurrieron, no aparecen en la linea. Un tramite puede terminar sin
+ * ninguna vista, y mostrarla pendiente le anticiparia al cliente algo que quizas no
+ * pase.
  *
  * Los labels salen de app/config/etapas.php, no del enum -- ver el comentario de Etapa.
  * Si una etapa no tiene entrada en la config (alguien la borro del archivo), se cae al
@@ -30,11 +36,12 @@ final class LineaEtapas
 {
     public const CUMPLIDA = 'cumplida';
     public const ACTUAL = 'actual';
+    public const SALTEADA = 'salteada';
     public const PENDIENTE = 'pendiente';
 
     /**
      * @param EventoPublico[]                                                                 $eventos
-     * @param array<string, array{label: string, detalle: string, accion?: string,
+     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
      *                            repeticion?: string}>                                       $config
      *
      * @return list<array{valor: string, label: string, detalle: string, accion: ?string,
@@ -60,6 +67,17 @@ final class LineaEtapas
                 $estado = self::ACTUAL;
             } elseif ($cantidad > 0) {
                 $estado = self::CUMPLIDA;
+            } elseif ($config[$etapa->value]['opcional'] ?? false) {
+                // Las etapas de la vista pueden no ocurrir nunca: no se anuncian de
+                // antemano. Mostrarlas pendientes le avisaria al cliente de una vista
+                // que quizas no exista.
+                continue;
+            } elseif ($etapa->esAnteriorA($actual)) {
+                // Quedo atras sin evento propio: el tramite la salteo porque no aplicaba
+                // (DICTAMENES en una SAS por estatuto modelo). Se pinta como recorrida
+                // -- la linea tiene que leerse como avance -- pero no es una etapa
+                // cumplida: no tiene fecha porque nunca paso por ahi.
+                $estado = self::SALTEADA;
             } else {
                 $estado = self::PENDIENTE;
             }
@@ -87,7 +105,7 @@ final class LineaEtapas
      * concordar en genero con el label ("2ª vista", no "2ª tramite iniciado"). Una
      * etapa sin 'repeticion' en la config no muestra contador aunque se repita.
      *
-     * @param array<string, array{label: string, detalle: string, accion?: string,
+     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
      *                            repeticion?: string}> $config
      */
     private static function repeticion(Etapa $etapa, int $cantidad, array $config): ?string
@@ -101,7 +119,7 @@ final class LineaEtapas
     }
 
     /**
-     * @param array<string, array{label: string, detalle: string, accion?: string,
+     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
      *                            repeticion?: string}> $config
      */
     public static function label(Etapa $etapa, array $config): string
@@ -113,7 +131,7 @@ final class LineaEtapas
      * Pedido concreto al cliente para la etapa en curso, si lo hay. Se muestra
      * destacado y nunca colapsado: es lo unico de la pagina que le pide algo.
      *
-     * @param array<string, array{label: string, detalle: string, accion?: string,
+     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
      *                            repeticion?: string}> $config
      */
     public static function accion(Etapa $etapa, array $config): ?string

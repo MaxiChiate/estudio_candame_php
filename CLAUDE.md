@@ -170,7 +170,9 @@ dev server built-in.
     migrar datos. El `value` del enum es un identificador estable que nunca se muestra y
     que está guardado en la base. Cada entrada de la config tiene `label`, `detalle`,
     y opcionalmente `accion` (pedido concreto al cliente, se muestra destacado y sin
-    colapsar) y `repeticion` (formato del contador, sólo en las etapas que son un loop).
+    colapsar), `repeticion` (formato del contador, sólo en las etapas que son un loop) y
+    `opcional` (las de la vista: pueden no ocurrir nunca, así que no se anuncian de
+    antemano — no aparecen en la línea hasta que el trámite pasa por ahí).
   - **El pipeline es genérico y no se recorre linealmente.** El orden define cómo se
     dibuja la línea y cuál es la etapa siguiente por default, pero se puede ir a
     cualquiera: hay etapas que no aplican a un trámite (Dictámenes en una SAS por
@@ -181,6 +183,9 @@ dev server built-in.
     no por comparar posiciones contra `etapa_actual` (que sólo marca la que está en
     curso). Con el criterio viejo, volver atrás des-completaba las etapas previas. Como
     efecto, una etapa posterior a la actual puede figurar cumplida: es correcto.
+  - Una etapa **salteada** (sin evento, pero anterior a la actual) es un estado propio:
+    se pinta como recorrida para que la línea se lea como avance, pero no lleva fecha ni
+    texto de estado, porque el trámite nunca pasó por ahí.
   - `observado` es un **flag ortogonal**, no una etapa: un trámite observado sigue
     perteneciendo a su etapa. No meterlo en el enum. Cubre sólo observaciones de **fuera
     de IGJ** (escribanía, documentación incompleta); las vistas de IGJ son etapas.

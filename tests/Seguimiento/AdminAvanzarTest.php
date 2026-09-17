@@ -91,6 +91,21 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
         self::assertStringContainsString('Vista contestada', $html);
     }
 
+    /**
+     * Desde Trámite iniciado el trámite puede terminar sin ninguna vista: ofrecer sólo
+     * "Trámite con vista" daría por hecho que el inspector va a correr una.
+     */
+    public function testEnTramiteIniciadoOfreceVistaOTerminado(): void
+    {
+        $id = $this->tramites->crear('PRES-2026-0505', 'Sin vista SAS');
+        $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
+
+        $html = (string) $this->pedir('GET', '/admin/tramites/' . $id)->getBody();
+
+        self::assertStringContainsString('Siguiente: Trámite con vista', $html);
+        self::assertStringContainsString('Siguiente: Trámite terminado', $html);
+    }
+
     /** @param array<string, string> $cuerpo */
     private function avanzar(int $id, array $cuerpo, bool $csrf = true): ResponseInterface
     {

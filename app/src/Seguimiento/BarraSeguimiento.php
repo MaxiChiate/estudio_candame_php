@@ -19,7 +19,7 @@ use Throwable;
 final class BarraSeguimiento
 {
     /**
-     * @param array<string, array{label: string, detalle: string, accion?: string,
+     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
      *                            repeticion?: string}> $etapasConfig
      */
     public function __construct(

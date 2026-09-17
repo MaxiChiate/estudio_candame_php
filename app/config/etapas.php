@@ -17,6 +17,11 @@ declare(strict_types=1);
  *              resto (<details> nativo, sin JS).
  *   accion     opcional. Cuando existe, se muestra destacado y sin colapsar porque le
  *              pide algo concreto al cliente. Usarlo solo si hay algo que hacer.
+ *   opcional   true en las etapas que pueden no ocurrir nunca (las de la vista: un
+ *              tramite puede terminar sin ninguna). No se anuncian de antemano -- solo
+ *              aparecen en la linea si el tramite efectivamente paso por ahi. Anunciar
+ *              "Tramite con vista - Pendiente" le diria al cliente que le espera una
+ *              vista, que es exactamente lo que no se sabe.
  *   repeticion opcional. Formato para la 2a vez y siguientes que el tramite pasa por la
  *              etapa; %s es el numero. Solo tiene sentido en las etapas que son un loop
  *              (la vista, que el inspector puede despachar varias veces). El ordinal va
@@ -63,11 +68,13 @@ return [
     'VISTA' => [
         'label' => 'Trámite con vista',
         'detalle' => 'El inspector designado corrió una vista para contestar.',
+        'opcional' => true,
         'repeticion' => '%sª vista',
     ],
     'VISTA_CONTESTADA' => [
         'label' => 'Vista contestada',
         'detalle' => 'Esperando que el inspector se expida. Puede despachar otra vista.',
+        'opcional' => true,
     ],
     'TERMINADO' => [
         'label' => 'Trámite terminado',
