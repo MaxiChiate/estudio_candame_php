@@ -23,7 +23,7 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
 {
     public function testSinEtapaDestinoVaALaSiguienteDelEnum(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0500', 'Siguiente SAS');
+        $id = $this->tramites->crear('Siguiente SAS');
 
         $response = $this->avanzar($id, []);
         self::assertSame(302, $response->getStatusCode());
@@ -34,7 +34,7 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
 
     public function testConEtapaDestinoVaAEsaEtapaAunqueSeaAnterior(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0501', 'Vuelta SAS');
+        $id = $this->tramites->crear('Vuelta SAS');
         $this->tramites->avanzar($id, Etapa::VISTA_CONTESTADA, null, null);
 
         $this->avanzar($id, ['etapa' => Etapa::VISTA->value]);
@@ -46,7 +46,7 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
 
     public function testUnaEtapaQueNoExisteEnElEnumEsRechazada(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0502', 'Invalida SAS');
+        $id = $this->tramites->crear('Invalida SAS');
 
         $this->avanzar($id, ['etapa' => 'LIBROS']);
 
@@ -58,7 +58,7 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
 
     public function testSinTokenCsrfNoAvanza(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0503', 'Csrf SAS');
+        $id = $this->tramites->crear('Csrf SAS');
 
         $this->avanzar($id, ['etapa' => Etapa::TERMINADO->value], csrf: false);
 
@@ -72,7 +72,7 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
      */
     public function testElDetalleOfreceLosProximosPasosYElEscape(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0504', 'Detalle SAS');
+        $id = $this->tramites->crear('Detalle SAS');
         $this->tramites->avanzar($id, Etapa::VISTA_CONTESTADA, null, null);
 
         $response = $this->pedir('GET', '/admin/tramites/' . $id);
@@ -97,7 +97,7 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
      */
     public function testEnTramiteIniciadoOfreceVistaOTerminado(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0505', 'Sin vista SAS');
+        $id = $this->tramites->crear('Sin vista SAS');
         $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
 
         $html = (string) $this->pedir('GET', '/admin/tramites/' . $id)->getBody();

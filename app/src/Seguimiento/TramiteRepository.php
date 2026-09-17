@@ -19,6 +19,13 @@ final class TramiteRepository
 {
     private const FORMATO_FECHA = 'Y-m-d H:i:s';
 
+    /**
+     * Prefijo de la referencia que ve el cliente (EC-2026-0001). Son las iniciales del
+     * estudio: cambiarlas es cambiar esta constante, y los tramites ya creados conservan
+     * la suya porque la referencia se guarda, no se calcula al leer.
+     */
+    private const PREFIJO_REFERENCIA = 'EC';
+
     public function __construct(
         private readonly Conexion $conexion,
         private readonly Reloj $reloj,
@@ -34,10 +41,10 @@ final class TramiteRepository
         return $fila === false ? null : Tramite::desdeFila($fila);
     }
 
-    public function porCodigo(string $codigo): ?Tramite
+    public function porReferencia(string $referencia): ?Tramite
     {
-        $stmt = $this->conexion->pdo()->prepare('SELECT * FROM tramite WHERE codigo = :codigo');
-        $stmt->execute(['codigo' => $codigo]);
+        $stmt = $this->conexion->pdo()->prepare('SELECT * FROM tramite WHERE referencia = :referencia');
+        $stmt->execute(['referencia' => $referencia]);
         $fila = $stmt->fetch();
 
         return $fila === false ? null : Tramite::desdeFila($fila);
@@ -64,29 +71,30 @@ final class TramiteRepository
      *
      * @return int id del tramite creado
      */
-    public function crear(string $codigo, string $denominacion, string $tipo = 'SAS'): int
+    public function crear(string $denominacion, string $tipo = 'SAS'): int
     {
         $pdo = $this->conexion->pdo();
-        $ahora = $this->reloj->ahora()->format(self::FORMATO_FECHA);
+        $ahora = $this->reloj->ahora();
+        $ahoraTexto = $ahora->format(self::FORMATO_FECHA);
         $etapa = Etapa::inicial();
 
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO tramite (codigo, tipo, denominacion, etapa_actual, observado, creado_el, actualizado_el)
-                 VALUES (:codigo, :tipo, :denominacion, :etapa, 0, :creado, :actualizado)'
+                'INSERT INTO tramite (referencia, tipo, denominacion, etapa_actual, observado, creado_el, actualizado_el)
+                 VALUES (:referencia, :tipo, :denominacion, :etapa, 0, :creado, :actualizado)'
             );
             $stmt->execute([
-                'codigo' => $codigo,
+                'referencia' => $this->proximaReferencia((int) $ahora->format('Y')),
                 'tipo' => $tipo,
                 'denominacion' => $denominacion,
                 'etapa' => $etapa->value,
-                'creado' => $ahora,
-                'actualizado' => $ahora,
+                'creado' => $ahoraTexto,
+                'actualizado' => $ahoraTexto,
             ]);
             $id = (int) $pdo->lastInsertId();
 
-            $this->insertarEvento($id, $etapa, $ahora, null, null);
+            $this->insertarEvento($id, $etapa, $ahoraTexto, null, null);
 
             $pdo->commit();
         } catch (\Throwable $e) {
@@ -96,6 +104,32 @@ final class TramiteRepository
         }
 
         return $id;
+    }
+
+    /**
+     * Siguiente referencia del año: EC-2026-0001, EC-2026-0002...
+     *
+     * El correlativo reinicia cada año, asi que no revela cuantos tramites lleva el
+     * estudio en total. Sale de mirar la mayor referencia del año en curso y sumarle
+     * uno: no hay contador aparte que se pueda desincronizar. La llama crear() DENTRO de
+     * su transaccion, y ademas hay un UNIQUE en la columna -- si alguna vez dos altas
+     * simultaneas pidieran el mismo numero, la segunda falla en vez de duplicar.
+     */
+    private function proximaReferencia(int $anio): string
+    {
+        $prefijoAnio = sprintf('%s-%d-', self::PREFIJO_REFERENCIA, $anio);
+
+        $stmt = $this->conexion->pdo()->prepare(
+            'SELECT MAX(referencia) FROM tramite WHERE referencia LIKE :prefijo'
+        );
+        $stmt->execute(['prefijo' => $prefijoAnio . '%']);
+        $ultima = $stmt->fetchColumn();
+
+        // El LPAD a 4 hace que el orden alfabetico coincida con el numerico hasta 9999,
+        // asi que MAX() alcanza y no hace falta ordenar en PHP.
+        $numero = is_string($ultima) ? ((int) substr($ultima, mb_strlen($prefijoAnio))) + 1 : 1;
+
+        return $prefijoAnio . str_pad((string) $numero, 4, '0', STR_PAD_LEFT);
     }
 
     /**

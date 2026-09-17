@@ -30,7 +30,7 @@ final class BarraSeguimiento
     }
 
     /**
-     * @return array{codigo: string, etapaLabel: string, token: string, observado: bool}|null
+     * @return array{referencia: string, etapaLabel: string, token: string, observado: bool}|null
      *         null si no hay cookie, si el token ya no sirve, o si algo fallo
      */
     public function paraToken(?string $token): ?array
@@ -52,7 +52,7 @@ final class BarraSeguimiento
             }
 
             return [
-                'codigo' => $tramite->codigo,
+                'referencia' => $tramite->referencia,
                 'etapaLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
                 'token' => $token,
                 'observado' => $tramite->observado,

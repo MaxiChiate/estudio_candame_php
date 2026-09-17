@@ -164,6 +164,12 @@ dev server built-in.
   siguiendo el precedente de `Pruebas/`).
   - Le muestra al cliente en qué etapa está su trámite y **nada más**: ni socios, ni
     documentos, ni identificaciones fiscales, ni descargas. Ver "Fuera de alcance".
+  - `tramite.referencia` (`EC-2026-0001`) es el **único identificador** y lo genera
+    `TramiteRepository::proximaReferencia()` al crear: correlativo por año, que reinicia
+    cada enero para no revelar cuántos trámites lleva el estudio. El prefijo es la
+    constante `PREFIJO_REFERENCIA`. **El número de expediente de IGJ no se guarda**: el
+    cliente no tiene que verlo y, al dar de alta, todavía no existe — la doctora lo
+    maneja por fuera. No reintroducirlo sin instrucción explícita.
   - `Etapa` — enum de las 12 etapas del pipeline de IGJ, en orden. **No tiene
     `etiqueta()` a propósito**: los labels visibles viven en `app/config/etapas.php`
     porque la doctora los va a renombrar, y renombrar no debe requerir tocar código ni

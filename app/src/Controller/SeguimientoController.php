@@ -60,7 +60,7 @@ final class SeguimientoController
         $eventos = $this->tramites->eventosPublicos($tramite->id);
 
         $response = $this->twig->render($response, 'seguimiento/estado.html.twig', [
-            'pageTitle' => sprintf('Estado del trámite %s - Estudio Candame', $tramite->codigo),
+            'pageTitle' => sprintf('Estado del trámite %s - Estudio Candame', $tramite->referencia),
             'metaDescription' => 'Estado de avance del trámite.',
             'metaKeywords' => '',
             'tramite' => $tramite,

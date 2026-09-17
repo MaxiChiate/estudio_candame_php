@@ -27,7 +27,7 @@
                anidado dentro de un link. #}
             {% set urlDetalle = basePath ~ '/admin/tramites/' ~ fila.tramite.id %}
             <tr class="adminFilaLink{% if fila.tramite.observado %} is-observado{% endif %}">
-                <td><a href="{{ urlDetalle }}">{{ fila.tramite.codigo }}</a></td>
+                <td><a href="{{ urlDetalle }}">{{ fila.tramite.referencia }}</a></td>
                 <td>
                     <a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">
                         {{ fila.tramite.denominacion }}
