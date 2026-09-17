@@ -11,7 +11,8 @@ el servidor. Andando en producción en https://estudiocandame.com.ar (cPanel de 
   estatuto (.docx) del trámite de constitución de SAS
 - **PHPMailer** (SMTP) para el formulario de contacto
 - **vlucas/phpdotenv** para configuración por variables de entorno
-- Sin base de datos.
+- **MySQL/MariaDB vía PDO** (sin ORM), sólo para el portal de seguimiento de trámites.
+  Con `SEGUIMIENTO_ENABLED=false` el sitio no abre ninguna conexión.
 
 ## Estructura
 
@@ -40,8 +41,39 @@ php -S localhost:8000 -t public
 
 Abrir `http://localhost:8000`.
 
-El trámite de constitución de SAS (`/tramites/sas/constitucion`) está detrás del flag
+El trámite de constitución (`/tramites/constitucion`) está detrás del flag
 `CONFIGURADOR_ENABLED` en `app/.env`. En `false` (default) esa ruta devuelve 404.
+
+### Base de datos (sólo para el portal de seguimiento)
+
+Todo el sitio funciona sin base. Sólo hace falta si vas a trabajar en el portal de
+seguimiento (`SEGUIMIENTO_ENABLED=true`). Con un MySQL o MariaDB local:
+
+```sql
+CREATE DATABASE candame_local CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE DATABASE candame_test  CHARACTER SET utf8mb4 COLLATE utf8mb4_unicode_ci;
+CREATE USER 'candame_app'@'localhost' IDENTIFIED BY 'la-que-elijas';
+GRANT ALL PRIVILEGES ON candame_local.* TO 'candame_app'@'localhost';
+GRANT ALL PRIVILEGES ON candame_test.*  TO 'candame_app'@'localhost';
+```
+
+```bash
+mysql -u candame_app -p candame_local < database/migrations/001_seguimiento.sql
+mysql -u candame_app -p candame_test  < database/migrations/001_seguimiento.sql
+```
+
+`candame_test` es la que usan los tests, y **la truncan en cada corrida** — por eso va
+aparte de `candame_local`. Si no hay base configurada, los tests que la necesitan se
+saltean (`skipped`) en vez de fallar, y el resto de la suite corre igual.
+
+El hash de `ADMIN_PASS_HASH` se genera con:
+
+```bash
+php -r 'echo password_hash("la-password", PASSWORD_DEFAULT), PHP_EOL;'
+```
+
+y va **siempre entre comillas simples** en el `.env`: bcrypt arranca con `$2y$` y sin
+comillas el parser expande esos `$` como variables y rompe el hash.
 
 ## Deploy a producción (cPanel de Neolo)
 
@@ -142,6 +174,10 @@ Ver `app/.env.example`, documentado inline. Resumen:
 | `SAS_CAPITAL_MULTIPLO_SMVM` | Múltiplo de SMVM para el capital mínimo de una SAS (art. 40, Ley 27.349) |
 | `SAS_SMVM_API_URL` | API de datos.gob.ar consultada para el SMVM vigente |
 | `SMVM_FALLBACK_VALOR` / `SMVM_FALLBACK_FECHA` | Valor de respaldo si la API no responde |
+| `SEGUIMIENTO_ENABLED` | Feature flag del portal de seguimiento (`/seguimiento`, `/admin/tramites`). En `false` no se registra ninguna ruta ni se abre conexión a la base |
+| `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASS` / `DB_CHARSET` | Base del portal. Sólo se usan con `SEGUIMIENTO_ENABLED=true` |
+| `ADMIN_USER` / `ADMIN_PASS_HASH` | Credenciales HTTP Basic del panel. El hash va entre comillas simples; con cualquiera de las dos vacía el panel queda cerrado |
+| `APP_URL` | Origen del sitio, para armar el link completo del token al emitirlo |
 
 ## Bugs conocidos de la versión anterior (Kotlin/Thymeleaf) — corregidos en este port
 

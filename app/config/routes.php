@@ -2,24 +2,58 @@
 
 declare(strict_types=1);
 
+use EstudioCandame\Controller\AdminTramitesController;
 use EstudioCandame\Controller\ContactController;
 use EstudioCandame\Controller\ConsultaConstitucionController;
 use EstudioCandame\Controller\HumoController;
 use EstudioCandame\Controller\PageController;
+use EstudioCandame\Controller\SeguimientoController;
 use EstudioCandame\Pruebas\EnvioPruebaService;
+use EstudioCandame\Seguimiento\AccesoRepository;
+use EstudioCandame\Seguimiento\BarraSeguimiento;
+use EstudioCandame\Seguimiento\Conexion;
+use EstudioCandame\Seguimiento\TokenGenerator;
+use EstudioCandame\Seguimiento\TramiteRepository;
 use EstudioCandame\Service\CapitalMinimoResolver;
 use EstudioCandame\Service\ConsultaConstitucionMailer;
 use EstudioCandame\Service\FichaConstitucionXlsxBuilder;
 use EstudioCandame\Service\SmvmService;
+use EstudioCandame\Support\Admin\AutenticacionBasica;
 use EstudioCandame\Support\AntiAbuso\RateLimiter;
 use EstudioCandame\Support\RelojSistema;
 use Slim\App;
+use Slim\Routing\RouteCollectorProxy;
 use Slim\Views\Twig;
 
 return function (App $app, Twig $twig): void {
     $basePath = rtrim((string) ($_ENV['APP_BASE_PATH'] ?? ''), '/');
 
-    $pageController = new PageController($twig, $basePath);
+    // --- Portal de seguimiento -----------------------------------------------------
+    // Se arma antes que la home porque PageController necesita la barra de acceso.
+    // Con el flag apagado todo esto queda en null: no se registran rutas y, sobre todo,
+    // no se construye ninguna Conexion (que igual es perezosa y no abriria socket).
+    $seguimientoEnabled = filter_var($_ENV['SEGUIMIENTO_ENABLED'] ?? false, FILTER_VALIDATE_BOOL);
+    $barraSeguimiento = null;
+    $tramiteRepository = null;
+    $accesoRepository = null;
+    $etapasConfig = [];
+
+    if ($seguimientoEnabled) {
+        $relojSeguimiento = new RelojSistema();
+        $conexion = new Conexion(
+            (string) ($_ENV['DB_HOST'] ?? 'localhost'),
+            (string) ($_ENV['DB_NAME'] ?? ''),
+            (string) ($_ENV['DB_USER'] ?? ''),
+            (string) ($_ENV['DB_PASS'] ?? ''),
+            (string) ($_ENV['DB_CHARSET'] ?? 'utf8mb4'),
+        );
+        $etapasConfig = require APP_PATH . '/config/etapas.php';
+        $tramiteRepository = new TramiteRepository($conexion, $relojSeguimiento);
+        $accesoRepository = new AccesoRepository($conexion, $relojSeguimiento, new TokenGenerator());
+        $barraSeguimiento = new BarraSeguimiento($accesoRepository, $tramiteRepository, $etapasConfig);
+    }
+
+    $pageController = new PageController($twig, $basePath, $barraSeguimiento);
     $app->get('/', [$pageController, 'index']);
 
     // Rutas heredadas de bookmarks/SEO viejos: redirigen al anchor correspondiente
@@ -58,6 +92,52 @@ return function (App $app, Twig $twig): void {
     );
     $app->get('/contacto', [$contactController, 'redirectToAnchor']);
     $app->post('/contacto', [$contactController, 'submit']);
+
+    // Rutas del portal. Solo existen con el flag prendido: apagado, son 404 por
+    // ausencia de ruta, no por un chequeo dentro del controller.
+    if ($seguimientoEnabled && $tramiteRepository !== null && $accesoRepository !== null) {
+        $seguimientoController = new SeguimientoController(
+            $twig,
+            $accesoRepository,
+            $tramiteRepository,
+            $etapasConfig,
+            $basePath,
+        );
+
+        // La informativa va primero por claridad; no compiten, /seguimiento no matchea
+        // el patron con token.
+        $app->get('/seguimiento', [$seguimientoController, 'info']);
+        $app->get('/seguimiento/{token}', [$seguimientoController, 'verEstado']);
+
+        $adminController = new AdminTramitesController(
+            $twig,
+            $tramiteRepository,
+            $accesoRepository,
+            $etapasConfig,
+            $basePath,
+            (string) ($_ENV['APP_URL'] ?? ''),
+        );
+
+        // HTTP Basic sobre todo el grupo. Si ADMIN_USER o ADMIN_PASS_HASH estan vacios,
+        // AutenticacionBasica niega todo -- un .env incompleto no abre el panel.
+        $autenticacion = new AutenticacionBasica(
+            (string) ($_ENV['ADMIN_USER'] ?? ''),
+            (string) ($_ENV['ADMIN_PASS_HASH'] ?? ''),
+        );
+
+        $app->group('/admin', function (RouteCollectorProxy $grupo) use ($adminController): void {
+            $grupo->get('/tramites', [$adminController, 'listado']);
+            // "nuevo" antes del patron con id, y el id acotado a digitos para que no se
+            // pisen aunque cambie el orden.
+            $grupo->get('/tramites/nuevo', [$adminController, 'formularioNuevo']);
+            $grupo->post('/tramites/nuevo', [$adminController, 'crear']);
+            $grupo->get('/tramites/{id:[0-9]+}', [$adminController, 'detalle']);
+            $grupo->post('/tramites/{id:[0-9]+}/avanzar', [$adminController, 'avanzar']);
+            $grupo->post('/tramites/{id:[0-9]+}/observacion', [$adminController, 'observacion']);
+            $grupo->post('/tramites/{id:[0-9]+}/accesos', [$adminController, 'emitirAcceso']);
+            $grupo->post('/accesos/{id:[0-9]+}/revocar', [$adminController, 'revocarAcceso']);
+        })->add($autenticacion);
+    }
 
     $configuradorEnabled = filter_var($_ENV['CONFIGURADOR_ENABLED'] ?? false, FILTER_VALIDATE_BOOL);
     if ($configuradorEnabled) {

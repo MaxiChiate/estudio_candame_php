@@ -2,6 +2,16 @@ DirectoryIndex index.php
 
 <IfModule mod_rewrite.c>
     RewriteEngine On
+
+    # El panel /admin usa HTTP Basic. Con PHP en CGI/FastCGI -- que es como corre en
+    # este hosting -- Apache NO le pasa el header Authorization al script, asi que
+    # PHP_AUTH_USER llega vacio y el login nunca entra. Esta regla lo reexpone como
+    # HTTP_AUTHORIZATION, que es de donde lo lee AutenticacionBasica como fallback.
+    # Va antes del front controller: si se saca, el panel da 401 con las credenciales
+    # correctas y no hay nada en el log que lo explique.
+    RewriteCond %{HTTP:Authorization} .
+    RewriteRule ^ - [E=HTTP_AUTHORIZATION:%{HTTP:Authorization}]
+
     RewriteCond %{REQUEST_FILENAME} !-f
     RewriteCond %{REQUEST_FILENAME} !-d
     RewriteRule ^ index.php [QSA,L]

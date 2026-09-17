@@ -20,6 +20,17 @@
 </head>
 <body>
 <div class="mainContainer">
+    {# Solo la aporta PageController (la home). En el resto de las paginas la variable
+       ni siquiera esta definida, asi que esto no se renderiza. #}
+    {% if barraSeguimiento is defined and barraSeguimiento %}
+        <a class="barraSeguimiento" href="{{ basePath }}/seguimiento/{{ barraSeguimiento.token }}">
+            <span class="barraSeguimientoTexto">
+                Tr&aacute;mite <strong>{{ barraSeguimiento.referencia }}</strong> &mdash; {{ barraSeguimiento.etapaLabel }}
+                {%- if barraSeguimiento.observado %} <span class="barraSeguimientoChip">observado</span>{% endif %}
+            </span>
+            <span class="barraSeguimientoCta">Ver estado &rarr;</span>
+        </a>
+    {% endif %}
     {% include 'layout/header.html.twig' %}
     {% block content %}{% endblock %}
     {% include 'layout/footer.html.twig' %}

@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="utf-8"/>
+    <meta name="viewport" content="width=device-width, initial-scale=1"/>
+    <meta name="robots" content="noindex,nofollow"/>
+    <title>{{ pageTitle|default('Panel') }} - Estudio Candame</title>
+    <link rel="icon" href="{{ basePath }}/favicon.ico" sizes="any"/>
+    <link rel="stylesheet" href="{{ basePath }}/css/admin.css"/>
+</head>
+<body>
+<header class="adminHeader">
+    <a class="adminMarca" href="{{ basePath }}/admin/tramites">Estudio Candame &middot; Panel</a>
+    <a class="adminLink" href="{{ basePath }}/" target="_blank" rel="noopener">Ver el sitio</a>
+</header>
+
+<main class="adminMain">
+    {% if flash is defined and flash %}
+        <p class="adminFlash is-{{ flash.tipo }}" role="status">{{ flash.mensaje }}</p>
+    {% endif %}
+    {% block content %}{% endblock %}
+</main>
+</body>
+</html>
