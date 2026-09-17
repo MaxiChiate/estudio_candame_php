@@ -1,0 +1,26 @@
+{% extends 'admin/layout.html.twig' %}
+{% block content %}
+<div class="adminTitulo">
+    <h1>Nuevo tr&aacute;mite</h1>
+    <a class="adminLink" href="{{ basePath }}/admin/tramites">Volver al listado</a>
+</div>
+
+{% if errores %}
+    <div class="adminErrores">
+        <ul>{% for error in errores %}<li>{{ error }}</li>{% endfor %}</ul>
+    </div>
+{% endif %}
+
+<form method="post" action="{{ basePath }}/admin/tramites/nuevo" class="adminForm">
+    <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+
+    <label for="denominacion">Denominaci&oacute;n</label>
+    <input type="text" id="denominacion" name="denominacion" maxlength="255" required
+           value="{{ valores.denominacion }}"/>
+
+    <p class="adminAyuda">
+        La denominaci&oacute;n de la sociedad. Es el t&iacute;tulo que el cliente ve en el portal.
+    </p>
+    <button type="submit" class="adminBtn">Crear tr&aacute;mite</button>
+</form>
+{% endblock %}

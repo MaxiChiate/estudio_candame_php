@@ -343,6 +343,41 @@ h1, h2, h3 {
     color: var(--color-accent);
 }
 
+/* Boton enviando (js/envio-form.js): deshabilitado, con spinner al lado del texto.
+   CSS puro, sin gif ni assets de terceros. */
+.btn.is-enviando,
+.btn.is-enviando:hover {
+    background: var(--color-accent-dark);
+    cursor: progress;
+}
+
+.btnSpinner {
+    display: inline-block;
+    width: 1em;
+    height: 1em;
+    margin-right: 0.6em;
+    vertical-align: -0.15em;
+    border: 2px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: btnSpinnerGiro 0.7s linear infinite;
+}
+
+@keyframes btnSpinnerGiro {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Sin movimiento: queda un anillo fijo; "Enviando…" ya comunica el estado. */
+@media (prefers-reduced-motion: reduce) {
+    .btnSpinner {
+        animation: none;
+        border-right-color: currentColor;
+        opacity: 0.6;
+    }
+}
+
 /* Content */
 .centered {
     max-width: var(--max-width);
@@ -1220,3 +1255,158 @@ section[id] {
         gap: 32px;
     }
 }
+
+/* --- Portal de seguimiento -------------------------------------------------- */
+/* Reusa la paleta de :root. Registro sobrio: la linea de etapas informa avance,
+   no celebra ni promete plazos. */
+
+.barraSeguimiento {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    padding: 10px 20px;
+    background: var(--color-dark);
+    color: var(--color-dark-text);
+    text-decoration: none;
+    font-size: 0.92rem;
+}
+
+.barraSeguimiento:hover .barraSeguimientoCta { text-decoration: underline; }
+.barraSeguimientoTexto { color: var(--color-dark-text-soft); }
+.barraSeguimientoTexto strong { color: var(--color-dark-text); }
+.barraSeguimientoCta { color: var(--color-dark-text); white-space: nowrap; }
+
+.barraSeguimientoChip {
+    display: inline-block;
+    margin-left: 6px;
+    padding: 1px 8px;
+    border: 1px solid var(--color-dark-border);
+    border-radius: 999px;
+    font-size: 0.78rem;
+    color: var(--color-dark-text-muted);
+}
+
+/* Pedido concreto al cliente en la etapa actual. Mismo recuadro que el aviso de
+   observacion, con el acento lleno: es lo unico de la pagina que pide una accion. */
+.seguimientoAccion {
+    margin: 0 0 24px;
+    padding: 18px 22px;
+    border: 1px solid var(--color-accent);
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-bg);
+    text-align: left;
+}
+
+.seguimientoAccion p { margin: 0; }
+.seguimientoAccionTitulo { margin: 0 0 6px !important; font-weight: 600; color: var(--color-accent-dark); }
+
+.seguimientoAviso {
+    margin: 0 0 32px;
+    padding: 18px 22px;
+    border: 1px solid var(--color-border-strong);
+    border-left: 3px solid var(--color-accent);
+    background: var(--color-bg);
+}
+
+.seguimientoAvisoTitulo { margin: 0 0 6px; font-weight: 600; color: var(--color-accent-dark); }
+.seguimientoAvisoPie { margin: 8px 0 0; color: var(--color-text-soft); font-size: 0.92rem; }
+
+.seguimientoLinea { list-style: none; margin: 0 0 36px; padding: 0; text-align: left; }
+
+.seguimientoEtapa {
+    position: relative;
+    display: flex;
+    gap: 16px;
+    padding: 0 0 24px 0;
+}
+
+/* La linea que une las marcas; la ultima etapa no la lleva. */
+.seguimientoEtapa::before {
+    content: "";
+    position: absolute;
+    left: 7px;
+    top: 18px;
+    bottom: 0;
+    width: 1px;
+    background: var(--color-divider);
+}
+
+.seguimientoEtapa:last-child { padding-bottom: 0; }
+.seguimientoEtapa:last-child::before { display: none; }
+
+.seguimientoMarca {
+    flex: 0 0 auto;
+    width: 15px;
+    height: 15px;
+    margin-top: 3px;
+    border-radius: 50%;
+    border: 2px solid var(--color-border-strong);
+    background: var(--color-surface);
+}
+
+/* Salteada: mismo punto lleno que una cumplida. El trámite ya dejó atrás esa etapa
+   aunque no haya pasado por ella, y la línea tiene que leerse como avance. */
+.seguimientoEtapa.is-cumplida .seguimientoMarca,
+.seguimientoEtapa.is-salteada .seguimientoMarca { background: var(--color-text-soft); border-color: var(--color-text-soft); }
+.seguimientoEtapa.is-actual .seguimientoMarca { background: var(--color-accent); border-color: var(--color-accent); }
+
+.seguimientoEtapaLabel { margin: 0; font-weight: 600; color: var(--color-text-soft); }
+.seguimientoEtapa.is-actual .seguimientoEtapaLabel { color: var(--color-ink); }
+.seguimientoEtapa.is-pendiente .seguimientoEtapaLabel { color: var(--color-label); }
+.seguimientoEtapaMeta { margin: 2px 0 0; font-size: 0.88rem; color: var(--color-label); }
+.seguimientoEtapaDetalle { margin: 6px 0 0; color: var(--color-text-muted); }
+
+/* Cuantas veces se registro una etapa que puede repetirse ("2ª vista"). */
+.seguimientoEtapaRepeticion { font-size: 0.85rem; font-weight: 500; color: var(--color-label); }
+
+/* Colapsable nativo, sin JS: el nombre de la etapa abre su explicacion. El detalle de
+   la etapa actual NO usa esto -- va siempre visible. */
+.seguimientoEtapaQue > summary { cursor: pointer; list-style: none; }
+.seguimientoEtapaQue > summary::-webkit-details-marker { display: none; }
+.seguimientoEtapaQue > summary .seguimientoEtapaLabel,
+.seguimientoEtapaQue > summary .seguimientoEtapaMeta { display: block; }
+
+/* El signo de pregunta al lado del nombre: chico, redondo y del color del acento, para
+   que se lea como "esto se abre" y no como un adorno. */
+.seguimientoEtapaQueMarca {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 16px;
+    height: 16px;
+    margin-left: 6px;
+    border: 1px solid var(--color-accent);
+    border-radius: 50%;
+    font-size: 0.7rem;
+    font-weight: 600;
+    line-height: 1;
+    color: var(--color-accent);
+    vertical-align: middle;
+}
+
+.seguimientoEtapaQue > summary:hover .seguimientoEtapaQueMarca,
+.seguimientoEtapaQue[open] > summary .seguimientoEtapaQueMarca {
+    background: var(--color-accent);
+    color: var(--color-surface);
+}
+
+.seguimientoEtapaQue > summary .seguimientoEtapaDetalle,
+.seguimientoEtapaQue > p.seguimientoEtapaDetalle { margin-top: 6px; }
+
+.seguimientoNotas { text-align: left; margin: 0 0 32px; }
+.seguimientoNotas h2 { font-size: 1.25rem; margin: 0 0 12px; }
+.seguimientoNotas ul { list-style: none; margin: 0; padding: 0; }
+.seguimientoNotas li { padding: 12px 0; border-top: 1px solid var(--color-divider); }
+.seguimientoNotas li p { margin: 0; }
+.seguimientoNotaFecha { font-size: 0.85rem; color: var(--color-label); margin-bottom: 4px !important; }
+
+.seguimientoPie { color: var(--color-text-soft); font-size: 0.92rem; }
+
+.seguimientoInfoEtapas { text-align: left; margin: 0 0 28px; }
+.seguimientoInfoEtapas h2 { font-size: 1.25rem; margin: 0 0 12px; }
+.seguimientoInfoEtapas ol { margin: 0; padding-left: 20px; }
+.seguimientoInfoEtapas li { margin-bottom: 14px; }
+.seguimientoInfoEtapas li p { margin: 0; }
+.seguimientoInfoEtapaLabel { font-weight: 600; }

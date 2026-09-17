@@ -89,6 +89,33 @@ A nivel repo (Settings → Secrets and variables → Actions):
 - **No crea el `.user.ini`** de `public_html` (límites de PHP). Ese archivo no viaja
   en el repo, se crea a mano en el servidor una sola vez. Ver README.
 - **No toca el `error_log`** ni los archivos de `public_html` que no están en el repo.
+- **No aplica migraciones de base de datos.** Ver abajo.
+
+---
+
+## Migraciones de base de datos
+
+Sólo aplican al portal de seguimiento (`SEGUIMIENTO_ENABLED`); el resto del sitio no
+usa base.
+
+`database/` vive en la raíz del repo, **fuera de `app/`**, así que los `.sql` no viajan
+en el deploy y nunca quedan expuestos por HTTP. Se aplican a mano:
+
+1. En cPanel → **Bases de datos MySQL**: crear la base y un usuario, y asignarle todos
+   los privilegios sobre ella.
+2. En **phpMyAdmin** → la base → pestaña **SQL**: pegar el contenido de
+   `database/migrations/001_seguimiento.sql` y ejecutar.
+3. Cargar `DB_HOST`, `DB_NAME`, `DB_USER`, `DB_PASS` en el `.env` de producción (que
+   en el CI vive en el secret `ENV_PRODUCTION`).
+
+> ⚠️ **Prod corre MariaDB, no MySQL.** Si desarrollaste contra MySQL 8, evitá lo que
+> sea específico de esa versión: nada de `CHECK` con expresiones, funciones de ventana
+> ni índices funcionales sobre JSON. El esquema actual es portable a propósito.
+
+El orden importa en el primer deploy del portal: **primero la base y el `.env`, después
+prender el flag**. Con `SEGUIMIENTO_ENABLED=true` y la base sin crear,
+`/seguimiento/{token}` devuelve 500 (la home sigue funcionando: la barra de acceso se
+traga el fallo a propósito).
 
 ---
 
