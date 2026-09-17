@@ -28,7 +28,10 @@ final class AdminTramitesController
 {
     private const CLAVE_CSRF = CsrfToken::CLAVE_ADMIN_SEGUIMIENTO;
 
-    /** @param array<string, array{label: string, detalle: string}> $etapasConfig */
+    /**
+     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
+     *                            repeticion?: string}> $etapasConfig
+     */
     public function __construct(
         private readonly Twig $twig,
         private readonly TramiteRepository $tramites,
@@ -48,10 +51,7 @@ final class AdminTramitesController
             $filas[] = [
                 'tramite' => $tramite,
                 'etapaLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
-                'siguiente' => $tramite->etapaActual->siguiente(),
-                'siguienteLabel' => $tramite->etapaActual->siguiente() !== null
-                    ? LineaEtapas::label($tramite->etapaActual->siguiente(), $this->etapasConfig)
-                    : null,
+                'siguientes' => $this->siguientes($tramite->etapaActual),
             ];
         }
 
@@ -67,7 +67,7 @@ final class AdminTramitesController
         return $this->render($response, 'admin/nuevo.html.twig', [
             'pageTitle' => 'Nuevo trámite - Panel',
             'errores' => [],
-            'valores' => ['codigo' => '', 'denominacion' => ''],
+            'valores' => ['denominacion' => ''],
         ]);
     }
 
@@ -79,20 +79,10 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites');
         }
 
-        $codigo = $this->campo($datos, 'codigo');
         $denominacion = $this->campo($datos, 'denominacion');
 
-        // Se juntan todos los errores, nunca se corta en el primero: mismo criterio que
-        // la validacion de la consulta de constitucion.
+        // La referencia la genera el repositorio al crear: no se pide ni se valida acá.
         $errores = [];
-        if ($codigo === '') {
-            $errores[] = 'El código es obligatorio.';
-        } elseif (mb_strlen($codigo) > 20) {
-            $errores[] = 'El código no puede superar los 20 caracteres.';
-        } elseif ($this->tramites->porCodigo($codigo) !== null) {
-            $errores[] = sprintf('Ya existe un trámite con el código %s.', $codigo);
-        }
-
         if ($denominacion === '') {
             $errores[] = 'La denominación es obligatoria.';
         } elseif (mb_strlen($denominacion) > 255) {
@@ -103,12 +93,13 @@ final class AdminTramitesController
             return $this->render($response->withStatus(422), 'admin/nuevo.html.twig', [
                 'pageTitle' => 'Nuevo trámite - Panel',
                 'errores' => $errores,
-                'valores' => ['codigo' => $codigo, 'denominacion' => $denominacion],
+                'valores' => ['denominacion' => $denominacion],
             ]);
         }
 
-        $id = $this->tramites->crear($codigo, $denominacion);
-        $this->flash(sprintf('Trámite %s creado.', $codigo));
+        $id = $this->tramites->crear($denominacion);
+        $tramite = $this->tramites->porId($id);
+        $this->flash(sprintf('Trámite %s creado.', $tramite?->referencia ?? ''));
 
         return $this->redirigir($response, '/admin/tramites/' . $id);
     }
@@ -122,12 +113,13 @@ final class AdminTramitesController
         }
 
         return $this->render($response, 'admin/detalle.html.twig', [
-            'pageTitle' => sprintf('%s - Panel', $tramite->codigo),
+            'pageTitle' => sprintf('%s - Panel', $tramite->referencia),
             'tramite' => $tramite,
             'etapaLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
             'eventos' => $this->tramites->eventos($tramite->id),
             'accesos' => $this->accesos->porTramite($tramite->id),
             'etapas' => Etapa::cases(),
+            'siguientes' => $this->siguientes($tramite->etapaActual),
             'etapasConfig' => $this->etapasConfig,
             'flash' => $this->tomarFlash(),
             // El token en claro se muestra UNA vez, en el redirect posterior a emitirlo.
@@ -151,15 +143,26 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites');
         }
 
-        // Si no viene etapa explicita, avanza a la siguiente: ese es el camino de un
-        // click desde el listado.
+        // Si no viene etapa explicita, avanza a la siguiente del enum: ese es el camino
+        // de un click desde el listado. Con etapa explicita se puede ir a CUALQUIERA,
+        // incluidas anteriores (el loop de la vista) y salteando las que no aplican al
+        // tramite. Lo unico que se valida es que sea un valor del enum.
         $etapaPedida = $this->campo($datos, 'etapa');
-        $etapa = $etapaPedida !== '' ? Etapa::tryFrom($etapaPedida) : $tramite->etapaActual->siguiente();
 
-        if ($etapa === null) {
-            $this->flash(sprintf('El trámite %s ya está en la última etapa.', $tramite->codigo), 'error');
+        if ($etapaPedida !== '') {
+            $etapa = Etapa::tryFrom($etapaPedida);
+            if ($etapa === null) {
+                $this->flash('La etapa indicada no existe.', 'error');
 
-            return $this->redirigir($response, $this->volverA($datos, $id));
+                return $this->redirigir($response, $this->volverA($datos, $id));
+            }
+        } else {
+            $etapa = $tramite->etapaActual->siguiente();
+            if ($etapa === null) {
+                $this->flash(sprintf('El trámite %s ya está en la última etapa.', $tramite->referencia), 'error');
+
+                return $this->redirigir($response, $this->volverA($datos, $id));
+            }
         }
 
         $this->tramites->avanzar(
@@ -171,11 +174,28 @@ final class AdminTramitesController
 
         $this->flash(sprintf(
             '%s pasó a %s.',
-            $tramite->codigo,
+            $tramite->referencia,
             LineaEtapas::label($etapa, $this->etapasConfig),
         ));
 
         return $this->redirigir($response, $this->volverA($datos, $id));
+    }
+
+    /**
+     * Atajos de "proximo paso" para los botones del panel: normalmente uno solo, dos en
+     * VISTA_CONTESTADA (ver Etapa::siguientesSugeridas).
+     *
+     * @return list<array{valor: string, label: string}>
+     */
+    private function siguientes(Etapa $actual): array
+    {
+        return array_map(
+            fn (Etapa $etapa): array => [
+                'valor' => $etapa->value,
+                'label' => LineaEtapas::label($etapa, $this->etapasConfig),
+            ],
+            $actual->siguientesSugeridas(),
+        );
     }
 
     /** @param array<string, string> $args */
@@ -198,8 +218,8 @@ final class AdminTramitesController
         $this->tramites->actualizarObservacion($id, $observado, $this->campoONull($datos, 'nota_observacion'));
 
         $this->flash($observado
-            ? sprintf('%s quedó marcado como observado.', $tramite->codigo)
-            : sprintf('Se levantó la observación de %s.', $tramite->codigo));
+            ? sprintf('%s quedó marcado como observado.', $tramite->referencia)
+            : sprintf('Se levantó la observación de %s.', $tramite->referencia));
 
         return $this->redirigir($response, '/admin/tramites/' . $id);
     }

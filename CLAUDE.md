@@ -164,12 +164,37 @@ dev server built-in.
   siguiendo el precedente de `Pruebas/`).
   - Le muestra al cliente en qué etapa está su trámite y **nada más**: ni socios, ni
     documentos, ni identificaciones fiscales, ni descargas. Ver "Fuera de alcance".
-  - `Etapa` — enum de las 6 etapas en orden. **No tiene `etiqueta()` a propósito**: los
-    labels visibles viven en `app/config/etapas.php` porque la doctora los va a
-    renombrar, y renombrar no debe requerir tocar código ni migrar datos. El `value` del
-    enum es un identificador estable que nunca se muestra y que está guardado en la base.
+  - `tramite.referencia` (`EC-2026-0001`) es el **único identificador** y lo genera
+    `TramiteRepository::proximaReferencia()` al crear: correlativo por año, que reinicia
+    cada enero para no revelar cuántos trámites lleva el estudio. El prefijo es la
+    constante `PREFIJO_REFERENCIA`. **El número de expediente de IGJ no se guarda**: el
+    cliente no tiene que verlo y, al dar de alta, todavía no existe — la doctora lo
+    maneja por fuera. No reintroducirlo sin instrucción explícita.
+  - `Etapa` — enum de las 12 etapas del pipeline de IGJ, en orden. **No tiene
+    `etiqueta()` a propósito**: los labels visibles viven en `app/config/etapas.php`
+    porque la doctora los va a renombrar, y renombrar no debe requerir tocar código ni
+    migrar datos. El `value` del enum es un identificador estable que nunca se muestra y
+    que está guardado en la base. Cada entrada de la config tiene `label`, `detalle`,
+    y opcionalmente `accion` (pedido concreto al cliente, se muestra destacado y sin
+    colapsar), `repeticion` (formato del contador, sólo en las etapas que son un loop) y
+    `opcional` (las de la vista: pueden no ocurrir nunca, así que no se anuncian de
+    antemano — no aparecen en la línea hasta que el trámite pasa por ahí).
+  - **El pipeline es genérico y no se recorre linealmente.** El orden define cómo se
+    dibuja la línea y cuál es la etapa siguiente por default, pero se puede ir a
+    cualquiera: hay etapas que no aplican a un trámite (Dictámenes en una SAS por
+    estatuto modelo) y se saltean, y la vista es un loop — el inspector puede despachar
+    más de una, así que un trámite vuelve de `VISTA_CONTESTADA` a `VISTA`. No
+    implementar secuencias por tipo de trámite.
+  - Por eso **una etapa está cumplida si tiene al menos un evento en `tramite_evento`**,
+    no por comparar posiciones contra `etapa_actual` (que sólo marca la que está en
+    curso). Con el criterio viejo, volver atrás des-completaba las etapas previas. Como
+    efecto, una etapa posterior a la actual puede figurar cumplida: es correcto.
+  - Una etapa **salteada** (sin evento, pero anterior a la actual) es un estado propio:
+    se pinta como recorrida para que la línea se lea como avance, pero no lleva fecha ni
+    texto de estado, porque el trámite nunca pasó por ahí.
   - `observado` es un **flag ortogonal**, no una etapa: un trámite observado sigue
-    perteneciendo a su etapa. No meterlo en el enum.
+    perteneciendo a su etapa. No meterlo en el enum. Cubre sólo observaciones de **fuera
+    de IGJ** (escribanía, documentación incompleta); las vistas de IGJ son etapas.
   - `Conexion` — PDO perezoso (abre recién en el primer `pdo()`). No hay container de DI
     en este proyecto: el "singleton lazy" es esta clase, instanciada en `routes.php`.
   - `TramiteRepository::eventosPublicos()` **no trae `nota_interna` en el SELECT**, y

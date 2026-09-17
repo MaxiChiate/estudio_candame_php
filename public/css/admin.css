@@ -166,6 +166,11 @@ body {
 }
 
 .adminForm button { margin-top: 14px; align-self: flex-start; }
+
+/* Atajos de proximo paso: un boton, o dos en Vista contestada. */
+.adminAccionesEtapa { display: flex; flex-wrap: wrap; gap: 10px; margin-bottom: 22px; }
+.adminAccionesEtapa form { margin: 0; }
+.adminAccionesEtapa button { margin: 0; }
 .adminFormInline { max-width: 100%; margin-bottom: 20px; }
 .adminAyuda { font-size: 0.86rem; color: var(--admin-soft); margin: 10px 0 0; }
 .adminVacio { color: var(--admin-label); font-style: italic; }

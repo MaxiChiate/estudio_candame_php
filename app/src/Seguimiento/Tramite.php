@@ -16,7 +16,12 @@ final class Tramite
 {
     public function __construct(
         public readonly int $id,
-        public readonly string $codigo,
+        /**
+         * Id nuestro (EC-2026-0001), generado al crear el tramite. Es el unico
+         * identificador que existe: el numero de expediente de IGJ no se guarda -- el
+         * cliente no tiene que verlo, y al dar de alta todavia no existe.
+         */
+        public readonly string $referencia,
         public readonly string $tipo,
         public readonly string $denominacion,
         public readonly Etapa $etapaActual,
@@ -38,13 +43,13 @@ final class Tramite
             throw new RuntimeException(sprintf(
                 'Etapa desconocida "%s" en el tramite %s.',
                 (string) $fila['etapa_actual'],
-                (string) $fila['codigo'],
+                (string) $fila['referencia'],
             ));
         }
 
         return new self(
             (int) $fila['id'],
-            (string) $fila['codigo'],
+            (string) $fila['referencia'],
             (string) $fila['tipo'],
             (string) $fila['denominacion'],
             $etapa,

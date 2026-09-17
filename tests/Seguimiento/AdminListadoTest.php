@@ -19,8 +19,8 @@ final class AdminListadoTest extends BaseDeDatosTestCase
 {
     public function testLasCeldasDeDatosLinkeanAlDetalleYElFormDeAvanzarQuedaAfuera(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0400', 'Listado SAS');
-        $this->tramites->avanzar($id, Etapa::FIRMA, null, null);
+        $id = $this->tramites->crear('Listado SAS');
+        $this->tramites->avanzar($id, Etapa::PROCESANDO_DOCUMENTACION, null, null);
 
         $response = $this->listado();
         self::assertSame(200, $response->getStatusCode());

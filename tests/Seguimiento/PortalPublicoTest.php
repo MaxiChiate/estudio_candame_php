@@ -19,27 +19,29 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 {
     public function testTokenValidoDevuelve200YLaEtapaCorrecta(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0100', 'Cerro Alto SAS');
-        $this->tramites->avanzar($id, Etapa::PRESENTACION, null, null);
+        $id = $this->tramites->crear('Cerro Alto SAS');
+        $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
         $token = $this->accesos->emitir($id, 'cliente de prueba');
 
         $response = $this->get('/seguimiento/' . $token);
         $html = (string) $response->getBody();
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertStringContainsString('PRES-2026-0100', $html);
+        // La referencia nuestra, generada al crear: es el único identificador que ve el
+        // cliente.
+        self::assertStringContainsString($this->tramites->porId($id)?->referencia ?? '', $html);
 
         // La etapa actual tiene que ser la que quedo, no otra de la linea.
         self::assertMatchesRegularExpression(
-            '/is-actual.*?Presentaci&oacute;n|is-actual.*?Presentación/s',
+            '/is-actual.*?Trámite iniciado/s',
             $html,
-            'La etapa marcada como actual no es Presentación.',
+            'La etapa marcada como actual no es Trámite iniciado.',
         );
     }
 
     public function testTokenValidoTraeLasCabecerasDePrivacidad(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0101', 'Meridiano SAS');
+        $id = $this->tramites->crear('Meridiano SAS');
         $token = $this->accesos->emitir($id, 'cliente');
 
         $response = $this->get('/seguimiento/' . $token);
@@ -58,7 +60,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
      */
     public function testInexistenteRevocadoYMalformadoDevuelvenLaMismaRespuesta(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0102', 'Cauce SAS');
+        $id = $this->tramites->crear('Cauce SAS');
         $tokenRevocado = $this->accesos->emitir($id, 'cliente');
         $acceso = $this->accesos->buscarPorToken($tokenRevocado);
         self::assertNotNull($acceso);
@@ -89,10 +91,10 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testLaNotaInternaNoLlegaALaVistaPublica(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0103', 'Rosas del Sur SAS');
+        $id = $this->tramites->crear('Rosas del Sur SAS');
         $this->tramites->avanzar(
             $id,
-            Etapa::FIRMA,
+            Etapa::HABILITADO_ESCRIBANIA,
             'Se firmó el instrumento constitutivo.',
             'INTERNO: el socio 2 todavía no mandó el DNI, reclamar por teléfono.',
         );
@@ -109,10 +111,10 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testNingunDatoPersonalLlegaALaVistaPublica(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0104', 'Litoral Norte SAS');
+        $id = $this->tramites->crear('Litoral Norte SAS');
         $this->tramites->avanzar(
             $id,
-            Etapa::INSCRIPCION,
+            Etapa::TRAMITE_INICIADO,
             'La IGJ inscribió la sociedad.',
             'CUIT 30-71234567-8, DNI del presidente 28.456.789, domicilio Av. Siempreviva 742.',
         );
@@ -128,13 +130,60 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         self::assertStringNotContainsString('contador Juan Pérez', $html);
 
         // Mas general que buscar los valores del fixture: que no haya NADA con forma de
-        // CUIT ni de DNI en la pagina, venga de donde venga.
-        //
-        // Ojo: no se puede buscar la palabra "CUIT" a secas, porque es el nombre de una
-        // de las etapas y aparece legitimamente en la linea de avance. Lo que no puede
-        // aparecer son numeros con esa forma.
+        // CUIT ni de DNI en la pagina, venga de donde venga. Se buscan las formas y no
+        // la palabra "CUIT": lo que no puede filtrarse son los numeros.
         self::assertDoesNotMatchRegularExpression('/\b\d{2}-\d{8}-\d\b/', $html, 'Hay algo con forma de CUIT.');
         self::assertDoesNotMatchRegularExpression('/\b\d{1,2}\.\d{3}\.\d{3}\b/', $html, 'Hay algo con forma de DNI.');
+    }
+
+    /**
+     * La 'accion' de la etapa actual es lo unico que le pide algo al cliente: va
+     * destacada y NUNCA dentro de un <details>, que nadie abre.
+     */
+    public function testLaAccionDeLaEtapaActualNoVaColapsada(): void
+    {
+        $config = require APP_PATH . '/config/etapas.php';
+        $accion = $config['ESPERANDO_CONFIRMACION']['accion'];
+
+        $id = $this->tramites->crear('Acción SAS');
+        $this->tramites->avanzar($id, Etapa::ESPERANDO_CONFIRMACION, null, null);
+        $token = $this->accesos->emitir($id, 'cliente');
+
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+        self::assertStringContainsString($accion, $html);
+
+        // Sin los bloques colapsables, el texto tiene que seguir estando.
+        $sinDetails = preg_replace('#<details.*?</details>#s', '', $html) ?? '';
+        self::assertStringContainsString($accion, $sinDetails, 'La acción quedó dentro de un <details>.');
+
+        // El detalle de una etapa que NO es la actual si va colapsado.
+        self::assertStringNotContainsString($config['PARA_RETIRAR']['detalle'], $sinDetails);
+    }
+
+    /**
+     * Un trámite puede terminar sin ninguna vista. Hasta que ocurra, la vista no se
+     * anuncia: decir "Trámite con vista - Pendiente" le avisaría al cliente de algo que
+     * quizás no pase.
+     */
+    public function testLaVistaNoSeAnunciaHastaQueOcurre(): void
+    {
+        $config = require APP_PATH . '/config/etapas.php';
+
+        $id = $this->tramites->crear('Sin vista SAS');
+        $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
+        $token = $this->accesos->emitir($id, 'cliente');
+
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+
+        self::assertStringNotContainsString($config['VISTA']['label'], $html);
+        self::assertStringNotContainsString($config['VISTA_CONTESTADA']['label'], $html);
+        // El resto de la línea sí está.
+        self::assertStringContainsString($config['TERMINADO']['label'], $html);
+
+        // Una vez que la vista ocurre, aparece.
+        $this->tramites->avanzar($id, Etapa::VISTA, null, null);
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+        self::assertStringContainsString($config['VISTA']['label'], $html);
     }
 
     public function testLaPaginaInformativaNoTieneCampoParaIngresarCodigo(): void
@@ -155,7 +204,8 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
      */
     public function testLaHomeConCookieValidaNoMueveElContador(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0105', 'Contador Home SAS');
+        $id = $this->tramites->crear('Contador Home SAS');
+        $referencia = $this->tramites->porId($id)?->referencia ?? '';
         $token = $this->accesos->emitir($id, 'cliente');
         $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
         self::assertNotNull($accesoId);
@@ -165,8 +215,8 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
         // Que la barra efectivamente se haya resuelto: si no, el test pasaria aunque la
         // home nunca tocara el token.
-        self::assertStringContainsString('PRES-2026-0105', (string) $home1->getBody());
-        self::assertStringContainsString('PRES-2026-0105', (string) $home2->getBody());
+        self::assertStringContainsString($referencia, (string) $home1->getBody());
+        self::assertStringContainsString($referencia, (string) $home2->getBody());
         self::assertSame(0, $this->accesos->porId($accesoId)?->accesos);
 
         $this->get('/seguimiento/' . $token);
@@ -176,7 +226,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testHeadYPrefetchNoCuentanComoVisita(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0106', 'Prefetch SAS');
+        $id = $this->tramites->crear('Prefetch SAS');
         $token = $this->accesos->emitir($id, 'cliente');
         $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
         self::assertNotNull($accesoId);
@@ -199,7 +249,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
      */
     public function testRecargarElPortalNoSumaDeNuevo(): void
     {
-        $id = $this->tramites->crear('PRES-2026-0107', 'Recarga SAS');
+        $id = $this->tramites->crear('Recarga SAS');
         $token = $this->accesos->emitir($id, 'cliente');
         $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
         self::assertNotNull($accesoId);
