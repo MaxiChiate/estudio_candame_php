@@ -5,11 +5,19 @@ declare(strict_types=1);
 namespace EstudioCandame\Tests\Seguimiento;
 
 use EstudioCandame\Seguimiento\AccesoRepository;
+use EstudioCandame\Seguimiento\CatalogoFlujos;
 use EstudioCandame\Seguimiento\Conexion;
+use EstudioCandame\Seguimiento\Flujo;
 use EstudioCandame\Seguimiento\TokenGenerator;
 use EstudioCandame\Seguimiento\TramiteRepository;
+use EstudioCandame\Support\AntiAbuso\CsrfToken;
 use EstudioCandame\Support\RelojSistema;
 use PHPUnit\Framework\TestCase;
+use Psr\Http\Message\ResponseInterface;
+use Slim\Factory\AppFactory;
+use Slim\Psr7\Factory\ServerRequestFactory;
+use Slim\Views\Twig;
+use Slim\Views\TwigMiddleware;
 use Throwable;
 
 /**
@@ -27,6 +35,7 @@ abstract class BaseDeDatosTestCase extends TestCase
     protected Conexion $conexion;
     protected TramiteRepository $tramites;
     protected AccesoRepository $accesos;
+    protected CatalogoFlujos $catalogo;
 
     protected function setUp(): void
     {
@@ -64,6 +73,69 @@ abstract class BaseDeDatosTestCase extends TestCase
         $reloj = new RelojSistema();
         $this->tramites = new TramiteRepository($this->conexion, $reloj);
         $this->accesos = new AccesoRepository($this->conexion, $reloj, new TokenGenerator());
+        $this->catalogo = CatalogoFlujos::desdeConfig(dirname(__DIR__, 2) . '/app');
+    }
+
+    /**
+     * Alta de tramite para los tests. El flujo por default es SAS porque es lo unico que
+     * habia cargado cuando el portal tenia un solo pipeline; los tests que prueban algo
+     * especifico de otro flujo lo pasan explicito.
+     */
+    protected function crearTramite(string $denominacion, Flujo $flujo = Flujo::SAS): int
+    {
+        return $this->tramites->crear($denominacion, $flujo, $this->catalogo->etapaInicial($flujo));
+    }
+
+    /**
+     * Manda un request al panel pasando por routes.php de verdad: mismo wiring, mismas
+     * rutas, misma autenticacion que en produccion. Lo comparten los tests del panel
+     * para no repetir el armado de la app en cada uno.
+     *
+     * @param array<string, string> $cuerpo
+     */
+    protected function pedirAlPanel(string $metodo, string $ruta, array $cuerpo = [], bool $csrf = false): ResponseInterface
+    {
+        self::definirAppPath();
+
+        if (session_status() !== PHP_SESSION_ACTIVE) {
+            @session_start();
+        }
+
+        if ($csrf) {
+            $cuerpo['_csrf'] = CsrfToken::generar(CsrfToken::CLAVE_ADMIN_SEGUIMIENTO);
+        }
+
+        $config = self::configuracion();
+        self::assertNotNull($config);
+
+        $_ENV['SEGUIMIENTO_ENABLED'] = 'true';
+        $_ENV['CONFIGURADOR_ENABLED'] = 'false';
+        $_ENV['ADMIN_USER'] = 'candame';
+        $_ENV['ADMIN_PASS_HASH'] = password_hash('la-correcta', PASSWORD_DEFAULT);
+        $_ENV['DB_HOST'] = $config['host'];
+        $_ENV['DB_NAME'] = $config['name'];
+        $_ENV['DB_USER'] = $config['user'];
+        $_ENV['DB_PASS'] = $config['pass'];
+        $_ENV['DB_CHARSET'] = $config['charset'];
+
+        $app = AppFactory::create();
+        $twig = Twig::create(APP_PATH . '/templates', ['cache' => false, 'charset' => 'utf-8']);
+        $twig->getEnvironment()->addGlobal('basePath', '');
+        $twig->getEnvironment()->addGlobal('configuradorEnabled', false);
+        $app->add(TwigMiddleware::create($app, $twig));
+        $app->addRoutingMiddleware();
+        $app->addErrorMiddleware(false, false, false);
+
+        (require APP_PATH . '/config/routes.php')($app, $twig);
+
+        $request = (new ServerRequestFactory())
+            ->createServerRequest($metodo, $ruta, [
+                'PHP_AUTH_USER' => 'candame',
+                'PHP_AUTH_PW' => 'la-correcta',
+            ])
+            ->withParsedBody($cuerpo);
+
+        return $app->handle($request);
     }
 
     /**

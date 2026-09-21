@@ -5,6 +5,7 @@ declare(strict_types=1);
 namespace EstudioCandame\Tests\Seguimiento;
 
 use EstudioCandame\Seguimiento\Etapa;
+use EstudioCandame\Seguimiento\Flujo;
 use EstudioCandame\Seguimiento\LineaEtapas;
 
 /**
@@ -15,7 +16,7 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
 {
     public function testElAltaDejaElTramiteEnLaEtapaInicialConSuEvento(): void
     {
-        $id = $this->tramites->crear('Alta SAS');
+        $id = $this->crearTramite('Alta SAS');
 
         $tramite = $this->tramites->porId($id);
         self::assertNotNull($tramite);
@@ -29,7 +30,7 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
 
     public function testAvanzarCreaElEventoYActualizaLaEtapaActual(): void
     {
-        $id = $this->tramites->crear('Avance SAS');
+        $id = $this->crearTramite('Avance SAS');
 
         $this->tramites->avanzar($id, Etapa::PROCESANDO_DOCUMENTACION, 'Firmado.', 'nota interna');
 
@@ -47,7 +48,7 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
 
     public function testLaEtapaActualSiempreCoincideConElUltimoEvento(): void
     {
-        $id = $this->tramites->crear('Recorrido SAS');
+        $id = $this->crearTramite('Recorrido SAS');
 
         foreach ([Etapa::PROCESANDO_DOCUMENTACION, Etapa::TRAMITE_INICIADO, Etapa::ESPERANDO_CONFIRMACION, Etapa::DICTAMENES, Etapa::PARA_RETIRAR] as $etapa) {
             $this->tramites->avanzar($id, $etapa, null, null);
@@ -72,8 +73,7 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
      */
     public function testElLoopDeVistaNoDesCompletaLoAnterior(): void
     {
-        $config = require APP_PATH . '/config/etapas.php';
-        $id = $this->tramites->crear('Loop SAS');
+        $id = $this->crearTramite('Loop SAS');
 
         foreach ([Etapa::TRAMITE_INICIADO, Etapa::VISTA, Etapa::VISTA_CONTESTADA, Etapa::VISTA] as $etapa) {
             $this->tramites->avanzar($id, $etapa, null, null);
@@ -83,7 +83,12 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
         self::assertNotNull($tramite);
         self::assertSame(Etapa::VISTA, $tramite->etapaActual);
 
-        $linea = LineaEtapas::construir($tramite->etapaActual, $this->tramites->eventosPublicos($id), $config);
+        $linea = LineaEtapas::construir(
+            $tramite->flujo,
+            $tramite->etapaActual,
+            $this->tramites->eventosPublicos($id),
+            $this->catalogo,
+        );
         $estados = array_column($linea, 'estado', 'valor');
         $repeticiones = array_column($linea, 'repeticion', 'valor');
 
@@ -94,11 +99,16 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
         self::assertSame('2ª vista', $repeticiones['VISTA']);
     }
 
-    /** Ir a una etapa muy posterior saltea las del medio sin darlas por cumplidas. */
-    public function testSaltearEtapasFunciona(): void
+    /**
+     * Saltar etapas sigue siendo legal, incluso a una que no pertenece al flujo del
+     * tramite: el operador es quien sabe. Lo del medio queda pendiente -- no cumplido --
+     * y lo de afuera del flujo se dibuja igual, como una etapa mas que ocurrio.
+     */
+    public function testSaltarAUnaEtapaFueraDelFlujoLaRegistraIgual(): void
     {
-        $config = require APP_PATH . '/config/etapas.php';
-        $id = $this->tramites->crear('Salteo SAS');
+        // Un tramite SAS: su flujo termina en TRAMITE_INICIADO_DIGITALMENTE, asi que
+        // TRAMITE_INICIADO (el de los tramites en papel) le queda afuera.
+        $id = $this->crearTramite('Salteo SAS', Flujo::SAS);
 
         $this->tramites->avanzar($id, Etapa::ESPERANDO_ESCRIBANIA, null, null);
         $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
@@ -106,17 +116,32 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
         $tramite = $this->tramites->porId($id);
         self::assertNotNull($tramite);
         self::assertSame(Etapa::TRAMITE_INICIADO, $tramite->etapaActual);
+        self::assertFalse($this->catalogo->pertenece($tramite->flujo, Etapa::TRAMITE_INICIADO));
 
-        $linea = LineaEtapas::construir($tramite->etapaActual, $this->tramites->eventosPublicos($id), $config);
+        $linea = LineaEtapas::construir(
+            $tramite->flujo,
+            $tramite->etapaActual,
+            $this->tramites->eventosPublicos($id),
+            $this->catalogo,
+        );
         $estados = array_column($linea, 'estado', 'valor');
 
-        self::assertSame(LineaEtapas::SALTEADA, $estados['EDICTO_PUBLICADO']);
-        self::assertSame(LineaEtapas::SALTEADA, $estados['DICTAMENES']);
+        // La etapa de afuera del flujo es la actual y se dibuja.
+        self::assertSame(LineaEtapas::ACTUAL, $estados[Etapa::TRAMITE_INICIADO->value]);
+        self::assertTrue(array_column($linea, 'fueraDeFlujo', 'valor')[Etapa::TRAMITE_INICIADO->value]);
+
+        // Las del flujo que nunca ocurrieron siguen pendientes, no cumplidas.
+        self::assertSame(LineaEtapas::PENDIENTE, $estados['EDICTO_PUBLICADO']);
+        self::assertSame(LineaEtapas::PENDIENTE, $estados['DICTAMENES']);
+        self::assertNull(array_column($linea, 'fecha', 'valor')['DICTAMENES']);
+
+        // Y por la que si paso, cumplida.
+        self::assertSame(LineaEtapas::CUMPLIDA, $estados['ESPERANDO_ESCRIBANIA']);
     }
 
     public function testObservadoEsOrtogonalALaEtapa(): void
     {
-        $id = $this->tramites->crear('Observada SAS');
+        $id = $this->crearTramite('Observada SAS');
         $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
 
         $this->tramites->actualizarObservacion($id, true, 'Falta acompañar la reserva de nombre.');

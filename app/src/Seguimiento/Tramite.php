@@ -22,7 +22,12 @@ final class Tramite
          * cliente no tiene que verlo, y al dar de alta todavia no existe.
          */
         public readonly string $referencia,
-        public readonly string $tipo,
+        /**
+         * Que secuencia de etapas recorre este tramite. Se elige al crear y no se puede
+         * cambiar: cambiarlo dejaria eventos ya registrados fuera del flujo. Se guarda
+         * en la columna tramite.flujo (antes tramite.tipo, ver la migracion 004).
+         */
+        public readonly Flujo $flujo,
         public readonly string $denominacion,
         public readonly Etapa $etapaActual,
         public readonly bool $observado,
@@ -35,6 +40,17 @@ final class Tramite
     /** @param array<string, mixed> $fila */
     public static function desdeFila(array $fila): self
     {
+        $flujo = Flujo::tryFrom((string) $fila['flujo']);
+        if ($flujo === null) {
+            // Igual que con la etapa: un valor que el enum no conoce solo aparece si se
+            // edito la base a mano o si se agrego un flujo y falto la migracion.
+            throw new RuntimeException(sprintf(
+                'Flujo desconocido "%s" en el tramite %s.',
+                (string) $fila['flujo'],
+                (string) $fila['referencia'],
+            ));
+        }
+
         $etapa = Etapa::tryFrom((string) $fila['etapa_actual']);
         if ($etapa === null) {
             // Pasa si alguien edito etapa_actual a mano en la base con un valor que no
@@ -50,7 +66,7 @@ final class Tramite
         return new self(
             (int) $fila['id'],
             (string) $fila['referencia'],
-            (string) $fila['tipo'],
+            $flujo,
             (string) $fila['denominacion'],
             $etapa,
             (bool) $fila['observado'],
