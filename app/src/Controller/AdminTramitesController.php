@@ -207,14 +207,18 @@ final class AdminTramitesController
         ]);
     }
 
-    /** @return list<array{valor: string, nombre: string, descripcion: string}> */
+    /**
+     * Opciones del selector de tipo de tramite. Solo el nombre: la descripcion se
+     * muestra en la confirmacion, junto al recorrido, que es donde sirve para decidir.
+     *
+     * @return list<array{valor: string, nombre: string}>
+     */
     private function flujosParaElegir(): array
     {
         return array_map(
             fn (Flujo $flujo): array => [
                 'valor' => $flujo->value,
                 'nombre' => $this->catalogo->nombre($flujo),
-                'descripcion' => $this->catalogo->descripcion($flujo),
             ],
             Flujo::cases(),
         );

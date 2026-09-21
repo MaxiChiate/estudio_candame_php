@@ -41,12 +41,6 @@
         En el paso siguiente se ve el recorrido completo antes de guardar.
     </p>
 
-    <ul class="adminFlujosAyuda">
-        {% for flujo in flujos %}
-            <li><strong>{{ flujo.nombre }}:</strong> {{ flujo.descripcion }}</li>
-        {% endfor %}
-    </ul>
-
     <button type="submit" class="adminBtn">Continuar</button>
 </form>
 {% endblock %}
