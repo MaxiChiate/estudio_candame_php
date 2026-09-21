@@ -12,13 +12,6 @@
 </p>
 <p class="adminAyuda">{{ flujoDescripcion }}</p>
 
-<div class="adminAvisoFuerte" role="note">
-    <p>
-        El tipo de tr&aacute;mite <strong>no se puede cambiar despu&eacute;s de crearlo</strong>.
-        Si no es el correcto, volv&eacute; a editar antes de confirmar.
-    </p>
-</div>
-
 <section class="adminSeccion">
     <h2>Recorrido del tr&aacute;mite</h2>
     <p class="adminAyuda">
@@ -34,14 +27,14 @@
     </div>
 </section>
 
-<div class="adminAccionesEtapa">
+<div class="adminAccionesEtapa adminAccionesAlta">
     {# Vuelve al paso 1 con lo cargado. Va por POST y no por link para no perder los
        datos en la URL ni tener que reescribirlos a mano. #}
     <form method="post" action="{{ basePath }}/admin/tramites/nuevo/editar">
         <input type="hidden" name="_csrf" value="{{ csrf }}"/>
         <input type="hidden" name="denominacion" value="{{ valores.denominacion }}"/>
         <input type="hidden" name="flujo" value="{{ valores.flujo }}"/>
-        <button type="submit" class="adminBtnTexto">Volver a editar</button>
+        <button type="submit" class="adminBtn adminBtnInverso">Volver a editar</button>
     </form>
 
     <form method="post" action="{{ basePath }}/admin/tramites">

@@ -46,8 +46,9 @@ final class AdminAltaTest extends BaseDeDatosTestCase
         // El recorrido completo, con el texto que le corresponde a ese flujo.
         self::assertStringContainsString('Escribanía legalizando firmas', $html);
         self::assertStringContainsString('Completando libros, copiando actas', $html);
-        // Y el aviso de que despues no se cambia.
-        self::assertStringContainsString('no se puede cambiar', $html);
+        // Las dos salidas, al mismo nivel: volver a editar y confirmar.
+        self::assertStringContainsString('Volver a editar', $html);
+        self::assertStringContainsString('Crear el tr&aacute;mite', $html);
 
         self::assertSame([], $this->tramites->listado(), 'La previsualización no puede guardar nada.');
     }
