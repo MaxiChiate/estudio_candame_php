@@ -156,7 +156,7 @@ body {
 
 .adminForm { display: flex; flex-direction: column; gap: 6px; max-width: 620px; }
 .adminForm label { font-size: 0.86rem; color: var(--admin-label); margin-top: 8px; }
-.adminForm input[type="text"], .adminForm select, .adminForm textarea {
+.adminForm input[type="text"], .adminForm input[type="datetime-local"], .adminForm select, .adminForm textarea {
     padding: 9px 12px;
     border: 1px solid var(--admin-border);
     background: var(--admin-surface);
@@ -204,6 +204,81 @@ body {
     font-size: 0.88rem;
     color: var(--admin-text);
 }
+
+/* Titulo de seccion con una accion al costado ("Editar historial"). El boton no lleva
+   el margen del h2, asi que se alinean por el centro. */
+.adminSeccionCabecera {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    flex-wrap: wrap;
+    margin-bottom: 14px;
+}
+
+.adminSeccionCabecera h2 { margin: 0; }
+
+/* Editor del historial: cada evento es una tarjeta con su form de edicion y, abajo y
+   separado, el de borrar -- que no quede pegado a "Guardar" y se toque por error. */
+.adminHistorialEditable { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 16px; }
+
+.adminHistorialItem {
+    padding: 16px 20px;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-surface);
+}
+
+.adminHistorialEtapa { margin: 0 0 4px; font-weight: 600; color: var(--admin-ink); }
+.adminHistorialEtapa .adminChip { vertical-align: middle; }
+.adminForm input[type="datetime-local"] { max-width: 260px; }
+.adminHistorialEliminar {
+    margin: 16px 0 0;
+    padding-top: 12px;
+    border-top: 1px solid var(--admin-divider);
+}
+
+/* Borrar el tramite: al final de la pagina, bien separado de los enlaces de acceso
+   (que tienen sus propios botones de texto) y en un rojo que no se confunde con el
+   bordo del resto del panel. */
+.adminZonaPeligro {
+    margin-top: 48px;
+    padding: 20px 24px 24px;
+    border: 1px solid #f0b4b4;
+    border-left: 4px solid #b00d1a;
+    background: #fff5f5;
+}
+
+.adminZonaPeligro h2 { font-size: 1.1rem; margin: 0 0 6px; color: #8a0913; }
+.adminZonaPeligro .adminAyuda { margin: 0 0 18px; }
+.adminZonaPeligro form { margin: 0; }
+
+.adminBtnPeligro {
+    padding: 11px 22px;
+    border-color: #b00d1a;
+    background: #b00d1a;
+    font-weight: 600;
+}
+
+.adminBtnPeligro:hover { background: #8a0913; border-color: #8a0913; }
+.adminBtnPeligro:focus-visible { outline: 3px solid #f59a9a; outline-offset: 2px; }
+
+/* Dialogo propio de confirmacion (en vez del confirm() del browser). <dialog> nativo:
+   showModal() ya trae el foco atrapado, Esc para cerrar y el fondo inerte. */
+.adminDialogo {
+    width: min(460px, calc(100vw - 32px));
+    padding: 0;
+    border: none;
+    border-top: 4px solid #b00d1a;
+    background: var(--admin-surface);
+    color: var(--admin-text);
+    box-shadow: 0 18px 48px rgba(28, 25, 23, 0.28);
+}
+
+.adminDialogo::backdrop { background: rgba(28, 16, 19, 0.55); }
+.adminDialogo form { padding: 24px 26px 22px; }
+.adminDialogo h2 { margin: 0 0 10px; font-size: 1.2rem; color: #8a0913; }
+.adminDialogo p { margin: 0 0 10px; }
+.adminDialogoAcciones { display: flex; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-top: 22px; }
 
 @media (max-width: 640px) {
     .adminTabla, .adminTabla thead, .adminTabla tbody, .adminTabla tr, .adminTabla td { display: block; width: 100%; }

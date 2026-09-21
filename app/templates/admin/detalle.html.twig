@@ -57,23 +57,7 @@
         <input type="hidden" name="_csrf" value="{{ csrf }}"/>
 
         <label for="etapa">Otra etapa <span class="adminTenue">(saltear o volver)</span></label>
-        {# Primero el recorrido de este tramite, que es lo que se usa siempre. Abajo, el
-           resto del catalogo: saltar ahi sigue siendo legal (el operador sabe lo que
-           hace) y la etapa aparece igual en la linea del cliente. #}
-        <select id="etapa" name="etapa">
-            <optgroup label="Etapas de este tr&aacute;mite">
-                {% for etapa in etapasDelFlujo %}
-                    <option value="{{ etapa.valor }}"{% if etapa.actual %} selected{% endif %}>{{ etapa.label }}</option>
-                {% endfor %}
-            </optgroup>
-            {% if etapasFueraDelFlujo is not empty %}
-                <optgroup label="Otras etapas (fuera de este tipo de tr&aacute;mite)">
-                    {% for etapa in etapasFueraDelFlujo %}
-                        <option value="{{ etapa.valor }}"{% if etapa.actual %} selected{% endif %}>{{ etapa.label }}</option>
-                    {% endfor %}
-                </optgroup>
-            {% endif %}
-        </select>
+        {% include 'admin/_select_etapa.html.twig' with {idSelect: 'etapa', marcarActual: true} %}
 
         <label for="nota_publica">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
         <textarea id="nota_publica" name="nota_publica" rows="2"></textarea>
@@ -102,7 +86,10 @@
 </section>
 
 <section class="adminSeccion">
-    <h2>Historial</h2>
+    <div class="adminSeccionCabecera">
+        <h2>Historial</h2>
+        <a class="adminBtn adminBtnInverso adminBtnChico" href="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial">Editar historial</a>
+    </div>
     {% if eventos is empty %}
         <p class="adminVacio">Sin eventos.</p>
     {% else %}
@@ -161,4 +148,43 @@
         </table>
     {% endif %}
 </section>
+
+{# Al final y separado del resto a proposito: es lo unico del panel que no tiene vuelta
+   atras. El boton de la zona solo abre el dialogo; el que borra de verdad es el de
+   adentro. Sin JS el dialogo no abre y no se borra nada -- falla hacia el lado seguro.
+   El servidor solo exige CSRF. #}
+<section class="adminZonaPeligro">
+    <h2>Eliminar el tr&aacute;mite</h2>
+    <p class="adminAyuda">
+        Borra el tr&aacute;mite con todo su historial y sus enlaces de acceso: el cliente deja de poder verlo en el acto.
+        No se puede deshacer.
+    </p>
+    <button type="button" class="adminBtn adminBtnPeligro" id="abrirEliminar">Eliminar tr&aacute;mite {{ tramite.referencia }}</button>
+</section>
+
+<dialog class="adminDialogo" id="dialogoEliminar" aria-labelledby="dialogoEliminarTitulo">
+    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/eliminar">
+        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+        <h2 id="dialogoEliminarTitulo">&iquest;Eliminar {{ tramite.referencia }}?</h2>
+        <p><strong>{{ tramite.denominacion }}</strong></p>
+        <p class="adminAyuda">
+            Se borran el tr&aacute;mite, todo su historial y sus enlaces de acceso. El cliente deja de poder verlo.
+            <strong>No se puede deshacer.</strong>
+        </p>
+        <div class="adminDialogoAcciones">
+            {# Cancelar primero y con el foco: Enter por reflejo no borra nada. #}
+            <button type="button" class="adminBtn adminBtnInverso" id="cancelarEliminar" autofocus>Cancelar</button>
+            <button type="submit" class="adminBtn adminBtnPeligro">S&iacute;, eliminar</button>
+        </div>
+    </form>
+</dialog>
+<script>
+    (function () {
+        var dialogo = document.getElementById('dialogoEliminar');
+        document.getElementById('abrirEliminar').addEventListener('click', function () { dialogo.showModal(); });
+        document.getElementById('cancelarEliminar').addEventListener('click', function () { dialogo.close(); });
+        // Click en el fondo (fuera de la caja) cierra, como cualquier modal.
+        dialogo.addEventListener('click', function (e) { if (e.target === dialogo) { dialogo.close(); } });
+    })();
+</script>
 {% endblock %}

@@ -1,0 +1,20 @@
+{# Select de etapas: primero el recorrido del tramite, que es lo que se usa siempre.
+   Abajo, el resto del catalogo: ir ahi sigue siendo legal (el operador sabe lo que
+   hace) y la etapa aparece igual en la linea del cliente.
+
+   Espera `etapasDelFlujo`, `etapasFueraDelFlujo`, `idSelect` y, opcional,
+   `marcarActual` (preselecciona la etapa en curso). #}
+<select id="{{ idSelect }}" name="etapa">
+    <optgroup label="Etapas de este tr&aacute;mite">
+        {% for etapa in etapasDelFlujo %}
+            <option value="{{ etapa.valor }}"{% if marcarActual|default(false) and etapa.actual %} selected{% endif %}>{{ etapa.label }}</option>
+        {% endfor %}
+    </optgroup>
+    {% if etapasFueraDelFlujo is not empty %}
+        <optgroup label="Otras etapas (fuera de este tipo de tr&aacute;mite)">
+            {% for etapa in etapasFueraDelFlujo %}
+                <option value="{{ etapa.valor }}"{% if marcarActual|default(false) and etapa.actual %} selected{% endif %}>{{ etapa.label }}</option>
+            {% endfor %}
+        </optgroup>
+    {% endif %}
+</select>

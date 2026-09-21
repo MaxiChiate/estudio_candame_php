@@ -218,6 +218,13 @@ dev server built-in.
     partial Twig que la vista pública (`seguimiento/_linea.html.twig`), porque el flujo no
     se puede cambiar después. La previsualización **no guarda nada** y el endpoint de
     creación revalida por su cuenta.
+  - El historial se puede **editar** (`/admin/tramites/{id}/historial`): fecha, hora y
+    notas de cada evento, borrar eventos y agregar eventos con fecha pasada. Existe por
+    los trámites que ya venían avanzados cuando se cargaron (el alta les pone "hoy").
+    **Nada de esa pantalla mueve `etapa_actual`** — eso es exclusivo de `/avanzar` —, así
+    que ahí `etapa_actual` y el último evento pueden diferir a propósito. El trámite
+    entero se puede borrar desde el detalle (`/eliminar`); eventos y enlaces caen por
+    `ON DELETE CASCADE`.
   - `observado` es un **flag ortogonal**, no una etapa: un trámite observado sigue
     perteneciendo a su etapa. No meterlo en el enum. Cubre sólo observaciones de **fuera
     de IGJ** (escribanía, documentación incompleta); las vistas de IGJ son etapas.
