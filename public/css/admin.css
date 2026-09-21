@@ -213,3 +213,74 @@ body {
     .adminFilaLink td:not(.adminColAccion) > a { padding: 6px 14px; }
     .adminColAccion { text-align: left; }
 }
+
+/* --- Flujos: ayuda del alta, confirmacion y linea previa --------------------- */
+
+.adminFlujosAyuda {
+    margin: 10px 0 0;
+    padding-left: 20px;
+    font-size: 0.86rem;
+    color: var(--admin-soft);
+}
+
+.adminFlujosAyuda li { margin-bottom: 4px; }
+.adminFlujosAyuda strong { color: var(--admin-text); }
+
+.adminAvisoFuerte {
+    margin: 16px 0 0;
+    padding: 12px 16px;
+    border-left: 3px solid var(--admin-accent);
+    background: var(--admin-surface);
+}
+
+.adminAvisoFuerte p { margin: 0; }
+
+/* La confirmacion del alta incluye el MISMO partial de la linea de etapas que la vista
+   publica (seguimiento/_linea.html.twig), pero el panel no carga main.css -- no comparte
+   layout con el sitio y no tiene sentido bajar toda esa hoja para una pantalla. Estas
+   reglas son la version del panel de esa linea, con las variables del admin. Si se toca
+   la estructura del partial, hay que mirar los dos lados: aca y el bloque "Portal de
+   seguimiento" de main.css. */
+
+.adminLineaPrevia .seguimientoLinea { list-style: none; margin: 0; padding: 0; }
+
+.adminLineaPrevia .seguimientoEtapa {
+    position: relative;
+    padding: 0 0 18px 28px;
+}
+
+.adminLineaPrevia .seguimientoEtapa::before {
+    content: "";
+    position: absolute;
+    left: 6px;
+    top: 16px;
+    bottom: 0;
+    width: 1px;
+    background: var(--admin-divider);
+}
+
+.adminLineaPrevia .seguimientoEtapa:last-child { padding-bottom: 0; }
+.adminLineaPrevia .seguimientoEtapa:last-child::before { display: none; }
+
+.adminLineaPrevia .seguimientoMarca {
+    position: absolute;
+    left: 0;
+    top: 5px;
+    width: 13px;
+    height: 13px;
+    border: 2px solid var(--admin-border);
+    border-radius: 50%;
+    background: var(--admin-surface);
+}
+
+.adminLineaPrevia .seguimientoEtapa.is-cumplida .seguimientoMarca { background: var(--admin-soft); border-color: var(--admin-soft); }
+.adminLineaPrevia .seguimientoEtapa.is-actual .seguimientoMarca { background: var(--admin-accent); border-color: var(--admin-accent); }
+
+.adminLineaPrevia .seguimientoEtapaLabel { margin: 0; font-weight: 600; color: var(--admin-text); }
+.adminLineaPrevia .seguimientoEtapaMeta { margin: 2px 0 0; font-size: 0.82rem; color: var(--admin-label); }
+.adminLineaPrevia .seguimientoEtapaDetalle { margin: 4px 0 0; font-size: 0.88rem; color: var(--admin-soft); }
+.adminLineaPrevia .seguimientoEtapaQue > summary { cursor: pointer; list-style: none; }
+.adminLineaPrevia .seguimientoEtapaQue > summary::-webkit-details-marker { display: none; }
+.adminLineaPrevia .seguimientoEtapaQue > summary .seguimientoEtapaLabel,
+.adminLineaPrevia .seguimientoEtapaQue > summary .seguimientoEtapaMeta { display: block; }
+.adminLineaPrevia .seguimientoEtapaQueMarca { color: var(--admin-label); font-weight: 500; }

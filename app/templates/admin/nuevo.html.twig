@@ -11,7 +11,10 @@
     </div>
 {% endif %}
 
-<form method="post" action="{{ basePath }}/admin/tramites/nuevo" class="adminForm">
+{# Paso 1 de 2: esto no crea nada. El POST va a la previsualizacion, que muestra el
+   recorrido completo antes de guardar, porque el tipo de tramite no se puede cambiar
+   despues. #}
+<form method="post" action="{{ basePath }}/admin/tramites/nuevo/previsualizar" class="adminForm">
     <input type="hidden" name="_csrf" value="{{ csrf }}"/>
 
     <label for="denominacion">Denominaci&oacute;n</label>
@@ -21,6 +24,29 @@
     <p class="adminAyuda">
         La denominaci&oacute;n de la sociedad. Es el t&iacute;tulo que el cliente ve en el portal.
     </p>
-    <button type="submit" class="adminBtn">Crear tr&aacute;mite</button>
+
+    <label for="flujo">Tipo de tr&aacute;mite</label>
+    <select id="flujo" name="flujo" required>
+        <option value="" {% if not valores.flujo %}selected{% endif %} disabled>Eleg&iacute; el tipo de tr&aacute;mite&hellip;</option>
+        {% for flujo in flujos %}
+            <option value="{{ flujo.valor }}"{% if flujo.valor == valores.flujo %} selected{% endif %}>
+                {{ flujo.nombre }}
+            </option>
+        {% endfor %}
+    </select>
+
+    <p class="adminAyuda">
+        Define qu&eacute; etapas recorre el tr&aacute;mite y en qu&eacute; orden.
+        <strong>No se puede cambiar despu&eacute;s de crearlo.</strong>
+        En el paso siguiente se ve el recorrido completo antes de guardar.
+    </p>
+
+    <ul class="adminFlujosAyuda">
+        {% for flujo in flujos %}
+            <li><strong>{{ flujo.nombre }}:</strong> {{ flujo.descripcion }}</li>
+        {% endfor %}
+    </ul>
+
+    <button type="submit" class="adminBtn">Continuar</button>
 </form>
 {% endblock %}

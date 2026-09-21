@@ -13,6 +13,7 @@
         <tr>
             <th>C&oacute;digo</th>
             <th>Denominaci&oacute;n</th>
+            <th>Tipo</th>
             <th>Etapa</th>
             <th>Actualizado</th>
             <th class="adminColAccion">Avanzar</th>
@@ -34,6 +35,7 @@
                         {% if fila.tramite.observado %}<span class="adminChip">observado</span>{% endif %}
                     </a>
                 </td>
+                <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.flujoNombre }}</a></td>
                 <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.etapaLabel }}</a></td>
                 <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.tramite.actualizadoEl|date('d/m/Y') }}</a></td>
                 <td class="adminColAccion">

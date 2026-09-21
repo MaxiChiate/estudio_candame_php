@@ -11,6 +11,7 @@ use EstudioCandame\Controller\SeguimientoController;
 use EstudioCandame\Pruebas\EnvioPruebaService;
 use EstudioCandame\Seguimiento\AccesoRepository;
 use EstudioCandame\Seguimiento\BarraSeguimiento;
+use EstudioCandame\Seguimiento\CatalogoFlujos;
 use EstudioCandame\Seguimiento\Conexion;
 use EstudioCandame\Seguimiento\TokenGenerator;
 use EstudioCandame\Seguimiento\TramiteRepository;
@@ -36,6 +37,7 @@ return function (App $app, Twig $twig): void {
     $barraSeguimiento = null;
     $tramiteRepository = null;
     $accesoRepository = null;
+    $catalogoFlujos = null;
     $etapasConfig = [];
 
     if ($seguimientoEnabled) {
@@ -48,9 +50,12 @@ return function (App $app, Twig $twig): void {
             (string) ($_ENV['DB_CHARSET'] ?? 'utf8mb4'),
         );
         $etapasConfig = require APP_PATH . '/config/etapas.php';
+        // Valida las dos configs al construirse: una etapa inexistente o repetida en un
+        // flujo revienta aca, al arrancar, y no cuando un cliente abre su enlace.
+        $catalogoFlujos = new CatalogoFlujos(require APP_PATH . '/config/flujos.php', $etapasConfig);
         $tramiteRepository = new TramiteRepository($conexion, $relojSeguimiento);
         $accesoRepository = new AccesoRepository($conexion, $relojSeguimiento, new TokenGenerator());
-        $barraSeguimiento = new BarraSeguimiento($accesoRepository, $tramiteRepository, $etapasConfig);
+        $barraSeguimiento = new BarraSeguimiento($accesoRepository, $tramiteRepository, $catalogoFlujos);
     }
 
     $pageController = new PageController($twig, $basePath, $barraSeguimiento);
@@ -95,11 +100,17 @@ return function (App $app, Twig $twig): void {
 
     // Rutas del portal. Solo existen con el flag prendido: apagado, son 404 por
     // ausencia de ruta, no por un chequeo dentro del controller.
-    if ($seguimientoEnabled && $tramiteRepository !== null && $accesoRepository !== null) {
+    if (
+        $seguimientoEnabled
+        && $tramiteRepository !== null
+        && $accesoRepository !== null
+        && $catalogoFlujos !== null
+    ) {
         $seguimientoController = new SeguimientoController(
             $twig,
             $accesoRepository,
             $tramiteRepository,
+            $catalogoFlujos,
             $etapasConfig,
             $basePath,
         );
@@ -113,7 +124,7 @@ return function (App $app, Twig $twig): void {
             $twig,
             $tramiteRepository,
             $accesoRepository,
-            $etapasConfig,
+            $catalogoFlujos,
             $basePath,
             (string) ($_ENV['APP_URL'] ?? ''),
         );
@@ -130,7 +141,12 @@ return function (App $app, Twig $twig): void {
             // "nuevo" antes del patron con id, y el id acotado a digitos para que no se
             // pisen aunque cambie el orden.
             $grupo->get('/tramites/nuevo', [$adminController, 'formularioNuevo']);
-            $grupo->post('/tramites/nuevo', [$adminController, 'crear']);
+            // Alta en dos pasos: el flujo no se puede cambiar despues de creado, asi que
+            // la confirmacion muestra el recorrido completo antes de escribir nada.
+            // Crear es POST /tramites a secas, y revalida por su cuenta.
+            $grupo->post('/tramites/nuevo/previsualizar', [$adminController, 'previsualizar']);
+            $grupo->post('/tramites/nuevo/editar', [$adminController, 'volverAEditar']);
+            $grupo->post('/tramites', [$adminController, 'crear']);
             $grupo->get('/tramites/{id:[0-9]+}', [$adminController, 'detalle']);
             $grupo->post('/tramites/{id:[0-9]+}/avanzar', [$adminController, 'avanzar']);
             $grupo->post('/tramites/{id:[0-9]+}/observacion', [$adminController, 'observacion']);
