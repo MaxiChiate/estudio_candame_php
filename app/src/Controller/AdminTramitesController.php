@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace EstudioCandame\Controller;
 
+use DateTimeImmutable;
 use EstudioCandame\Seguimiento\AccesoRepository;
 use EstudioCandame\Seguimiento\CatalogoFlujos;
 use EstudioCandame\Seguimiento\Etapa;
@@ -30,6 +31,9 @@ use Slim\Views\Twig;
 final class AdminTramitesController
 {
     private const CLAVE_CSRF = CsrfToken::CLAVE_ADMIN_SEGUIMIENTO;
+
+    /** Formato de value de <input type="datetime-local">. */
+    private const FORMATO_INPUT = 'Y-m-d\\TH:i';
 
     public function __construct(
         private readonly Twig $twig,
@@ -240,14 +244,7 @@ final class AdminTramitesController
             'flujoNombre' => $this->catalogo->nombre($tramite->flujo),
             'eventos' => $this->tramites->eventos($tramite->id),
             'accesos' => $this->accesos->porTramite($tramite->id),
-            // El select ofrece TODO el catalogo -- saltar fuera del flujo sigue siendo
-            // legal -- pero primero las del flujo, en su orden, que es el 99% de los
-            // casos.
-            'etapasDelFlujo' => $this->opciones($tramite, $this->catalogo->etapas($tramite->flujo)),
-            'etapasFueraDelFlujo' => $this->opciones($tramite, array_values(array_filter(
-                Etapa::cases(),
-                fn (Etapa $etapa): bool => !$this->catalogo->pertenece($tramite->flujo, $etapa),
-            ))),
+            ...$this->etapasParaElegir($tramite),
             'siguientes' => $this->siguientes($tramite),
             // Labels resueltos con el flujo, para que el historial muestre el mismo
             // texto que la linea del cliente cuando la etapa tiene override.
@@ -311,6 +308,201 @@ final class AdminTramitesController
         ));
 
         return $this->redirigir($response, $this->volverA($datos, $id));
+    }
+
+    /**
+     * Editor del historial: fecha, hora y notas de cada evento, borrar eventos y cargar
+     * eventos nuevos con fecha pasada.
+     *
+     * Existe sobre todo por los tramites que ya venian avanzados cuando se cargaron: el
+     * alta les pone "hoy" a la etapa inicial, y el tramite en realidad arranco hace un
+     * año. Nada de lo que se hace aca mueve la etapa actual -- eso sigue siendo
+     * exclusivo de "Avanzar de etapa".
+     *
+     * @param array<string, string> $args
+     */
+    public function historial(Request $request, Response $response, array $args): Response
+    {
+        $tramite = $this->tramites->porId((int) ($args['id'] ?? 0));
+        if ($tramite === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        return $this->render($response, 'admin/historial.html.twig', [
+            'pageTitle' => sprintf('Historial de %s - Panel', $tramite->referencia),
+            'tramite' => $tramite,
+            'etapaLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
+            'eventos' => $this->tramites->eventos($tramite->id),
+            'labelPorEtapa' => $this->labelPorEtapa($tramite),
+            ...$this->etapasParaElegir($tramite),
+            'ahora' => (new DateTimeImmutable())->format(self::FORMATO_INPUT),
+            'flash' => $this->tomarFlash(),
+        ]);
+    }
+
+    /** @param array<string, string> $args */
+    public function agregarEvento(Request $request, Response $response, array $args): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        if ($tramite === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $etapa = Etapa::tryFrom($this->campo($datos, 'etapa'));
+        $fecha = $this->fechaHora($this->campo($datos, 'ocurrido_el'));
+
+        if ($etapa === null || $fecha === null) {
+            $this->flash($etapa === null ? 'La etapa indicada no existe.' : 'La fecha y hora no son válidas.', 'error');
+
+            return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+        }
+
+        $this->tramites->agregarEvento(
+            $id,
+            $etapa,
+            $fecha,
+            $this->campoONull($datos, 'nota_publica'),
+            $this->campoONull($datos, 'nota_interna'),
+        );
+        $this->flash(sprintf(
+            'Se agregó %s al historial, el %s.',
+            $this->catalogo->label($tramite->flujo, $etapa),
+            $fecha->format('d/m/Y H:i'),
+        ));
+
+        return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /** @param array<string, string> $args */
+    public function editarEvento(Request $request, Response $response, array $args): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        $evento = $this->tramites->evento($id, (int) ($args['evento'] ?? 0));
+        if ($tramite === null || $evento === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $fecha = $this->fechaHora($this->campo($datos, 'ocurrido_el'));
+        if ($fecha === null) {
+            $this->flash('La fecha y hora no son válidas.', 'error');
+
+            return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+        }
+
+        $this->tramites->editarEvento(
+            $evento->id,
+            $fecha,
+            $this->campoONull($datos, 'nota_publica'),
+            $this->campoONull($datos, 'nota_interna'),
+        );
+        $this->flash(sprintf(
+            'Se guardó %s, el %s.',
+            $this->catalogo->label($tramite->flujo, $evento->etapa),
+            $fecha->format('d/m/Y H:i'),
+        ));
+
+        return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /** @param array<string, string> $args */
+    public function eliminarEvento(Request $request, Response $response, array $args): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        $evento = $this->tramites->evento($id, (int) ($args['evento'] ?? 0));
+        if ($tramite === null || $evento === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $this->tramites->eliminarEvento($evento->id);
+        $this->flash(sprintf(
+            'Se borró %s del %s del historial.',
+            $this->catalogo->label($tramite->flujo, $evento->etapa),
+            $evento->ocurridoEl->format('d/m/Y H:i'),
+        ));
+
+        return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /**
+     * Borra el tramite con todo su historial y sus enlaces. No hay vuelta atras; la
+     * confirmacion la pide el boton (confirm() del browser), y aca solo se exige CSRF.
+     *
+     * @param array<string, string> $args
+     */
+    public function eliminar(Request $request, Response $response, array $args): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        if ($tramite === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $this->tramites->eliminar($id);
+        $this->flash(sprintf('Se eliminó el trámite %s (%s).', $tramite->referencia, $tramite->denominacion));
+
+        return $this->redirigir($response, '/admin/tramites');
+    }
+
+    /**
+     * Fecha y hora de un <input type="datetime-local">. Algunos browsers mandan los
+     * segundos y otros no; se aceptan las dos formas. La vuelta por format() descarta
+     * lo que PHP "corrige" en silencio (un 31 de febrero pasaria como 3 de marzo).
+     */
+    private function fechaHora(string $valor): ?DateTimeImmutable
+    {
+        foreach (['!Y-m-d\TH:i', '!Y-m-d\TH:i:s'] as $formato) {
+            $fecha = DateTimeImmutable::createFromFormat($formato, $valor);
+            if ($fecha !== false && $fecha->format(substr($formato, 1)) === $valor) {
+                return $fecha;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Las etapas para un <select>: TODO el catalogo -- saltar fuera del flujo sigue
+     * siendo legal -- pero primero las del flujo, en su orden, que es el 99% de los
+     * casos.
+     *
+     * @return array{etapasDelFlujo: list<array{valor: string, label: string, actual: bool}>, etapasFueraDelFlujo: list<array{valor: string, label: string, actual: bool}>}
+     */
+    private function etapasParaElegir(Tramite $tramite): array
+    {
+        return [
+            'etapasDelFlujo' => $this->opciones($tramite, $this->catalogo->etapas($tramite->flujo)),
+            'etapasFueraDelFlujo' => $this->opciones($tramite, array_values(array_filter(
+                Etapa::cases(),
+                fn (Etapa $etapa): bool => !$this->catalogo->pertenece($tramite->flujo, $etapa),
+            ))),
+        ];
     }
 
     /**

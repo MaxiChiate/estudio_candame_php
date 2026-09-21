@@ -1,0 +1,86 @@
+{% extends 'admin/layout.html.twig' %}
+{% block content %}
+<div class="adminTitulo">
+    <h1>Historial de {{ tramite.referencia }}</h1>
+    <a class="adminLink" href="{{ basePath }}/admin/tramites/{{ tramite.id }}">Volver al tr&aacute;mite</a>
+</div>
+
+<p class="adminSubtitulo">
+    {{ tramite.denominacion }}.
+    Etapa actual: <strong>{{ etapaLabel }}</strong>
+</p>
+
+{# Nada de esta pantalla mueve la etapa actual: es para corregir el pasado (tipicamente,
+   tramites que ya venian avanzados cuando se cargaron). Avanzar sigue siendo del
+   detalle. #}
+<p class="adminAyuda">
+    Ac&aacute; se corrige el pasado: fechas, horarios y notas de cada etapa registrada, o etapas que sobran o faltan.
+    Nada de esto cambia la etapa actual &mdash; para eso est&aacute; &laquo;Avanzar de etapa&raquo; en el tr&aacute;mite.
+    Si borr&aacute;s el registro de la etapa actual o de una anterior, el cliente la sigue viendo, sin fecha.
+</p>
+
+<section class="adminSeccion">
+    <h2>Etapas registradas</h2>
+
+    {% if eventos is empty %}
+        <p class="adminVacio">Sin eventos.</p>
+    {% else %}
+        <ul class="adminHistorialEditable">
+            {% for evento in eventos %}
+                <li class="adminHistorialItem">
+                    <p class="adminHistorialEtapa">
+                        {{ labelPorEtapa[evento.etapa.value]|default(evento.etapa.value) }}
+                        {% if evento.etapa == tramite.etapaActual %}<span class="adminChip">actual</span>{% endif %}
+                    </p>
+
+                    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial/{{ evento.id }}" class="adminForm adminFormHistorial">
+                        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+
+                        <label for="ocurrido_el_{{ evento.id }}">Fecha y hora</label>
+                        <input type="datetime-local" id="ocurrido_el_{{ evento.id }}" name="ocurrido_el" required
+                               value="{{ evento.ocurridoEl|date('Y-m-d\\TH:i') }}"/>
+
+                        <label for="nota_publica_{{ evento.id }}">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
+                        <textarea id="nota_publica_{{ evento.id }}" name="nota_publica" rows="2">{{ evento.notaPublica }}</textarea>
+
+                        <label for="nota_interna_{{ evento.id }}">Nota interna <span class="adminTenue">(nunca sale del panel)</span></label>
+                        <textarea id="nota_interna_{{ evento.id }}" name="nota_interna" rows="2">{{ evento.notaInterna }}</textarea>
+
+                        <button type="submit" class="adminBtn adminBtnChico">Guardar</button>
+                    </form>
+
+                    {# Form aparte: no se pueden anidar forms, y borrar no tiene que viajar
+                       con los campos de la edicion. #}
+                    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial/{{ evento.id }}/eliminar"
+                          class="adminHistorialEliminar"
+                          onsubmit="return confirm('¿Borrar {{ labelPorEtapa[evento.etapa.value]|default(evento.etapa.value)|e('js') }} del {{ evento.ocurridoEl|date('d/m/Y H:i') }}?');">
+                        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+                        <button type="submit" class="adminBtnTexto">Borrar esta etapa del historial</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+
+<section class="adminSeccion">
+    <h2>Agregar una etapa</h2>
+    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial" class="adminForm">
+        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+
+        <label for="etapa">Etapa</label>
+        {% include 'admin/_select_etapa.html.twig' with {idSelect: 'etapa'} %}
+
+        <label for="ocurrido_el">Fecha y hora</label>
+        <input type="datetime-local" id="ocurrido_el" name="ocurrido_el" required value="{{ ahora }}"/>
+
+        <label for="nota_publica">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
+        <textarea id="nota_publica" name="nota_publica" rows="2"></textarea>
+
+        <label for="nota_interna">Nota interna <span class="adminTenue">(nunca sale del panel)</span></label>
+        <textarea id="nota_interna" name="nota_interna" rows="2"></textarea>
+
+        <button type="submit" class="adminBtn">Agregar al historial</button>
+    </form>
+</section>
+{% endblock %}

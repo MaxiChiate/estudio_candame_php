@@ -151,6 +151,12 @@ return function (App $app, Twig $twig): void {
             $grupo->post('/tramites/{id:[0-9]+}/avanzar', [$adminController, 'avanzar']);
             $grupo->post('/tramites/{id:[0-9]+}/observacion', [$adminController, 'observacion']);
             $grupo->post('/tramites/{id:[0-9]+}/accesos', [$adminController, 'emitirAcceso']);
+            $grupo->post('/tramites/{id:[0-9]+}/eliminar', [$adminController, 'eliminar']);
+            // Editor del historial. Nada de esto mueve etapa_actual: para eso, /avanzar.
+            $grupo->get('/tramites/{id:[0-9]+}/historial', [$adminController, 'historial']);
+            $grupo->post('/tramites/{id:[0-9]+}/historial', [$adminController, 'agregarEvento']);
+            $grupo->post('/tramites/{id:[0-9]+}/historial/{evento:[0-9]+}', [$adminController, 'editarEvento']);
+            $grupo->post('/tramites/{id:[0-9]+}/historial/{evento:[0-9]+}/eliminar', [$adminController, 'eliminarEvento']);
             $grupo->post('/accesos/{id:[0-9]+}/revocar', [$adminController, 'revocarAcceso']);
         })->add($autenticacion);
     }

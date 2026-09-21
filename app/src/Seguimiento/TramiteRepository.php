@@ -236,6 +236,79 @@ final class TramiteRepository
         return $eventos;
     }
 
+    /**
+     * Un evento suelto, para editarlo o borrarlo desde el panel. Filtra por tramite
+     * ademas de por id: la ruta trae los dos, y un id de evento de OTRO tramite tiene
+     * que dar null en vez de dejarse tocar desde una URL que no le corresponde.
+     */
+    public function evento(int $tramiteId, int $eventoId): ?TramiteEvento
+    {
+        foreach ($this->eventos($tramiteId) as $evento) {
+            if ($evento->id === $eventoId) {
+                return $evento;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Carga un evento en el historial con fecha a eleccion, SIN mover etapa_actual.
+     *
+     * Existe para corregir el pasado -- tipicamente, tramites que ya venian avanzados
+     * cuando se cargaron en el portal --, no para avanzar: para eso esta avanzar(), que
+     * es la que mueve la etapa en curso. Por eso aca etapa_actual y el ultimo evento
+     * pueden quedar distintos, y es lo que se pidio.
+     */
+    public function agregarEvento(
+        int $tramiteId,
+        Etapa $etapa,
+        DateTimeImmutable $ocurridoEl,
+        ?string $notaPublica,
+        ?string $notaInterna,
+    ): void {
+        $this->insertarEvento($tramiteId, $etapa, $ocurridoEl->format(self::FORMATO_FECHA), $notaPublica, $notaInterna);
+    }
+
+    /** Corrige fecha y notas de un evento. La etapa no se edita: eso es borrar y agregar. */
+    public function editarEvento(
+        int $eventoId,
+        DateTimeImmutable $ocurridoEl,
+        ?string $notaPublica,
+        ?string $notaInterna,
+    ): void {
+        $stmt = $this->conexion->pdo()->prepare(
+            'UPDATE tramite_evento SET ocurrido_el = :ocurrido, nota_publica = :publica, nota_interna = :interna
+             WHERE id = :id'
+        );
+        $stmt->execute([
+            'ocurrido' => $ocurridoEl->format(self::FORMATO_FECHA),
+            'publica' => $notaPublica !== null && $notaPublica !== '' ? $notaPublica : null,
+            'interna' => $notaInterna !== null && $notaInterna !== '' ? $notaInterna : null,
+            'id' => $eventoId,
+        ]);
+    }
+
+    /**
+     * Borra un evento. etapa_actual no se toca: si se borra el evento de la etapa en
+     * curso, el tramite sigue en ella y el cliente la ve sin fecha.
+     */
+    public function eliminarEvento(int $eventoId): void
+    {
+        $stmt = $this->conexion->pdo()->prepare('DELETE FROM tramite_evento WHERE id = :id');
+        $stmt->execute(['id' => $eventoId]);
+    }
+
+    /**
+     * Borra el tramite entero. Eventos y enlaces de acceso caen solos por el ON DELETE
+     * CASCADE de sus FK: los enlaces que el cliente tenga dejan de andar en el acto.
+     */
+    public function eliminar(int $tramiteId): void
+    {
+        $stmt = $this->conexion->pdo()->prepare('DELETE FROM tramite WHERE id = :id');
+        $stmt->execute(['id' => $tramiteId]);
+    }
+
     private function insertarEvento(int $tramiteId, Etapa $etapa, string $ocurridoEl, ?string $notaPublica, ?string $notaInterna): void
     {
         $stmt = $this->conexion->pdo()->prepare(
