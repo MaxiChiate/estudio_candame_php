@@ -1349,10 +1349,22 @@ section[id] {
 /* Punto lleno para todo lo que ya ocurrió, sea del flujo del trámite o no: una etapa
    fuera de flujo que pasó es, para el cliente, una etapa cumplida más. */
 .seguimientoEtapa.is-cumplida .seguimientoMarca { background: var(--color-text-soft); border-color: var(--color-text-soft); }
-.seguimientoEtapa.is-actual .seguimientoMarca { background: var(--color-accent); border-color: var(--color-accent); }
+/* Mas grande que las demas y con un halo, centrada sobre la misma linea: los margenes
+   negativos compensan los 6px de mas para que ni la linea ni el texto se corran. */
+.seguimientoEtapa.is-actual .seguimientoMarca {
+    position: relative;
+    width: 21px;
+    height: 21px;
+    margin: 4px -3px 0;
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 4px rgba(138, 21, 36, 0.15);
+}
 
 .seguimientoEtapaLabel { margin: 0; font-weight: 600; color: var(--color-text-soft); }
-.seguimientoEtapa.is-actual .seguimientoEtapaLabel { color: var(--color-ink); }
+/* La etapa actual es la respuesta a "como viene lo mio": nombre en el acento y un
+   punto mas grande que el resto, para que se encuentre de un vistazo. */
+.seguimientoEtapa.is-actual .seguimientoEtapaLabel { color: var(--color-accent-dark); font-size: 1.15rem; }
 .seguimientoEtapa.is-pendiente .seguimientoEtapaLabel { color: var(--color-label); }
 .seguimientoEtapaMeta { margin: 2px 0 0; font-size: 0.88rem; color: var(--color-label); }
 .seguimientoEtapaDetalle { margin: 6px 0 0; color: var(--color-text-muted); }

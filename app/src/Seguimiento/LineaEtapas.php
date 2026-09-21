@@ -16,13 +16,19 @@ use DateTimeImmutable;
  * el operador salteaba a mano lo que no aplicaba; el cliente veia etapas que nunca le
  * iban a tocar.
  *
- * Una etapa esta CUMPLIDA si tiene al menos un evento en tramite_evento. No se deriva
- * de comparar posiciones: el recorrido no es lineal ni dentro del propio flujo. La
- * vista es un loop (el inspector puede despachar varias), asi que un tramite vuelve de
- * VISTA_CONTESTADA a VISTA; con un criterio posicional, al volver atras las etapas
- * previas se des-completaban solas. Como efecto de esto, una etapa POSTERIOR a la
- * actual puede figurar cumplida -- y es lo correcto: el tramite efectivamente paso por
- * ahi.
+ * Una etapa esta CUMPLIDA si tiene al menos un evento en tramite_evento, o si se
+ * dibuja ANTES de la actual. Lo primero no se deriva de comparar posiciones: el
+ * recorrido no es lineal ni dentro del propio flujo. La vista es un loop (el inspector
+ * puede despachar varias), asi que un tramite vuelve de VISTA_CONTESTADA a VISTA; con un
+ * criterio solo posicional, al volver atras las etapas posteriores se des-completaban
+ * solas. Como efecto de esto, una etapa POSTERIOR a la actual puede figurar cumplida --
+ * y es lo correcto: el tramite efectivamente paso por ahi.
+ *
+ * Lo segundo cubre los saltos hacia adelante: si el operador pasa el tramite de una
+ * etapa a otra varias mas adelante, las del medio no tienen evento, pero el cliente las
+ * ve cumplidas (sin fecha), como si el tramite hubiera pasado por todas. Mostrarlas
+ * pendientes detras de la actual le haria creer que algo quedo sin hacer. Las opcionales
+ * salteadas siguen sin dibujarse: no hay por que anunciar una vista que no existio.
  *
  * Etapas FUERA DE FLUJO: el operador puede saltar a cualquier etapa del catalogo,
  * incluidas las que no pertenecen al flujo del tramite. Si eso paso -- hay un evento --
@@ -66,15 +72,21 @@ final class LineaEtapas
         }
 
         $linea = [];
+        // Mientras no se llegue a la actual, todo lo que se dibuja quedo atras.
+        $antesDeLaActual = true;
         foreach (self::etapasADibujar($flujo, $actual, array_keys($veces), $catalogo) as $etapa) {
             $cantidad = $veces[$etapa->value] ?? 0;
             $enElFlujo = $catalogo->pertenece($flujo, $etapa);
 
             if ($etapa === $actual) {
                 $estado = self::ACTUAL;
-            } elseif ($cantidad > 0) {
-                // Vale tanto para las del flujo como para las de afuera: si el tramite
-                // paso por ahi, para el cliente es una etapa cumplida y nada mas.
+                $antesDeLaActual = false;
+            } elseif ($cantidad > 0 || $antesDeLaActual) {
+                // Con evento, vale tanto para las del flujo como para las de afuera: si
+                // el tramite paso por ahi, para el cliente es una etapa cumplida y nada
+                // mas. Sin evento pero antes de la actual, es una etapa que el operador
+                // salteo: el cliente la ve cumplida igual, porque el tramite ya esta
+                // mas adelante y mostrarla pendiente le haria creer que falta.
                 $estado = self::CUMPLIDA;
             } else {
                 $estado = self::PENDIENTE;
@@ -86,7 +98,8 @@ final class LineaEtapas
                 'detalle' => $catalogo->detalle($flujo, $etapa),
                 'accion' => $catalogo->accion($etapa),
                 'estado' => $estado,
-                // Solo tiene sentido mostrar fecha de lo que ya paso.
+                // Solo tiene sentido mostrar fecha de lo que ya paso. Una salteada
+                // queda cumplida sin fecha: no hay evento del que sacarla.
                 'fecha' => $fechas[$etapa->value] ?? null,
                 'repeticion' => self::repeticion($etapa, $cantidad, $catalogo),
                 // No se usa en la vista publica: esta para el panel, donde si conviene
