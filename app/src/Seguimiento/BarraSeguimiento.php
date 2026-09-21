@@ -18,14 +18,10 @@ use Throwable;
  */
 final class BarraSeguimiento
 {
-    /**
-     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
-     *                            repeticion?: string}> $etapasConfig
-     */
     public function __construct(
         private readonly AccesoRepository $accesos,
         private readonly TramiteRepository $tramites,
-        private readonly array $etapasConfig,
+        private readonly CatalogoFlujos $catalogo,
     ) {
     }
 
@@ -53,7 +49,7 @@ final class BarraSeguimiento
 
             return [
                 'referencia' => $tramite->referencia,
-                'etapaLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
+                'etapaLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
                 'token' => $token,
                 'observado' => $tramite->observado,
             ];
