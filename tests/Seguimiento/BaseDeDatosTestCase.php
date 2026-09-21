@@ -77,11 +77,12 @@ abstract class BaseDeDatosTestCase extends TestCase
     }
 
     /**
-     * Alta de tramite para los tests. El flujo por default es SAS porque es lo unico que
-     * habia cargado cuando el portal tenia un solo pipeline; los tests que prueban algo
+     * Alta de tramite para los tests. El default es Constitucion SRL/SA porque su
+     * recorrido ES el pipeline unico y generico que habia antes de los flujos: los tests
+     * escritos contra aquel siguen describiendo lo mismo. Los que prueban algo
      * especifico de otro flujo lo pasan explicito.
      */
-    protected function crearTramite(string $denominacion, Flujo $flujo = Flujo::SAS): int
+    protected function crearTramite(string $denominacion, Flujo $flujo = Flujo::CONSTITUCION_SRL_SA): int
     {
         return $this->tramites->crear($denominacion, $flujo, $this->catalogo->etapaInicial($flujo));
     }

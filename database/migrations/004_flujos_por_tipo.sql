@@ -17,10 +17,20 @@
 --   SELECT tipo, COUNT(*) FROM tramite GROUP BY tipo;
 --     candame_local  -> 'SAS' x 8   (unico valor)
 --     estudicn_bd_0  -> sin filas   (produccion todavia vacia)
--- Un unico valor y mapea directo a Flujo::SAS ('sas'), asi que el backfill es una linea
--- y no hace falta ningun default inventado. Aun asi el paso 4 corta la migracion si
--- aparece un valor que no mapee a ningun flujo, antes que meterlo en uno equivocado en
--- silencio.
+-- 'SAS' NO significa que esos tramites sean del flujo SAS: era el DEFAULT de la columna
+-- (`tipo VARCHAR(10) NOT NULL DEFAULT 'SAS'`, migracion 001) y el alta del panel nunca
+-- lo dejo elegir -- de hecho el campo Estatuto se saco del alta en 41ab26d y el tipo
+-- dejo de mostrarse en 3e4d731. Lo que esos tramites efectivamente recorrieron es el
+-- pipeline unico y generico de antes de los flujos, que hoy es `constitucion_srl_sa`
+-- (el flujo 1 es ese mismo recorrido, sin overrides). Ahi van.
+--
+-- Mandarlos a 'sas' los pondria en un recorrido que nunca hicieron: la SAS pasa por TAD
+-- y ratificacion del gerente, y no usa TRAMITE_INICIADO sino TRAMITE_INICIADO_DIGITALMENTE,
+-- asi que un tramite viejo parado en TRAMITE_INICIADO apareceria como etapa fuera de
+-- flujo en vez de como la etapa normal que es.
+--
+-- El paso 4 corta la migracion si aparece un valor que no mapee a ningun flujo, antes
+-- que meterlo en uno equivocado en silencio.
 
 -- 1) Las etapas nuevas no entran en VARCHAR(30): 'procesando_documentacion_recibida'
 --    son 33 caracteres. Se ensanchan las dos columnas de etapa ANTES de que exista un
@@ -33,8 +43,8 @@ ALTER TABLE tramite_evento MODIFY etapa        VARCHAR(40) NOT NULL;
 --    ('reforma_srl_sin_cambio_gerencia') y la columna era VARCHAR(10).
 ALTER TABLE tramite MODIFY tipo VARCHAR(40) NOT NULL DEFAULT '';
 
--- 3) Backfill. Todo lo que hay es 'SAS'.
-UPDATE tramite SET tipo = 'sas' WHERE tipo = 'SAS';
+-- 3) Backfill. Todo lo que hay es el 'SAS' del default, que es el pipeline generico.
+UPDATE tramite SET tipo = 'constitucion_srl_sa' WHERE tipo = 'SAS';
 
 -- 4) Guarda: si quedo alguna fila con un valor que no es un flujo valido, este UPDATE
 --    intenta ponerle NULL en una columna NOT NULL y la migracion se corta ahi, con la
