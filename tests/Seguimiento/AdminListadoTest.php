@@ -13,16 +13,21 @@ use Psr\Http\Message\ResponseInterface;
  */
 final class AdminListadoTest extends BaseDeDatosTestCase
 {
-    public function testLasCeldasDeDatosLinkeanAlDetalleYElFormDeAvanzarQuedaAfuera(): void
+    /**
+     * Toda la fila lleva al detalle, y el listado no tiene ningun boton de avanzar: se
+     * confundia con el de entrar al tramite. Avanzar se hace desde adentro.
+     */
+    public function testTodasLasCeldasLinkeanAlDetalleYNoHayBotonDeAvanzar(): void
     {
         $id = $this->crearTramite('Listado SAS');
         $this->tramites->avanzar($id, Etapa::PROCESANDO_DOCUMENTACION, null, null);
 
         $response = $this->listado();
         self::assertSame(200, $response->getStatusCode());
+        $html = (string) $response->getBody();
 
         $dom = new \DOMDocument();
-        @$dom->loadHTML((string) $response->getBody());
+        @$dom->loadHTML($html);
         $xpath = new \DOMXPath($dom);
 
         $fila = $xpath->query('//tbody/tr')->item(0);
@@ -30,16 +35,14 @@ final class AdminListadoTest extends BaseDeDatosTestCase
 
         $celdas = $xpath->query('td', $fila);
         $destino = '/admin/tramites/' . $id;
-        // Todas menos la ultima (Avanzar) son un link al detalle.
-        for ($i = 0; $i < $celdas->length - 1; $i++) {
+        for ($i = 0; $i < $celdas->length; $i++) {
             $link = $xpath->query('a', $celdas->item($i))->item(0);
             self::assertInstanceOf(\DOMElement::class, $link, sprintf('La celda %d no tiene link.', $i));
             self::assertSame($destino, $link->getAttribute('href'));
         }
 
-        self::assertSame(0, $xpath->query('.//a//form | .//a//button', $fila)->length, 'Hay un form/boton dentro de un link.');
-        self::assertSame(1, $xpath->query('td[last()]//form', $fila)->length, 'El form de avanzar no esta en la celda de accion.');
-        self::assertSame(0, $xpath->query('td[last()]//a', $fila)->length, 'La celda de accion no puede navegar.');
+        self::assertSame(0, $xpath->query('//tbody//form | //tbody//button', $dom)->length, 'El listado no puede tener botones de avanzar.');
+        self::assertStringNotContainsString('/avanzar', $html);
     }
 
     private function listado(): ResponseInterface

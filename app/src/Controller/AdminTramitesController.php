@@ -20,9 +20,10 @@ use Slim\Views\Twig;
 /**
  * Panel de la doctora. Protegido por AutenticacionBasica (HTTP Basic) desde routes.php.
  *
- * Prioridad de diseno: avanzar de etapa es UN click desde el listado. Es la accion que
- * se hace todos los dias; si cuesta, el portal deja de actualizarse y queda mintiendo.
- * El resto (notas, observaciones, accesos) vive en el detalle, donde molesta menos.
+ * Prioridad de diseno: avanzar de etapa es UN click desde el detalle del tramite. Es la
+ * accion que se hace todos los dias; si cuesta, el portal deja de actualizarse y queda
+ * mintiendo. El listado no tiene boton de avanzar a proposito: se confundia con el de
+ * entrar al tramite. Todo lo que modifica un tramite se hace desde adentro.
  *
  * Todos los POST llevan CSRF: HTTP Basic hace que el browser mande las credenciales
  * solo en cada request, asi que sin token un formulario de otro sitio podria avanzar
@@ -65,7 +66,6 @@ final class AdminTramitesController
                 'tramite' => $tramite,
                 'etapaLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
                 'flujoNombre' => $this->catalogo->nombre($tramite->flujo),
-                'siguientes' => $this->siguientes($tramite),
             ];
         }
 
@@ -282,7 +282,7 @@ final class AdminTramitesController
         }
 
         // Si no viene etapa explicita, avanza a la siguiente DEL FLUJO del tramite: ese
-        // es el camino de un click desde el listado. Con etapa explicita se puede ir a
+        // es el camino de un click desde el detalle. Con etapa explicita se puede ir a
         // CUALQUIERA del catalogo, incluidas anteriores (el loop de la vista) y las que
         // no pertenecen al flujo. Lo unico que se valida es que sea un valor del enum:
         // el operador sabe lo que hace y el portal no le discute el recorrido.
@@ -293,14 +293,14 @@ final class AdminTramitesController
             if ($etapa === null) {
                 $this->flash('La etapa indicada no existe.', 'error');
 
-                return $this->redirigir($response, $this->volverA($datos, $id));
+                return $this->redirigir($response, '/admin/tramites/' . $id);
             }
         } else {
             $etapa = $this->catalogo->siguientesSugeridas($tramite->flujo, $tramite->etapaActual)[0] ?? null;
             if ($etapa === null) {
                 $this->flash(sprintf('El trámite %s ya está en la última etapa.', $tramite->referencia), 'error');
 
-                return $this->redirigir($response, $this->volverA($datos, $id));
+                return $this->redirigir($response, '/admin/tramites/' . $id);
             }
         }
 
@@ -308,7 +308,7 @@ final class AdminTramitesController
         if ($errorNotas !== null) {
             $this->flash($errorNotas, 'error');
 
-            return $this->redirigir($response, $this->volverA($datos, $id));
+            return $this->redirigir($response, '/admin/tramites/' . $id);
         }
 
         $this->tramites->avanzar(
@@ -324,7 +324,7 @@ final class AdminTramitesController
             $this->catalogo->label($tramite->flujo, $etapa),
         ));
 
-        return $this->redirigir($response, $this->volverA($datos, $id));
+        return $this->redirigir($response, '/admin/tramites/' . $id);
     }
 
     /**
@@ -694,19 +694,6 @@ final class AdminTramitesController
         $this->flash(sprintf('Se revocó el enlace de "%s".', $acceso->etiqueta));
 
         return $this->redirigir($response, '/admin/tramites/' . $acceso->tramiteId);
-    }
-
-    /**
-     * Vuelve al listado o al detalle segun de donde vino el POST, para que avanzar
-     * desde el listado no te saque del listado.
-     *
-     * @param array<string, mixed> $datos
-     */
-    private function volverA(array $datos, int $id): string
-    {
-        return $this->campo($datos, 'volver') === 'listado'
-            ? '/admin/tramites'
-            : '/admin/tramites/' . $id;
     }
 
     /** @param array<string, mixed> $datos */

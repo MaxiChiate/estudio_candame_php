@@ -16,7 +16,6 @@
             <th>Tipo</th>
             <th>Etapa</th>
             <th>Actualizado</th>
-            <th class="adminColAccion">Avanzar</th>
         </tr>
     </thead>
     <tbody>
@@ -24,8 +23,8 @@
             {# Toda la fila lleva al detalle con <a> reales (click derecho, pestana nueva),
                uno por celda de datos porque un <a> no puede envolver un <tr>. Solo el
                primero es foco/lector de pantalla: los demas son el mismo destino repetido.
-               La celda de "Avanzar" queda afuera a proposito: su form no puede quedar
-               anidado dentro de un link. #}
+               No hay boton de avanzar aca a proposito: se confundia con el de entrar al
+               tramite. Avanzar se hace desde el detalle. #}
             {% set urlDetalle = basePath ~ '/admin/tramites/' ~ fila.tramite.id %}
             <tr class="adminFilaLink{% if fila.tramite.observado %} is-observado{% endif %}">
                 <td><a href="{{ urlDetalle }}">{{ fila.tramite.referencia }}</a></td>
@@ -38,22 +37,6 @@
                 <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.flujoNombre }}</a></td>
                 <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.etapaLabel }}</a></td>
                 <td><a href="{{ urlDetalle }}" tabindex="-1" aria-hidden="true">{{ fila.tramite.actualizadoEl|date('d/m/Y') }}</a></td>
-                <td class="adminColAccion">
-                    {% if fila.siguientes is empty %}
-                        <span class="adminTenue">completado</span>
-                    {% else %}
-                        {# Un click. Normalmente un boton; en Vista contestada son dos,
-                           porque "siguiente" ahi es ambiguo (otra vista o terminado). #}
-                        {% for siguiente in fila.siguientes %}
-                            <form method="post" action="{{ basePath }}/admin/tramites/{{ fila.tramite.id }}/avanzar">
-                                <input type="hidden" name="_csrf" value="{{ csrf }}"/>
-                                <input type="hidden" name="volver" value="listado"/>
-                                <input type="hidden" name="etapa" value="{{ siguiente.valor }}"/>
-                                <button type="submit" class="adminBtn adminBtnChico">&rarr; {{ siguiente.label }}</button>
-                            </form>
-                        {% endfor %}
-                    {% endif %}
-                </td>
             </tr>
         {% endfor %}
     </tbody>

@@ -95,10 +95,9 @@ body {
 .adminTabla tr.is-observado td:first-child { box-shadow: inset 3px 0 0 var(--admin-accent); }
 .adminTabla tr.is-revocado { opacity: 0.55; }
 /* Fila clickeable: el link ocupa la celda entera (el padding pasa de la celda al <a>),
-   asi cualquier punto de las celdas de datos navega. La celda de accion conserva su
-   padding y no tiene link. */
-.adminFilaLink td:not(.adminColAccion) { padding: 0; }
-.adminFilaLink td:not(.adminColAccion) > a {
+   asi cualquier punto de la fila navega. */
+.adminFilaLink td { padding: 0; }
+.adminFilaLink td > a {
     display: block;
     padding: 10px 14px;
     color: inherit;
@@ -107,8 +106,6 @@ body {
 .adminFilaLink td:first-child > a { color: var(--admin-accent); font-weight: 600; }
 .adminFilaLink:hover td { background: var(--admin-bg); }
 .adminFilaLink td > a:focus-visible { outline: 2px solid var(--admin-accent); outline-offset: -2px; }
-.adminColAccion { text-align: right; }
-.adminColAccion form { margin: 0; display: inline; }
 
 .adminChip {
     display: inline-block;
@@ -285,8 +282,8 @@ body {
     .adminTabla thead { display: none; }
     .adminTabla tr { border-bottom: 1px solid var(--admin-border); }
     .adminTabla td { border-bottom: none; padding: 6px 14px; }
-    .adminFilaLink td:not(.adminColAccion) > a { padding: 6px 14px; }
-    .adminColAccion { text-align: left; }
+    .adminFilaLink td { padding: 0; }
+    .adminFilaLink td > a { padding: 6px 14px; }
 }
 
 /* --- Flujos: ayuda del alta, confirmacion y linea previa --------------------- */
