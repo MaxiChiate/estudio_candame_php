@@ -164,34 +164,56 @@ dev server built-in.
   siguiendo el precedente de `Pruebas/`).
   - Le muestra al cliente en qué etapa está su trámite y **nada más**: ni socios, ni
     documentos, ni identificaciones fiscales, ni descargas. Ver "Fuera de alcance".
+  - `tramite.flujo` (antes `tramite.tipo`, que estaba deprecada) guarda el flujo; la
+    migración `004` la renombra y ensancha las columnas de etapa a `VARCHAR(40)`, que es
+    lo que necesitan los values nuevos.
   - `tramite.referencia` (`EC-2026-0001`) es el **único identificador** y lo genera
     `TramiteRepository::proximaReferencia()` al crear: correlativo por año, que reinicia
     cada enero para no revelar cuántos trámites lleva el estudio. El prefijo es la
     constante `PREFIJO_REFERENCIA`. **El número de expediente de IGJ no se guarda**: el
     cliente no tiene que verlo y, al dar de alta, todavía no existe — la doctora lo
     maneja por fuera. No reintroducirlo sin instrucción explícita.
-  - `Etapa` — enum de las 12 etapas del pipeline de IGJ, en orden. **No tiene
+  - `Etapa` — **catálogo** de etapas posibles, no una secuencia. **No tiene
     `etiqueta()` a propósito**: los labels visibles viven en `app/config/etapas.php`
     porque la doctora los va a renombrar, y renombrar no debe requerir tocar código ni
     migrar datos. El `value` del enum es un identificador estable que nunca se muestra y
-    que está guardado en la base. Cada entrada de la config tiene `label`, `detalle`,
-    y opcionalmente `accion` (pedido concreto al cliente, se muestra destacado y sin
-    colapsar), `repeticion` (formato del contador, sólo en las etapas que son un loop) y
-    `opcional` (las de la vista: pueden no ocurrir nunca, así que no se anuncian de
-    antemano — no aparecen en la línea hasta que el trámite pasa por ahí).
-  - **El pipeline es genérico y no se recorre linealmente.** El orden define cómo se
-    dibuja la línea y cuál es la etapa siguiente por default, pero se puede ir a
-    cualquiera: hay etapas que no aplican a un trámite (Dictámenes en una SAS por
-    estatuto modelo) y se saltean, y la vista es un loop — el inspector puede despachar
-    más de una, así que un trámite vuelve de `VISTA_CONTESTADA` a `VISTA`. No
-    implementar secuencias por tipo de trámite.
+    que está guardado en la base. Los values preexistentes están en MAYÚSCULAS y los
+    agregados con los flujos en minúsculas: es deliberado, renombrarlos costaría una
+    migración de datos a cambio de nada. Cada entrada de la config tiene `label`,
+    `detalle`, y opcionalmente `accion` (pedido concreto al cliente, se muestra destacado
+    y sin colapsar), `repeticion` (formato del contador, sólo en las etapas que son un
+    loop) y `opcional` (las de la vista: pueden no ocurrir nunca, así que no se anuncian
+    de antemano — no aparecen en la línea hasta que el trámite pasa por ahí).
+  - **El pipeline lo define el flujo del trámite, no el enum.** `Flujo` (7 casos:
+    constitución SRL/SA, asoc. civil designación/reforma, art. 60, reforma SRL con y sin
+    cambio de gerencia, SAS, constitución asoc. civil) se elige **al crear el trámite** y
+    **no se puede cambiar después** — no hay ninguna ruta ni método que lo modifique, y
+    hay un test que lo verifica. Qué etapas recorre cada flujo, en qué orden, y los
+    overrides de `label`/`detalle` por flujo viven en `app/config/flujos.php`: config, no
+    código. `CatalogoFlujos` lee las dos configs, las valida al construirse (etapa
+    inexistente o repetida revienta al arrancar, no cuando un cliente abre su enlace) y
+    es lo único que resuelve orden y textos. Se instancia en `routes.php`, como
+    `Conexion`.
+  - Art. 60 y Reforma SRL sin cambio de gerencia **comparten la secuencia a propósito**:
+    son trámites distintos con el mismo pipeline. No colapsarlos en uno.
+  - El recorrido **no es lineal ni dentro del propio flujo**: la vista es un loop — el
+    inspector puede despachar más de una, así que un trámite vuelve de `VISTA_CONTESTADA`
+    a `VISTA`. El operador además puede saltar a **cualquier** etapa del catálogo,
+    incluidas las de afuera de su flujo; el panel no se lo discute (el select del detalle
+    las ofrece en un segundo grupo).
   - Por eso **una etapa está cumplida si tiene al menos un evento en `tramite_evento`**,
     no por comparar posiciones contra `etapa_actual` (que sólo marca la que está en
     curso). Con el criterio viejo, volver atrás des-completaba las etapas previas. Como
     efecto, una etapa posterior a la actual puede figurar cumplida: es correcto.
-  - Una etapa **salteada** (sin evento, pero anterior a la actual) es un estado propio:
-    se pinta como recorrida para que la línea se lea como avance, pero no lleva fecha ni
-    texto de estado, porque el trámite nunca pasó por ahí.
+  - Una etapa **fuera de flujo** con eventos se dibuja igual, marcada cumplida y ubicada
+    por orden de catálogo entre sus vecinas: para el cliente es una etapa más que
+    ocurrió, y la línea **no** le informa que "no correspondía". Sin eventos, no se
+    dibuja. (El estado *salteada* del pipeline único ya no existe.)
+  - El alta es **en dos pasos** (`/admin/tramites/nuevo` → `POST .../previsualizar` →
+    `POST /admin/tramites`) y la confirmación muestra el recorrido completo con el mismo
+    partial Twig que la vista pública (`seguimiento/_linea.html.twig`), porque el flujo no
+    se puede cambiar después. La previsualización **no guarda nada** y el endpoint de
+    creación revalida por su cuenta.
   - `observado` es un **flag ortogonal**, no una etapa: un trámite observado sigue
     perteneciendo a su etapa. No meterlo en el enum. Cubre sólo observaciones de **fuera
     de IGJ** (escribanía, documentación incompleta); las vistas de IGJ son etapas.
@@ -268,8 +290,7 @@ dev server built-in.
 El portal informa la etapa y nada más. NO hace, y no es un olvido: mails automáticos al
 cambiar de etapa (es el siguiente paso, no está hecho), descarga de documentos desde el
 portal, buscador público por número de trámite (sería enumerable, por eso `/seguimiento`
-no tiene ningún campo de ingreso), cuentas para profesionales que derivan, y SA/SRL (por
-ahora sólo SAS). La vista pública tampoco muestra socios, DNI, CUIT ni domicilios.
+no tiene ningún campo de ingreso), y cuentas para profesionales que derivan. La vista pública tampoco muestra socios, DNI, CUIT ni domicilios.
 
 ## Fuera de alcance (confirmado, no es un olvido)
 
