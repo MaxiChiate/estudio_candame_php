@@ -35,6 +35,16 @@ final class AdminTramitesController
     /** Formato de value de <input type="datetime-local">. */
     private const FORMATO_INPUT = 'Y-m-d\\TH:i';
 
+    /**
+     * Tope de las notas, en caracteres. Las columnas son TEXT (64 KB): pasarse hace que
+     * el INSERT/UPDATE reviente en modo estricto y el panel devuelva 500. 5000 sobra
+     * para cualquier nota real y se valida antes de tocar la base.
+     */
+    private const MAX_NOTA = 5000;
+
+    /** Piso de las fechas del historial: nada del estudio es anterior, y un 0025 es un typo. */
+    private const ANIO_MINIMO = 1990;
+
     public function __construct(
         private readonly Twig $twig,
         private readonly TramiteRepository $tramites,
@@ -294,6 +304,13 @@ final class AdminTramitesController
             }
         }
 
+        $errorNotas = $this->errorDeNotas($datos);
+        if ($errorNotas !== null) {
+            $this->flash($errorNotas, 'error');
+
+            return $this->redirigir($response, $this->volverA($datos, $id));
+        }
+
         $this->tramites->avanzar(
             $id,
             $etapa,
@@ -336,6 +353,9 @@ final class AdminTramitesController
             'labelPorEtapa' => $this->labelPorEtapa($tramite),
             ...$this->etapasParaElegir($tramite),
             'ahora' => (new DateTimeImmutable())->format(self::FORMATO_INPUT),
+            'fechaMinima' => self::ANIO_MINIMO . '-01-01T00:00',
+            'fechaMaxima' => (new DateTimeImmutable('+1 year'))->format(self::FORMATO_INPUT),
+            'maxNota' => self::MAX_NOTA,
             'flash' => $this->tomarFlash(),
         ]);
     }
@@ -358,8 +378,13 @@ final class AdminTramitesController
         $etapa = Etapa::tryFrom($this->campo($datos, 'etapa'));
         $fecha = $this->fechaHora($this->campo($datos, 'ocurrido_el'));
 
-        if ($etapa === null || $fecha === null) {
-            $this->flash($etapa === null ? 'La etapa indicada no existe.' : 'La fecha y hora no son válidas.', 'error');
+        $error = match (true) {
+            $etapa === null => 'La etapa indicada no existe.',
+            $fecha === null => $this->errorDeFecha(),
+            default => $this->errorDeNotas($datos),
+        };
+        if ($error !== null || $etapa === null || $fecha === null) {
+            $this->flash($error ?? 'La etapa indicada no existe.', 'error');
 
             return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
         }
@@ -397,10 +422,18 @@ final class AdminTramitesController
         }
 
         $fecha = $this->fechaHora($this->campo($datos, 'ocurrido_el'));
-        if ($fecha === null) {
-            $this->flash('La fecha y hora no son válidas.', 'error');
+        $error = $fecha === null ? $this->errorDeFecha() : $this->errorDeNotas($datos);
+        if ($error !== null || $fecha === null) {
+            $this->flash($error ?? $this->errorDeFecha(), 'error');
 
             return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+        }
+
+        // El input muestra hasta el minuto, y los eventos se guardan con segundos. Si el
+        // minuto no cambio (se edito solo una nota), se conserva la fecha guardada: si
+        // no, dos eventos del mismo minuto podrian invertir su orden.
+        if ($fecha->format('Y-m-d H:i') === $evento->ocurridoEl->format('Y-m-d H:i')) {
+            $fecha = $evento->ocurridoEl;
         }
 
         $this->tramites->editarEvento(
@@ -446,7 +479,7 @@ final class AdminTramitesController
 
     /**
      * Borra el tramite con todo su historial y sus enlaces. No hay vuelta atras; la
-     * confirmacion la pide el boton (confirm() del browser), y aca solo se exige CSRF.
+     * confirmacion la pide el dialogo del detalle, y aca solo se exige CSRF.
      *
      * @param array<string, string> $args
      */
@@ -480,7 +513,35 @@ final class AdminTramitesController
         foreach (['!Y-m-d\TH:i', '!Y-m-d\TH:i:s'] as $formato) {
             $fecha = DateTimeImmutable::createFromFormat($formato, $valor);
             if ($fecha !== false && $fecha->format(substr($formato, 1)) === $valor) {
-                return $fecha;
+                return $this->fechaEnRango($fecha) ? $fecha : null;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Desde 1990 hasta dentro de un año. Afuera de eso es un typo (0025 por 2025) que el
+     * cliente veria tal cual; y MySQL no garantiza DATETIME antes del año 1000.
+     */
+    private function fechaEnRango(DateTimeImmutable $fecha): bool
+    {
+        $anio = (int) $fecha->format('Y');
+
+        return $anio >= self::ANIO_MINIMO && $fecha <= new DateTimeImmutable('+1 year');
+    }
+
+    private function errorDeFecha(): string
+    {
+        return sprintf('La fecha y hora no son válidas (tienen que estar entre %d y dentro de un año).', self::ANIO_MINIMO);
+    }
+
+    /** @param array<string, mixed> $datos */
+    private function errorDeNotas(array $datos): ?string
+    {
+        foreach (['nota_publica', 'nota_interna'] as $clave) {
+            if (mb_strlen($this->campo($datos, $clave)) > self::MAX_NOTA) {
+                return sprintf('Las notas no pueden superar los %d caracteres.', self::MAX_NOTA);
             }
         }
 
