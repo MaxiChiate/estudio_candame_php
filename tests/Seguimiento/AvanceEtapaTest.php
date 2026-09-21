@@ -101,8 +101,9 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
 
     /**
      * Saltar etapas sigue siendo legal, incluso a una que no pertenece al flujo del
-     * tramite: el operador es quien sabe. Lo del medio queda pendiente -- no cumplido --
-     * y lo de afuera del flujo se dibuja igual, como una etapa mas que ocurrio.
+     * tramite: el operador es quien sabe. Lo del medio figura cumplido (sin fecha), como
+     * si el tramite hubiera pasado por todo, y lo de afuera del flujo se dibuja igual,
+     * como una etapa mas que ocurrio.
      */
     public function testSaltarAUnaEtapaFueraDelFlujoLaRegistraIgual(): void
     {
@@ -130,10 +131,13 @@ final class AvanceEtapaTest extends BaseDeDatosTestCase
         self::assertSame(LineaEtapas::ACTUAL, $estados[Etapa::TRAMITE_INICIADO->value]);
         self::assertTrue(array_column($linea, 'fueraDeFlujo', 'valor')[Etapa::TRAMITE_INICIADO->value]);
 
-        // Las del flujo que nunca ocurrieron siguen pendientes, no cumplidas.
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['EDICTO_PUBLICADO']);
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['DICTAMENES']);
+        // Las del flujo salteadas en el camino figuran cumplidas, pero sin fecha.
+        self::assertSame(LineaEtapas::CUMPLIDA, $estados['EDICTO_PUBLICADO']);
+        self::assertSame(LineaEtapas::CUMPLIDA, $estados['DICTAMENES']);
         self::assertNull(array_column($linea, 'fecha', 'valor')['DICTAMENES']);
+
+        // Las que vienen despues de la actual siguen pendientes.
+        self::assertSame(LineaEtapas::PENDIENTE, $estados[Etapa::TRAMITE_INICIADO_DIGITALMENTE->value]);
 
         // Y por la que si paso, cumplida.
         self::assertSame(LineaEtapas::CUMPLIDA, $estados['ESPERANDO_ESCRIBANIA']);

@@ -205,6 +205,10 @@ dev server built-in.
     no por comparar posiciones contra `etapa_actual` (que sólo marca la que está en
     curso). Con el criterio viejo, volver atrás des-completaba las etapas previas. Como
     efecto, una etapa posterior a la actual puede figurar cumplida: es correcto.
+    Además, **toda etapa que se dibuja antes de la actual figura cumplida** aunque no
+    tenga evento: si el operador salta varias etapas hacia adelante, el cliente ve las
+    del medio cumplidas (sin fecha), como si el trámite hubiera pasado por todas. Las
+    opcionales salteadas siguen sin dibujarse.
   - Una etapa **fuera de flujo** con eventos se dibuja igual, marcada cumplida y ubicada
     por orden de catálogo entre sus vecinas: para el cliente es una etapa más que
     ocurrió, y la línea **no** le informa que "no correspondía". Sin eventos, no se

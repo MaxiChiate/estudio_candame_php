@@ -246,17 +246,47 @@ final class LineaEtapasTest extends TestCase
         self::assertNotContains(Etapa::TRAMITE_SUBIDO_TAD->value, $valores);
     }
 
-    /** Una etapa del flujo sin evento pero ya pasada queda pendiente, no "salteada". */
-    public function testUnaEtapaDelFlujoSinEventoQuedaPendiente(): void
+    /**
+     * Si el operador salta varias etapas hacia adelante, las del medio no tienen evento
+     * pero el cliente las ve cumplidas, sin fecha: el tramite ya esta mas adelante.
+     */
+    public function testLasEtapasSalteadasAntesDeLaActualFiguranCumplidas(): void
     {
         $catalogo = self::catalogo();
-        $eventos = [new EventoPublico(Etapa::TRAMITE_INICIADO, new DateTimeImmutable('2026-03-10'), null)];
+        $eventos = [
+            new EventoPublico(Etapa::REUNIENDO_DOCUMENTACION, new DateTimeImmutable('2026-03-01'), null),
+            new EventoPublico(Etapa::TRAMITE_INICIADO, new DateTimeImmutable('2026-03-10'), null),
+        ];
 
         $linea = LineaEtapas::construir(Flujo::CONSTITUCION_SRL_SA, Etapa::TRAMITE_INICIADO, $eventos, $catalogo);
         $estados = array_column($linea, 'estado', 'valor');
+        $fechas = array_column($linea, 'fecha', 'valor');
 
-        self::assertSame(LineaEtapas::PENDIENTE, $estados['EDICTO_PUBLICADO']);
-        self::assertNull(array_column($linea, 'fecha', 'valor')['EDICTO_PUBLICADO']);
+        $valores = array_column($linea, 'valor');
+        $posicionActual = array_search(Etapa::TRAMITE_INICIADO->value, $valores, true);
+        foreach (array_slice($valores, 0, $posicionActual) as $valor) {
+            self::assertSame(LineaEtapas::CUMPLIDA, $estados[$valor], $valor);
+        }
+
+        self::assertSame(LineaEtapas::CUMPLIDA, $estados['PROCESANDO_DOCUMENTACION']);
+        self::assertNull($fechas['PROCESANDO_DOCUMENTACION'], 'Una salteada no tiene evento del que sacar fecha.');
+        self::assertSame('2026-03-01', $fechas['REUNIENDO_DOCUMENTACION']?->format('Y-m-d'));
+        self::assertSame(LineaEtapas::PENDIENTE, $estados['PARA_RETIRAR']);
+    }
+
+    /** Las opcionales salteadas no se dibujan: no se anuncia una vista que no existio. */
+    public function testUnSaltoNoDibujaLasOpcionalesDelMedio(): void
+    {
+        $catalogo = self::catalogo();
+        $eventos = [new EventoPublico(Etapa::PARA_RETIRAR, new DateTimeImmutable('2026-03-10'), null)];
+
+        $valores = array_column(
+            LineaEtapas::construir(Flujo::CONSTITUCION_SRL_SA, Etapa::PARA_RETIRAR, $eventos, $catalogo),
+            'valor',
+        );
+
+        self::assertNotContains(Etapa::VISTA->value, $valores);
+        self::assertNotContains(Etapa::VISTA_CONTESTADA->value, $valores);
     }
 
     /** Aunque sea de afuera del flujo, la etapa actual siempre se dibuja. */
