@@ -1346,10 +1346,9 @@ section[id] {
     background: var(--color-surface);
 }
 
-/* Salteada: mismo punto lleno que una cumplida. El trámite ya dejó atrás esa etapa
-   aunque no haya pasado por ella, y la línea tiene que leerse como avance. */
-.seguimientoEtapa.is-cumplida .seguimientoMarca,
-.seguimientoEtapa.is-salteada .seguimientoMarca { background: var(--color-text-soft); border-color: var(--color-text-soft); }
+/* Punto lleno para todo lo que ya ocurrió, sea del flujo del trámite o no: una etapa
+   fuera de flujo que pasó es, para el cliente, una etapa cumplida más. */
+.seguimientoEtapa.is-cumplida .seguimientoMarca { background: var(--color-text-soft); border-color: var(--color-text-soft); }
 .seguimientoEtapa.is-actual .seguimientoMarca { background: var(--color-accent); border-color: var(--color-accent); }
 
 .seguimientoEtapaLabel { margin: 0; font-weight: 600; color: var(--color-text-soft); }

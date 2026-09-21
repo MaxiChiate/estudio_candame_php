@@ -1,0 +1,50 @@
+{# Linea vertical de etapas.
+
+   Se usa en dos lugares: la vista publica del cliente y la confirmacion del alta en el
+   panel. Es el mismo partial a proposito -- lo que la doctora confirma al crear un
+   tramite es exactamente lo que va a ver el cliente, no una aproximacion.
+
+   Espera `linea`: la salida de LineaEtapas::construir() o ::previsualizar(). Una etapa
+   figura cumplida si el tramite paso por ahi, aunque despues haya vuelto atras: la
+   vista es un loop y se puede correr mas de una. Las etapas fuera del flujo que
+   ocurrieron se dibujan como cualquier otra cumplida: para el cliente son una etapa mas
+   que paso, y que "no correspondiera" a su tipo de tramite no es informacion suya. #}
+<ol class="seguimientoLinea">
+    {% for etapa in linea %}
+        <li class="seguimientoEtapa is-{{ etapa.estado }}"{% if etapa.estado == 'actual' %} aria-current="step"{% endif %}>
+            <span class="seguimientoMarca" aria-hidden="true"></span>
+            <div class="seguimientoEtapaCuerpo">
+                {% set marca %}{%- if etapa.repeticion %} <span class="seguimientoEtapaRepeticion">{{ etapa.repeticion }}</span>{% endif %}{% endset %}
+                {% set meta %}
+                    {%- if etapa.estado == 'cumplida' -%}
+                        Cumplida{% if etapa.fecha %} el {{ etapa.fecha|date('d/m/Y') }}{% endif %}
+                    {%- elseif etapa.estado == 'actual' -%}
+                        Etapa actual{% if etapa.fecha %} desde el {{ etapa.fecha|date('d/m/Y') }}{% endif %}
+                    {%- elseif etapa.estado == 'pendiente' -%}
+                        Pendiente
+                    {%- endif -%}
+                {% endset %}
+
+                {% if etapa.estado == 'actual' or not etapa.detalle %}
+                    {# La etapa actual no se colapsa: es la respuesta a "como viene lo
+                       mio" y, si se esconde, el cliente escribe igual. #}
+                    <p class="seguimientoEtapaLabel">{{ etapa.label }}{{ marca }}</p>
+                    {% if meta|trim %}<p class="seguimientoEtapaMeta">{{ meta }}</p>{% endif %}
+                    {% if etapa.detalle %}<p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>{% endif %}
+                {% else %}
+                    {# Cumplidas y pendientes: el nombre abre la explicacion. #}
+                    <details class="seguimientoEtapaQue">
+                        <summary>
+                            <span class="seguimientoEtapaLabel">
+                                {{- etapa.label }}{{ marca }}
+                                <span class="seguimientoEtapaQueMarca" aria-hidden="true">?</span>
+                            </span>
+                            {% if meta|trim %}<span class="seguimientoEtapaMeta">{{ meta }}</span>{% endif %}
+                        </summary>
+                        <p class="seguimientoEtapaDetalle">{{ etapa.detalle }}</p>
+                    </details>
+                {% endif %}
+            </div>
+        </li>
+    {% endfor %}
+</ol>

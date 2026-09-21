@@ -9,6 +9,9 @@
     {{ tramite.denominacion }}.
     Etapa actual: <strong>{{ etapaLabel }}</strong>{% if tramite.observado %} &middot; <span class="adminChip">observado</span>{% endif %}
 </p>
+{# Solo lectura: el tipo de tramite se eligio al crear y no se puede cambiar -- no hay
+   ninguna ruta que lo modifique. #}
+<p class="adminSubtitulo adminTenue">Tipo de tr&aacute;mite: {{ flujoNombre }}</p>
 
 {% if tokenNuevo %}
     {# Unica vez que se puede ver este token: en base solo queda el sha256. #}
@@ -54,12 +57,22 @@
         <input type="hidden" name="_csrf" value="{{ csrf }}"/>
 
         <label for="etapa">Otra etapa <span class="adminTenue">(saltear o volver)</span></label>
+        {# Primero el recorrido de este tramite, que es lo que se usa siempre. Abajo, el
+           resto del catalogo: saltar ahi sigue siendo legal (el operador sabe lo que
+           hace) y la etapa aparece igual en la linea del cliente. #}
         <select id="etapa" name="etapa">
-            {% for etapa in etapas %}
-                <option value="{{ etapa.value }}"{% if etapa.value == tramite.etapaActual.value %} selected{% endif %}>
-                    {{ etapasConfig[etapa.value].label|default(etapa.value) }}
-                </option>
-            {% endfor %}
+            <optgroup label="Etapas de este tr&aacute;mite">
+                {% for etapa in etapasDelFlujo %}
+                    <option value="{{ etapa.valor }}"{% if etapa.actual %} selected{% endif %}>{{ etapa.label }}</option>
+                {% endfor %}
+            </optgroup>
+            {% if etapasFueraDelFlujo is not empty %}
+                <optgroup label="Otras etapas (fuera de este tipo de tr&aacute;mite)">
+                    {% for etapa in etapasFueraDelFlujo %}
+                        <option value="{{ etapa.valor }}"{% if etapa.actual %} selected{% endif %}>{{ etapa.label }}</option>
+                    {% endfor %}
+                </optgroup>
+            {% endif %}
         </select>
 
         <label for="nota_publica">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
@@ -98,7 +111,7 @@
                 <li>
                     <p class="adminEventoCabecera">
                         {{ evento.ocurridoEl|date('d/m/Y H:i') }} &middot;
-                        {{ etapasConfig[evento.etapa.value].label|default(evento.etapa.value) }}
+                        {{ labelPorEtapa[evento.etapa.value]|default(evento.etapa.value) }}
                     </p>
                     {% if evento.notaPublica %}<p class="adminNotaPublica">{{ evento.notaPublica }}</p>{% endif %}
                     {% if evento.notaInterna %}<p class="adminNotaInterna">Interna: {{ evento.notaInterna }}</p>{% endif %}

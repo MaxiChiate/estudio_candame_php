@@ -7,48 +7,54 @@ namespace EstudioCandame\Seguimiento;
 use DateTimeImmutable;
 
 /**
- * Arma la linea de etapas que ve el cliente: para cada etapa del enum, si ya esta
- * cumplida (con la fecha del ultimo evento que la registro), si es la actual, o si
- * todavia no paso por ahi.
+ * Arma la linea de etapas que ve el cliente: que etapas recorre su tramite, cuales ya
+ * ocurrieron y con que fecha, y en cual esta ahora.
+ *
+ * Que etapas se dibujan lo define el FLUJO del tramite (ver CatalogoFlujos), no un
+ * pipeline unico: una constitucion de SRL pasa por escribania y edictos, una
+ * designacion de autoridades de asociacion civil no. Antes habia una sola secuencia y
+ * el operador salteaba a mano lo que no aplicaba; el cliente veia etapas que nunca le
+ * iban a tocar.
  *
  * Una etapa esta CUMPLIDA si tiene al menos un evento en tramite_evento. No se deriva
- * de comparar posiciones contra la etapa actual: el pipeline no es lineal. La vista es
- * un loop (el inspector puede despachar varias), asi que un tramite vuelve de
- * VISTA_CONTESTADA a VISTA; con el criterio viejo, al volver atras las etapas previas
- * se des-completaban solas. Como efecto de esto, una etapa POSTERIOR a la actual puede
- * figurar cumplida -- y es lo correcto: el tramite efectivamente paso por ahi.
+ * de comparar posiciones: el recorrido no es lineal ni dentro del propio flujo. La
+ * vista es un loop (el inspector puede despachar varias), asi que un tramite vuelve de
+ * VISTA_CONTESTADA a VISTA; con un criterio posicional, al volver atras las etapas
+ * previas se des-completaban solas. Como efecto de esto, una etapa POSTERIOR a la
+ * actual puede figurar cumplida -- y es lo correcto: el tramite efectivamente paso por
+ * ahi.
  *
- * Tambien hay etapas que no aplican a un tramite (DICTAMENES en una SAS por estatuto
- * modelo, por ejemplo) y se saltean. Una salteada -- sin evento, pero anterior a la
- * actual -- se pinta como recorrida para que la linea se lea como avance, pero no es
- * CUMPLIDA: no lleva fecha, porque el tramite nunca paso por ahi.
+ * Etapas FUERA DE FLUJO: el operador puede saltar a cualquier etapa del catalogo,
+ * incluidas las que no pertenecen al flujo del tramite. Si eso paso -- hay un evento --
+ * la etapa se dibuja igual, cumplida, ubicada entre sus vecinas segun el orden del
+ * catalogo (Etapa::ordenCatalogo). Para el cliente es una etapa mas que ocurrio: la
+ * linea NO le avisa que "no correspondia", porque no es informacion suya sino un detalle
+ * de como el estudio carga los tramites. Una etapa fuera del flujo y sin eventos
+ * simplemente no se dibuja.
  *
  * Las etapas marcadas 'opcional' en la config (las de la vista) no se anuncian de
- * antemano: si no ocurrieron, no aparecen en la linea. Un tramite puede terminar sin
- * ninguna vista, y mostrarla pendiente le anticiparia al cliente algo que quizas no
- * pase.
- *
- * Los labels salen de app/config/etapas.php, no del enum -- ver el comentario de Etapa.
- * Si una etapa no tiene entrada en la config (alguien la borro del archivo), se cae al
- * value del enum como label antes que romper la pagina.
+ * antemano: si no ocurrieron, no aparecen. Un tramite puede terminar sin ninguna vista,
+ * y mostrarla pendiente le anticiparia al cliente algo que quizas no pase.
  */
 final class LineaEtapas
 {
     public const CUMPLIDA = 'cumplida';
     public const ACTUAL = 'actual';
-    public const SALTEADA = 'salteada';
     public const PENDIENTE = 'pendiente';
 
     /**
-     * @param EventoPublico[]                                                                 $eventos
-     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
-     *                            repeticion?: string}>                                       $config
+     * @param EventoPublico[] $eventos
      *
      * @return list<array{valor: string, label: string, detalle: string, accion: ?string,
-     *                    estado: string, fecha: ?DateTimeImmutable, repeticion: ?string}>
+     *                    estado: string, fecha: ?DateTimeImmutable, repeticion: ?string,
+     *                    fueraDeFlujo: bool}>
      */
-    public static function construir(Etapa $actual, array $eventos, array $config): array
-    {
+    public static function construir(
+        Flujo $flujo,
+        Etapa $actual,
+        array $eventos,
+        CatalogoFlujos $catalogo,
+    ): array {
         // Ultima vez que el tramite paso por cada etapa, y cuantas veces en total. La
         // fecha es la del ultimo evento: con el loop de la vista, lo que le importa al
         // cliente es cuando fue la vez mas reciente, no la primera.
@@ -60,41 +66,129 @@ final class LineaEtapas
         }
 
         $linea = [];
-        foreach (Etapa::cases() as $etapa) {
+        foreach (self::etapasADibujar($flujo, $actual, array_keys($veces), $catalogo) as $etapa) {
             $cantidad = $veces[$etapa->value] ?? 0;
+            $enElFlujo = $catalogo->pertenece($flujo, $etapa);
 
             if ($etapa === $actual) {
                 $estado = self::ACTUAL;
             } elseif ($cantidad > 0) {
+                // Vale tanto para las del flujo como para las de afuera: si el tramite
+                // paso por ahi, para el cliente es una etapa cumplida y nada mas.
                 $estado = self::CUMPLIDA;
-            } elseif ($config[$etapa->value]['opcional'] ?? false) {
-                // Las etapas de la vista pueden no ocurrir nunca: no se anuncian de
-                // antemano. Mostrarlas pendientes le avisaria al cliente de una vista
-                // que quizas no exista.
-                continue;
-            } elseif ($etapa->esAnteriorA($actual)) {
-                // Quedo atras sin evento propio: el tramite la salteo porque no aplicaba
-                // (DICTAMENES en una SAS por estatuto modelo). Se pinta como recorrida
-                // -- la linea tiene que leerse como avance -- pero no es una etapa
-                // cumplida: no tiene fecha porque nunca paso por ahi.
-                $estado = self::SALTEADA;
             } else {
                 $estado = self::PENDIENTE;
             }
 
             $linea[] = [
                 'valor' => $etapa->value,
-                'label' => self::label($etapa, $config),
-                'detalle' => $config[$etapa->value]['detalle'] ?? '',
-                'accion' => $config[$etapa->value]['accion'] ?? null,
+                'label' => $catalogo->label($flujo, $etapa),
+                'detalle' => $catalogo->detalle($flujo, $etapa),
+                'accion' => $catalogo->accion($etapa),
                 'estado' => $estado,
                 // Solo tiene sentido mostrar fecha de lo que ya paso.
                 'fecha' => $fechas[$etapa->value] ?? null,
-                'repeticion' => self::repeticion($etapa, $cantidad, $config),
+                'repeticion' => self::repeticion($etapa, $cantidad, $catalogo),
+                // No se usa en la vista publica: esta para el panel, donde si conviene
+                // que se note que esa etapa no es del flujo del tramite.
+                'fueraDeFlujo' => !$enElFlujo,
             ];
         }
 
         return $linea;
+    }
+
+    /**
+     * Previsualizacion del recorrido de un flujo, sin tramite todavia: todas sus etapas,
+     * en orden, sin fechas ni estado real. La usa la confirmacion del alta, donde hay
+     * que mostrar la secuencia completa ANTES de guardar nada, porque el flujo no se
+     * puede cambiar despues.
+     *
+     * A diferencia de la linea de un tramite, aca SI se muestran las etapas opcionales:
+     * quien mira es el operador eligiendo un flujo, no el cliente, y lo que necesita ver
+     * es el recorrido completo posible.
+     *
+     * @return list<array{valor: string, label: string, detalle: string, accion: ?string,
+     *                    estado: string, fecha: ?DateTimeImmutable, repeticion: ?string,
+     *                    fueraDeFlujo: bool}>
+     */
+    public static function previsualizar(Flujo $flujo, CatalogoFlujos $catalogo): array
+    {
+        return array_map(
+            static fn (Etapa $etapa): array => [
+                'valor' => $etapa->value,
+                'label' => $catalogo->label($flujo, $etapa),
+                'detalle' => $catalogo->detalle($flujo, $etapa),
+                'accion' => $catalogo->accion($etapa),
+                'estado' => self::PENDIENTE,
+                'fecha' => null,
+                'repeticion' => null,
+                'fueraDeFlujo' => false,
+            ],
+            $catalogo->etapas($flujo),
+        );
+    }
+
+    /**
+     * Etapas que entran en la linea, ya ordenadas: las del flujo, mas las de afuera por
+     * las que el tramite efectivamente paso, intercaladas donde corresponde.
+     *
+     * Las de afuera se ubican por orden de catalogo respecto de las del flujo. Funciona
+     * porque todos los flujos avanzan en el mismo sentido que el catalogo (no hay flujo
+     * que use B antes que A si en el catalogo A viene antes que B), asi que "la primera
+     * del flujo que en el catalogo va despues" es un lugar bien definido. Lo que quede
+     * sin ubicar -- etapas de catalogo posterior a todo el flujo -- va al final.
+     *
+     * @param string[] $etapasConEventos values de las etapas con al menos un evento
+     *
+     * @return list<Etapa>
+     */
+    private static function etapasADibujar(
+        Flujo $flujo,
+        Etapa $actual,
+        array $etapasConEventos,
+        CatalogoFlujos $catalogo,
+    ): array {
+        $ocurrieron = [];
+        foreach ($etapasConEventos as $valor) {
+            $etapa = Etapa::tryFrom($valor);
+            if ($etapa !== null) {
+                $ocurrieron[$etapa->value] = $etapa;
+            }
+        }
+        // La etapa actual se dibuja siempre, aunque sea de afuera del flujo y todavia no
+        // tenga evento propio.
+        $ocurrieron[$actual->value] = $actual;
+
+        $fueraDeFlujo = array_values(array_filter(
+            $ocurrieron,
+            static fn (Etapa $etapa): bool => !$catalogo->pertenece($flujo, $etapa),
+        ));
+        usort(
+            $fueraDeFlujo,
+            static fn (Etapa $a, Etapa $b): int => $a->ordenCatalogo() <=> $b->ordenCatalogo(),
+        );
+
+        $linea = [];
+        foreach ($catalogo->etapas($flujo) as $delFlujo) {
+            while ($fueraDeFlujo !== [] && $fueraDeFlujo[0]->ordenCatalogo() < $delFlujo->ordenCatalogo()) {
+                $linea[] = array_shift($fueraDeFlujo);
+            }
+
+            // Las opcionales del flujo (las de la vista) no se anuncian: solo aparecen
+            // si el tramite efectivamente paso por ahi.
+            if (
+                $catalogo->esOpcional($delFlujo)
+                && $delFlujo !== $actual
+                && !isset($ocurrieron[$delFlujo->value])
+            ) {
+                continue;
+            }
+
+            $linea[] = $delFlujo;
+        }
+
+        return [...$linea, ...$fueraDeFlujo];
     }
 
     /**
@@ -104,38 +198,14 @@ final class LineaEtapas
      * El formato lo pone la config y no el codigo, porque el ordinal tiene que
      * concordar en genero con el label ("2ª vista", no "2ª tramite iniciado"). Una
      * etapa sin 'repeticion' en la config no muestra contador aunque se repita.
-     *
-     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
-     *                            repeticion?: string}> $config
      */
-    private static function repeticion(Etapa $etapa, int $cantidad, array $config): ?string
+    private static function repeticion(Etapa $etapa, int $cantidad, CatalogoFlujos $catalogo): ?string
     {
-        $formato = $config[$etapa->value]['repeticion'] ?? null;
+        $formato = $catalogo->formatoRepeticion($etapa);
         if ($formato === null || $cantidad < 2) {
             return null;
         }
 
         return sprintf($formato, (string) $cantidad);
-    }
-
-    /**
-     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
-     *                            repeticion?: string}> $config
-     */
-    public static function label(Etapa $etapa, array $config): string
-    {
-        return $config[$etapa->value]['label'] ?? $etapa->value;
-    }
-
-    /**
-     * Pedido concreto al cliente para la etapa en curso, si lo hay. Se muestra
-     * destacado y nunca colapsado: es lo unico de la pagina que le pide algo.
-     *
-     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
-     *                            repeticion?: string}> $config
-     */
-    public static function accion(Etapa $etapa, array $config): ?string
-    {
-        return $config[$etapa->value]['accion'] ?? null;
     }
 }

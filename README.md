@@ -57,9 +57,14 @@ GRANT ALL PRIVILEGES ON candame_local.* TO 'candame_app'@'localhost';
 GRANT ALL PRIVILEGES ON candame_test.*  TO 'candame_app'@'localhost';
 ```
 
+Las migraciones se aplican **en orden y a mano** (no hay framework de migraciones ni
+SSH al hosting), las dos bases por igual:
+
 ```bash
-mysql -u candame_app -p candame_local < database/migrations/001_seguimiento.sql
-mysql -u candame_app -p candame_test  < database/migrations/001_seguimiento.sql
+for m in database/migrations/*.sql; do
+  mysql -u candame_app -p candame_local < "$m"
+  mysql -u candame_app -p candame_test  < "$m"
+done
 ```
 
 `candame_test` es la que usan los tests, y **la truncan en cada corrida** — por eso va

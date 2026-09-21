@@ -19,7 +19,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 {
     public function testTokenValidoDevuelve200YLaEtapaCorrecta(): void
     {
-        $id = $this->tramites->crear('Cerro Alto SAS');
+        $id = $this->crearTramite('Cerro Alto SAS');
         $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
         $token = $this->accesos->emitir($id, 'cliente de prueba');
 
@@ -41,7 +41,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testTokenValidoTraeLasCabecerasDePrivacidad(): void
     {
-        $id = $this->tramites->crear('Meridiano SAS');
+        $id = $this->crearTramite('Meridiano SAS');
         $token = $this->accesos->emitir($id, 'cliente');
 
         $response = $this->get('/seguimiento/' . $token);
@@ -60,7 +60,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
      */
     public function testInexistenteRevocadoYMalformadoDevuelvenLaMismaRespuesta(): void
     {
-        $id = $this->tramites->crear('Cauce SAS');
+        $id = $this->crearTramite('Cauce SAS');
         $tokenRevocado = $this->accesos->emitir($id, 'cliente');
         $acceso = $this->accesos->buscarPorToken($tokenRevocado);
         self::assertNotNull($acceso);
@@ -91,7 +91,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testLaNotaInternaNoLlegaALaVistaPublica(): void
     {
-        $id = $this->tramites->crear('Rosas del Sur SAS');
+        $id = $this->crearTramite('Rosas del Sur SAS');
         $this->tramites->avanzar(
             $id,
             Etapa::HABILITADO_ESCRIBANIA,
@@ -111,7 +111,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testNingunDatoPersonalLlegaALaVistaPublica(): void
     {
-        $id = $this->tramites->crear('Litoral Norte SAS');
+        $id = $this->crearTramite('Litoral Norte SAS');
         $this->tramites->avanzar(
             $id,
             Etapa::TRAMITE_INICIADO,
@@ -145,7 +145,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         $config = require APP_PATH . '/config/etapas.php';
         $accion = $config['ESPERANDO_CONFIRMACION']['accion'];
 
-        $id = $this->tramites->crear('Acción SAS');
+        $id = $this->crearTramite('Acción SAS');
         $this->tramites->avanzar($id, Etapa::ESPERANDO_CONFIRMACION, null, null);
         $token = $this->accesos->emitir($id, 'cliente');
 
@@ -169,7 +169,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
     {
         $config = require APP_PATH . '/config/etapas.php';
 
-        $id = $this->tramites->crear('Sin vista SAS');
+        $id = $this->crearTramite('Sin vista SAS');
         $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
         $token = $this->accesos->emitir($id, 'cliente');
 
@@ -204,7 +204,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
      */
     public function testLaHomeConCookieValidaNoMueveElContador(): void
     {
-        $id = $this->tramites->crear('Contador Home SAS');
+        $id = $this->crearTramite('Contador Home SAS');
         $referencia = $this->tramites->porId($id)?->referencia ?? '';
         $token = $this->accesos->emitir($id, 'cliente');
         $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
@@ -226,7 +226,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
 
     public function testHeadYPrefetchNoCuentanComoVisita(): void
     {
-        $id = $this->tramites->crear('Prefetch SAS');
+        $id = $this->crearTramite('Prefetch SAS');
         $token = $this->accesos->emitir($id, 'cliente');
         $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
         self::assertNotNull($accesoId);
@@ -249,7 +249,7 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
      */
     public function testRecargarElPortalNoSumaDeNuevo(): void
     {
-        $id = $this->tramites->crear('Recarga SAS');
+        $id = $this->crearTramite('Recarga SAS');
         $token = $this->accesos->emitir($id, 'cliente');
         $accesoId = $this->accesos->buscarPorToken($token)?->accesoId;
         self::assertNotNull($accesoId);

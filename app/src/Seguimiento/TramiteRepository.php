@@ -69,24 +69,29 @@ final class TramiteRepository
      * Alta de tramite. Deja sentado el primer evento en la etapa inicial en la misma
      * transaccion: un tramite sin ningun evento mostraria una linea de etapas vacia.
      *
+     * El flujo llega resuelto de afuera y no se puede cambiar despues: no hay ningun
+     * metodo aca que lo actualice, a proposito. La etapa inicial tambien viene dada
+     * (CatalogoFlujos::etapaInicial) porque depende del flujo, no del catalogo de
+     * etapas.
+     *
      * @return int id del tramite creado
      */
-    public function crear(string $denominacion, string $tipo = 'SAS'): int
+    public function crear(string $denominacion, Flujo $flujo, Etapa $etapaInicial): int
     {
         $pdo = $this->conexion->pdo();
         $ahora = $this->reloj->ahora();
         $ahoraTexto = $ahora->format(self::FORMATO_FECHA);
-        $etapa = Etapa::inicial();
+        $etapa = $etapaInicial;
 
         $pdo->beginTransaction();
         try {
             $stmt = $pdo->prepare(
-                'INSERT INTO tramite (referencia, tipo, denominacion, etapa_actual, observado, creado_el, actualizado_el)
-                 VALUES (:referencia, :tipo, :denominacion, :etapa, 0, :creado, :actualizado)'
+                'INSERT INTO tramite (referencia, flujo, denominacion, etapa_actual, observado, creado_el, actualizado_el)
+                 VALUES (:referencia, :flujo, :denominacion, :etapa, 0, :creado, :actualizado)'
             );
             $stmt->execute([
                 'referencia' => $this->proximaReferencia((int) $ahora->format('Y')),
-                'tipo' => $tipo,
+                'flujo' => $flujo->value,
                 'denominacion' => $denominacion,
                 'etapa' => $etapa->value,
                 'creado' => $ahoraTexto,

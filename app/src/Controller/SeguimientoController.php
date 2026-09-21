@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace EstudioCandame\Controller;
 
 use EstudioCandame\Seguimiento\AccesoRepository;
+use EstudioCandame\Seguimiento\CatalogoFlujos;
 use EstudioCandame\Seguimiento\CookieSeguimiento;
+use EstudioCandame\Seguimiento\EventoPublico;
 use EstudioCandame\Seguimiento\LineaEtapas;
+use EstudioCandame\Seguimiento\Tramite;
 use EstudioCandame\Seguimiento\TramiteRepository;
 use Psr\Http\Message\ResponseInterface as Response;
 use Psr\Http\Message\ServerRequestInterface as Request;
@@ -23,6 +26,11 @@ use Slim\Views\Twig;
 final class SeguimientoController
 {
     /**
+     * $etapasConfig se sigue inyectando aparte del catalogo porque la pagina
+     * informativa lista el catalogo entero de etapas, sin flujo de por medio. Todo lo
+     * que dependa del tramite pasa por $catalogo, que es quien sabe el orden y los
+     * textos del flujo.
+     *
      * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
      *                            repeticion?: string}> $etapasConfig
      */
@@ -30,6 +38,7 @@ final class SeguimientoController
         private readonly Twig $twig,
         private readonly AccesoRepository $accesos,
         private readonly TramiteRepository $tramites,
+        private readonly CatalogoFlujos $catalogo,
         private readonly array $etapasConfig,
         private readonly string $basePath = '',
     ) {
@@ -64,17 +73,21 @@ final class SeguimientoController
             'metaDescription' => 'Estado de avance del trámite.',
             'metaKeywords' => '',
             'tramite' => $tramite,
-            'linea' => LineaEtapas::construir($tramite->etapaActual, $eventos, $this->etapasConfig),
-            'etapaActualLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
+            // Que etapas se dibujan y en que orden lo define el flujo del tramite.
+            'linea' => LineaEtapas::construir(
+                $tramite->flujo,
+                $tramite->etapaActual,
+                $eventos,
+                $this->catalogo,
+            ),
+            'etapaActualLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
             // Lo unico de la pagina que le pide algo al cliente: va destacado arriba de
             // todo y nunca colapsado.
-            'accionActual' => LineaEtapas::accion($tramite->etapaActual, $this->etapasConfig),
+            'accionActual' => $this->catalogo->accion($tramite->etapaActual),
             // Para el detalle bajo la linea: solo los eventos que tienen algo que decir.
-            'eventos' => array_values(array_filter(
-                $eventos,
-                static fn ($evento): bool => $evento->notaPublica !== null && $evento->notaPublica !== '',
-            )),
-            'etapasConfig' => $this->etapasConfig,
+            // El label se resuelve aca, con el flujo, para que una etapa con override lo
+            // muestre igual que en la linea.
+            'novedades' => $this->novedades($tramite, $eventos),
         ]);
 
         return $this->conCabecerasPrivadas($response)
@@ -82,6 +95,32 @@ final class SeguimientoController
                 'Set-Cookie',
                 CookieSeguimiento::valorSet($token, CookieSeguimiento::esHttps($request)),
             );
+    }
+
+    /**
+     * Eventos con nota publica, listos para el template: fecha, etapa con el label del
+     * flujo, y la nota. Los que no tienen nada que decir no se listan.
+     *
+     * @param EventoPublico[] $eventos
+     *
+     * @return list<array{fecha: \DateTimeImmutable, label: string, nota: string}>
+     */
+    private function novedades(Tramite $tramite, array $eventos): array
+    {
+        $novedades = [];
+        foreach ($eventos as $evento) {
+            if ($evento->notaPublica === null || $evento->notaPublica === '') {
+                continue;
+            }
+
+            $novedades[] = [
+                'fecha' => $evento->ocurridoEl,
+                'label' => $this->catalogo->label($tramite->flujo, $evento->etapa),
+                'nota' => $evento->notaPublica,
+            ];
+        }
+
+        return $novedades;
     }
 
     /**

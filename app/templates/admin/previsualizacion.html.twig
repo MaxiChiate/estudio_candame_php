@@ -1,0 +1,47 @@
+{% extends 'admin/layout.html.twig' %}
+{% block content %}
+<div class="adminTitulo">
+    <h1>Confirmar el nuevo tr&aacute;mite</h1>
+    <a class="adminLink" href="{{ basePath }}/admin/tramites">Cancelar</a>
+</div>
+
+{# Paso 2 de 2: todavia no se guardo nada. Los datos viajan en hidden inputs y el alta
+   real ocurre recien con "Crear el tramite", que revalida todo del lado del servidor. #}
+<p class="adminSubtitulo">
+    <strong>{{ valores.denominacion }}</strong> &middot; {{ flujoNombre }}
+</p>
+<p class="adminAyuda">{{ flujoDescripcion }}</p>
+
+<section class="adminSeccion">
+    <h2>Recorrido del tr&aacute;mite</h2>
+    <p class="adminAyuda">
+        As&iacute; va a ver el cliente la l&iacute;nea de etapas. Las etapas de vista solo le
+        aparecen si el inspector efectivamente corre una.
+    </p>
+
+    {# Mismo partial que la vista publica: lo que se confirma es lo que el cliente ve.
+       El wrapper existe porque el panel no carga main.css y la linea se estila aparte
+       en admin.css. #}
+    <div class="adminLineaPrevia">
+        {% include 'seguimiento/_linea.html.twig' %}
+    </div>
+</section>
+
+<div class="adminAccionesEtapa adminAccionesAlta">
+    {# Vuelve al paso 1 con lo cargado. Va por POST y no por link para no perder los
+       datos en la URL ni tener que reescribirlos a mano. #}
+    <form method="post" action="{{ basePath }}/admin/tramites/nuevo/editar">
+        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+        <input type="hidden" name="denominacion" value="{{ valores.denominacion }}"/>
+        <input type="hidden" name="flujo" value="{{ valores.flujo }}"/>
+        <button type="submit" class="adminBtn adminBtnInverso">Volver a editar</button>
+    </form>
+
+    <form method="post" action="{{ basePath }}/admin/tramites">
+        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+        <input type="hidden" name="denominacion" value="{{ valores.denominacion }}"/>
+        <input type="hidden" name="flujo" value="{{ valores.flujo }}"/>
+        <button type="submit" class="adminBtn">Crear el tr&aacute;mite</button>
+    </form>
+</div>
+{% endblock %}

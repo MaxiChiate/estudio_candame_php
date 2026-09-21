@@ -5,8 +5,11 @@ declare(strict_types=1);
 namespace EstudioCandame\Controller;
 
 use EstudioCandame\Seguimiento\AccesoRepository;
+use EstudioCandame\Seguimiento\CatalogoFlujos;
 use EstudioCandame\Seguimiento\Etapa;
+use EstudioCandame\Seguimiento\Flujo;
 use EstudioCandame\Seguimiento\LineaEtapas;
+use EstudioCandame\Seguimiento\Tramite;
 use EstudioCandame\Seguimiento\TramiteRepository;
 use EstudioCandame\Support\AntiAbuso\CsrfToken;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -28,15 +31,11 @@ final class AdminTramitesController
 {
     private const CLAVE_CSRF = CsrfToken::CLAVE_ADMIN_SEGUIMIENTO;
 
-    /**
-     * @param array<string, array{label: string, detalle: string, accion?: string, opcional?: bool,
-     *                            repeticion?: string}> $etapasConfig
-     */
     public function __construct(
         private readonly Twig $twig,
         private readonly TramiteRepository $tramites,
         private readonly AccesoRepository $accesos,
-        private readonly array $etapasConfig,
+        private readonly CatalogoFlujos $catalogo,
         private readonly string $basePath = '',
         private readonly string $appUrl = '',
     ) {
@@ -50,8 +49,9 @@ final class AdminTramitesController
         foreach ($tramites as $tramite) {
             $filas[] = [
                 'tramite' => $tramite,
-                'etapaLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
-                'siguientes' => $this->siguientes($tramite->etapaActual),
+                'etapaLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
+                'flujoNombre' => $this->catalogo->nombre($tramite->flujo),
+                'siguientes' => $this->siguientes($tramite),
             ];
         }
 
@@ -67,10 +67,74 @@ final class AdminTramitesController
         return $this->render($response, 'admin/nuevo.html.twig', [
             'pageTitle' => 'Nuevo trámite - Panel',
             'errores' => [],
-            'valores' => ['denominacion' => ''],
+            'valores' => ['denominacion' => '', 'flujo' => ''],
+            'flujos' => $this->flujosParaElegir(),
         ]);
     }
 
+    /**
+     * Paso 2 del alta: muestra lo cargado y el recorrido COMPLETO del flujo elegido,
+     * para confirmar. No escribe nada.
+     *
+     * El alta es en dos pasos por una sola razon: el flujo no se puede cambiar despues
+     * de creado el tramite, asi que elegirlo mal se arregla borrando y volviendo a
+     * empezar. Ver la secuencia entera antes de guardar es lo que evita eso.
+     */
+    public function previsualizar(Request $request, Response $response): Response
+    {
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $denominacion = $this->campo($datos, 'denominacion');
+        $flujoPedido = $this->campo($datos, 'flujo');
+        $flujo = Flujo::tryFrom($flujoPedido);
+        $errores = $this->validarAlta($denominacion, $flujo);
+
+        if ($errores !== [] || $flujo === null) {
+            return $this->formularioConErrores($response, $errores, $denominacion, $flujoPedido);
+        }
+
+        return $this->render($response, 'admin/previsualizacion.html.twig', [
+            'pageTitle' => 'Confirmar el nuevo trámite - Panel',
+            'valores' => ['denominacion' => $denominacion, 'flujo' => $flujo->value],
+            'flujoNombre' => $this->catalogo->nombre($flujo),
+            'flujoDescripcion' => $this->catalogo->descripcion($flujo),
+            // Mismo partial que la vista publica: lo que se confirma es exactamente lo
+            // que va a ver el cliente.
+            'linea' => LineaEtapas::previsualizar($flujo, $this->catalogo),
+        ]);
+    }
+
+    /**
+     * "Volver a editar" desde la confirmacion: repuebla el paso 1 con lo que se habia
+     * cargado. Sin errores -- no es un rechazo, es que la doctora cambio de idea.
+     */
+    public function volverAEditar(Request $request, Response $response): Response
+    {
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        return $this->render($response, 'admin/nuevo.html.twig', [
+            'pageTitle' => 'Nuevo trámite - Panel',
+            'errores' => [],
+            'valores' => [
+                'denominacion' => $this->campo($datos, 'denominacion'),
+                'flujo' => $this->campo($datos, 'flujo'),
+            ],
+            'flujos' => $this->flujosParaElegir(),
+        ]);
+    }
+
+    /**
+     * Paso 3: crea. Revalida todo -- este endpoint NO confia en que se haya pasado por
+     * la previsualizacion, que es solo una pantalla y no deja nada guardado.
+     */
     public function crear(Request $request, Response $response): Response
     {
         $datos = (array) $request->getParsedBody();
@@ -80,28 +144,84 @@ final class AdminTramitesController
         }
 
         $denominacion = $this->campo($datos, 'denominacion');
+        $flujoPedido = $this->campo($datos, 'flujo');
+        $flujo = Flujo::tryFrom($flujoPedido);
+        $errores = $this->validarAlta($denominacion, $flujo);
+
+        if ($errores !== [] || $flujo === null) {
+            return $this->formularioConErrores($response, $errores, $denominacion, $flujoPedido);
+        }
 
         // La referencia la genera el repositorio al crear: no se pide ni se valida acá.
+        $id = $this->tramites->crear($denominacion, $flujo, $this->catalogo->etapaInicial($flujo));
+        $tramite = $this->tramites->porId($id);
+        $this->flash(sprintf(
+            'Trámite %s creado como %s.',
+            $tramite?->referencia ?? '',
+            $this->catalogo->nombre($flujo),
+        ));
+
+        return $this->redirigir($response, '/admin/tramites/' . $id);
+    }
+
+    /**
+     * Validaciones del alta, iguales para la previsualizacion y para la creacion.
+     *
+     * @return list<string>
+     */
+    private function validarAlta(string $denominacion, ?Flujo $flujo): array
+    {
         $errores = [];
+
         if ($denominacion === '') {
             $errores[] = 'La denominación es obligatoria.';
         } elseif (mb_strlen($denominacion) > 255) {
             $errores[] = 'La denominación no puede superar los 255 caracteres.';
         }
 
-        if ($errores !== []) {
-            return $this->render($response->withStatus(422), 'admin/nuevo.html.twig', [
-                'pageTitle' => 'Nuevo trámite - Panel',
-                'errores' => $errores,
-                'valores' => ['denominacion' => $denominacion],
-            ]);
+        if ($flujo === null) {
+            $errores[] = 'Elegí el tipo de trámite.';
         }
 
-        $id = $this->tramites->crear($denominacion);
-        $tramite = $this->tramites->porId($id);
-        $this->flash(sprintf('Trámite %s creado.', $tramite?->referencia ?? ''));
+        return $errores;
+    }
 
-        return $this->redirigir($response, '/admin/tramites/' . $id);
+    /**
+     * Vuelve al form del paso 1 con lo cargado y los errores. El flujo pedido se
+     * devuelve tal cual vino (aunque sea invalido) solo para no perder la seleccion; el
+     * template lo compara contra los flujos reales.
+     *
+     * @param list<string> $errores
+     */
+    private function formularioConErrores(
+        Response $response,
+        array $errores,
+        string $denominacion,
+        string $flujoPedido,
+    ): Response {
+        return $this->render($response->withStatus(422), 'admin/nuevo.html.twig', [
+            'pageTitle' => 'Nuevo trámite - Panel',
+            'errores' => $errores,
+            'valores' => ['denominacion' => $denominacion, 'flujo' => $flujoPedido],
+            'flujos' => $this->flujosParaElegir(),
+        ]);
+    }
+
+    /**
+     * Opciones del selector de tipo de tramite. Solo el nombre: la descripcion se
+     * muestra en la confirmacion, junto al recorrido, que es donde sirve para decidir.
+     *
+     * @return list<array{valor: string, nombre: string}>
+     */
+    private function flujosParaElegir(): array
+    {
+        return array_map(
+            fn (Flujo $flujo): array => [
+                'valor' => $flujo->value,
+                'nombre' => $this->catalogo->nombre($flujo),
+            ],
+            Flujo::cases(),
+        );
     }
 
     /** @param array<string, string> $args */
@@ -115,12 +235,23 @@ final class AdminTramitesController
         return $this->render($response, 'admin/detalle.html.twig', [
             'pageTitle' => sprintf('%s - Panel', $tramite->referencia),
             'tramite' => $tramite,
-            'etapaLabel' => LineaEtapas::label($tramite->etapaActual, $this->etapasConfig),
+            'etapaLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
+            // Dato de solo lectura: el flujo se eligio al crear y no se puede cambiar.
+            'flujoNombre' => $this->catalogo->nombre($tramite->flujo),
             'eventos' => $this->tramites->eventos($tramite->id),
             'accesos' => $this->accesos->porTramite($tramite->id),
-            'etapas' => Etapa::cases(),
-            'siguientes' => $this->siguientes($tramite->etapaActual),
-            'etapasConfig' => $this->etapasConfig,
+            // El select ofrece TODO el catalogo -- saltar fuera del flujo sigue siendo
+            // legal -- pero primero las del flujo, en su orden, que es el 99% de los
+            // casos.
+            'etapasDelFlujo' => $this->opciones($tramite, $this->catalogo->etapas($tramite->flujo)),
+            'etapasFueraDelFlujo' => $this->opciones($tramite, array_values(array_filter(
+                Etapa::cases(),
+                fn (Etapa $etapa): bool => !$this->catalogo->pertenece($tramite->flujo, $etapa),
+            ))),
+            'siguientes' => $this->siguientes($tramite),
+            // Labels resueltos con el flujo, para que el historial muestre el mismo
+            // texto que la linea del cliente cuando la etapa tiene override.
+            'labelPorEtapa' => $this->labelPorEtapa($tramite),
             'flash' => $this->tomarFlash(),
             // El token en claro se muestra UNA vez, en el redirect posterior a emitirlo.
             'tokenNuevo' => $this->tomarTokenNuevo(),
@@ -143,10 +274,11 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites');
         }
 
-        // Si no viene etapa explicita, avanza a la siguiente del enum: ese es el camino
-        // de un click desde el listado. Con etapa explicita se puede ir a CUALQUIERA,
-        // incluidas anteriores (el loop de la vista) y salteando las que no aplican al
-        // tramite. Lo unico que se valida es que sea un valor del enum.
+        // Si no viene etapa explicita, avanza a la siguiente DEL FLUJO del tramite: ese
+        // es el camino de un click desde el listado. Con etapa explicita se puede ir a
+        // CUALQUIERA del catalogo, incluidas anteriores (el loop de la vista) y las que
+        // no pertenecen al flujo. Lo unico que se valida es que sea un valor del enum:
+        // el operador sabe lo que hace y el portal no le discute el recorrido.
         $etapaPedida = $this->campo($datos, 'etapa');
 
         if ($etapaPedida !== '') {
@@ -157,7 +289,7 @@ final class AdminTramitesController
                 return $this->redirigir($response, $this->volverA($datos, $id));
             }
         } else {
-            $etapa = $tramite->etapaActual->siguiente();
+            $etapa = $this->catalogo->siguientesSugeridas($tramite->flujo, $tramite->etapaActual)[0] ?? null;
             if ($etapa === null) {
                 $this->flash(sprintf('El trámite %s ya está en la última etapa.', $tramite->referencia), 'error');
 
@@ -175,26 +307,60 @@ final class AdminTramitesController
         $this->flash(sprintf(
             '%s pasó a %s.',
             $tramite->referencia,
-            LineaEtapas::label($etapa, $this->etapasConfig),
+            $this->catalogo->label($tramite->flujo, $etapa),
         ));
 
         return $this->redirigir($response, $this->volverA($datos, $id));
     }
 
     /**
-     * Atajos de "proximo paso" para los botones del panel: normalmente uno solo, dos en
-     * VISTA_CONTESTADA (ver Etapa::siguientesSugeridas).
+     * Atajos de "proximo paso" para los botones del panel: normalmente uno solo -- la
+     * siguiente etapa del flujo del tramite -- y dos donde la vista hace ambiguo el
+     * siguiente (ver CatalogoFlujos::siguientesSugeridas).
      *
      * @return list<array{valor: string, label: string}>
      */
-    private function siguientes(Etapa $actual): array
+    private function siguientes(Tramite $tramite): array
+    {
+        return $this->opciones(
+            $tramite,
+            $this->catalogo->siguientesSugeridas($tramite->flujo, $tramite->etapaActual),
+        );
+    }
+
+    /**
+     * Label de cada etapa del catalogo resuelto con el flujo del tramite. Para el
+     * historial de eventos, que puede incluir etapas de afuera del flujo.
+     *
+     * @return array<string, string>
+     */
+    private function labelPorEtapa(Tramite $tramite): array
+    {
+        $labels = [];
+        foreach (Etapa::cases() as $etapa) {
+            $labels[$etapa->value] = $this->catalogo->label($tramite->flujo, $etapa);
+        }
+
+        return $labels;
+    }
+
+    /**
+     * Etapas listas para un <select> o un boton: value y label resuelto con el flujo del
+     * tramite, marcando cual es la actual.
+     *
+     * @param list<Etapa> $etapas
+     *
+     * @return list<array{valor: string, label: string, actual: bool}>
+     */
+    private function opciones(Tramite $tramite, array $etapas): array
     {
         return array_map(
             fn (Etapa $etapa): array => [
                 'valor' => $etapa->value,
-                'label' => LineaEtapas::label($etapa, $this->etapasConfig),
+                'label' => $this->catalogo->label($tramite->flujo, $etapa),
+                'actual' => $etapa === $tramite->etapaActual,
             ],
-            $actual->siguientesSugeridas(),
+            $etapas,
         );
     }
 
@@ -313,7 +479,6 @@ final class AdminTramitesController
         $datos['metaKeywords'] = '';
         $datos['basePath'] = $this->basePath;
         $datos['csrf'] = CsrfToken::generar(self::CLAVE_CSRF);
-        $datos['etapasConfig'] ??= $this->etapasConfig;
 
         return $this->twig->render($response, $template, $datos)
             ->withHeader('X-Robots-Tag', 'noindex, nofollow')
