@@ -218,9 +218,12 @@ dev server built-in.
     partial Twig que la vista pública (`seguimiento/_linea.html.twig`), porque el flujo no
     se puede cambiar después. La previsualización **no guarda nada** y el endpoint de
     creación revalida por su cuenta.
-  - El historial se puede **editar** (`/admin/tramites/{id}/historial`): fecha, hora y
-    notas de cada evento, borrar eventos y agregar eventos con fecha pasada. Existe por
-    los trámites que ya venían avanzados cuando se cargaron (el alta les pone "hoy").
+  - El historial se puede **editar** (`/admin/tramites/{id}/historial`): fecha y
+    notas de cada evento (la hora sigue en la base para ordenar los eventos del mismo
+    día, pero el panel no la muestra ni la pide: al cambiar el día se conserva la hora
+    guardada, y lo agregado lleva la hora del momento de cargarlo), borrar eventos y
+    agregar eventos con fecha pasada. Existe por los trámites que ya venían avanzados
+    cuando se cargaron (el alta les pone "hoy").
     **Nada de esa pantalla mueve `etapa_actual`** — eso es exclusivo de `/avanzar` —, así
     que ahí `etapa_actual` y el último evento pueden diferir a propósito. El trámite
     entero se puede borrar desde el detalle (`/eliminar`); eventos y enlaces caen por

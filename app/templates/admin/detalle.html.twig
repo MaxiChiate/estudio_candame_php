@@ -97,7 +97,7 @@
             {% for evento in eventos %}
                 <li>
                     <p class="adminEventoCabecera">
-                        {{ evento.ocurridoEl|date('d/m/Y H:i') }} &middot;
+                        {{ evento.ocurridoEl|date('d/m/Y') }} &middot;
                         {{ labelPorEtapa[evento.etapa.value]|default(evento.etapa.value) }}
                     </p>
                     {% if evento.notaPublica %}<p class="adminNotaPublica">{{ evento.notaPublica }}</p>{% endif %}

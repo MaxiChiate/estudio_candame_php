@@ -14,7 +14,7 @@
    tramites que ya venian avanzados cuando se cargaron). Avanzar sigue siendo del
    detalle. #}
 <p class="adminAyuda">
-    Ac&aacute; se corrige el pasado: fechas, horarios y notas de cada etapa registrada, o etapas que sobran o faltan.
+    Ac&aacute; se corrige el pasado: fechas y notas de cada etapa registrada, o etapas que sobran o faltan.
     Nada de esto cambia la etapa actual &mdash; para eso est&aacute; &laquo;Avanzar de etapa&raquo; en el tr&aacute;mite.
     Si borr&aacute;s el registro de la etapa actual o de una anterior, el cliente la sigue viendo, sin fecha.
 </p>
@@ -36,9 +36,9 @@
                     <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial/{{ evento.id }}" class="adminForm adminFormHistorial">
                         <input type="hidden" name="_csrf" value="{{ csrf }}"/>
 
-                        <label for="ocurrido_el_{{ evento.id }}">Fecha y hora</label>
-                        <input type="datetime-local" id="ocurrido_el_{{ evento.id }}" name="ocurrido_el" required min="{{ fechaMinima }}" max="{{ fechaMaxima }}"
-                               value="{{ evento.ocurridoEl|date('Y-m-d\\TH:i') }}"/>
+                        <label for="ocurrido_el_{{ evento.id }}">Fecha</label>
+                        <input type="date" id="ocurrido_el_{{ evento.id }}" name="ocurrido_el" required min="{{ fechaMinima }}" max="{{ fechaMaxima }}"
+                               value="{{ evento.ocurridoEl|date('Y-m-d') }}"/>
 
                         <label for="nota_publica_{{ evento.id }}">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
                         <textarea id="nota_publica_{{ evento.id }}" name="nota_publica" rows="2" maxlength="{{ maxNota }}">{{ evento.notaPublica }}</textarea>
@@ -53,7 +53,7 @@
                        con los campos de la edicion. #}
                     <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial/{{ evento.id }}/eliminar"
                           class="adminHistorialEliminar"
-                          onsubmit="return confirm('¿Borrar {{ labelPorEtapa[evento.etapa.value]|default(evento.etapa.value)|e('js') }} del {{ evento.ocurridoEl|date('d/m/Y H:i') }}?');">
+                          onsubmit="return confirm('¿Borrar {{ labelPorEtapa[evento.etapa.value]|default(evento.etapa.value)|e('js') }} del {{ evento.ocurridoEl|date('d/m/Y') }}?');">
                         <input type="hidden" name="_csrf" value="{{ csrf }}"/>
                         <button type="submit" class="adminBtnTexto">Borrar esta etapa del historial</button>
                     </form>
@@ -71,8 +71,8 @@
         <label for="etapa">Etapa</label>
         {% include 'admin/_select_etapa.html.twig' with {idSelect: 'etapa'} %}
 
-        <label for="ocurrido_el">Fecha y hora</label>
-        <input type="datetime-local" id="ocurrido_el" name="ocurrido_el" required min="{{ fechaMinima }}" max="{{ fechaMaxima }}" value="{{ ahora }}"/>
+        <label for="ocurrido_el">Fecha</label>
+        <input type="date" id="ocurrido_el" name="ocurrido_el" required min="{{ fechaMinima }}" max="{{ fechaMaxima }}" value="{{ ahora }}"/>
 
         <label for="nota_publica">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
         <textarea id="nota_publica" name="nota_publica" rows="2" maxlength="{{ maxNota }}"></textarea>

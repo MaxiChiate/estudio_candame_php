@@ -33,8 +33,11 @@ final class AdminTramitesController
 {
     private const CLAVE_CSRF = CsrfToken::CLAVE_ADMIN_SEGUIMIENTO;
 
-    /** Formato de value de <input type="datetime-local">. */
-    private const FORMATO_INPUT = 'Y-m-d\\TH:i';
+    /**
+     * Formato de value de <input type="date">. El historial se edita por dia: la hora
+     * sigue guardada en la base (ordena los eventos del mismo dia) pero no se muestra.
+     */
+    private const FORMATO_INPUT = 'Y-m-d';
 
     /**
      * Tope de las notas, en caracteres. Las columnas son TEXT (64 KB): pasarse hace que
@@ -353,7 +356,7 @@ final class AdminTramitesController
             'labelPorEtapa' => $this->labelPorEtapa($tramite),
             ...$this->etapasParaElegir($tramite),
             'ahora' => (new DateTimeImmutable())->format(self::FORMATO_INPUT),
-            'fechaMinima' => self::ANIO_MINIMO . '-01-01T00:00',
+            'fechaMinima' => self::ANIO_MINIMO . '-01-01',
             'fechaMaxima' => (new DateTimeImmutable('+1 year'))->format(self::FORMATO_INPUT),
             'maxNota' => self::MAX_NOTA,
             'flash' => $this->tomarFlash(),
@@ -376,7 +379,10 @@ final class AdminTramitesController
         }
 
         $etapa = Etapa::tryFrom($this->campo($datos, 'etapa'));
-        $fecha = $this->fechaHora($this->campo($datos, 'ocurrido_el'));
+        $dia = $this->fecha($this->campo($datos, 'ocurrido_el'));
+        // La hora no se pide: va la del momento de cargarlo, asi un evento de hoy queda
+        // despues de los que ya se registraron hoy.
+        $fecha = $dia === null ? null : new DateTimeImmutable($dia->format('Y-m-d ') . (new DateTimeImmutable())->format('H:i:s'));
 
         $error = match (true) {
             $etapa === null => 'La etapa indicada no existe.',
@@ -399,7 +405,7 @@ final class AdminTramitesController
         $this->flash(sprintf(
             'Se agregó %s al historial, el %s.',
             $this->catalogo->label($tramite->flujo, $etapa),
-            $fecha->format('d/m/Y H:i'),
+            $fecha->format('d/m/Y'),
         ));
 
         return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
@@ -421,7 +427,7 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites');
         }
 
-        $fecha = $this->fechaHora($this->campo($datos, 'ocurrido_el'));
+        $fecha = $this->fecha($this->campo($datos, 'ocurrido_el'));
         $error = $fecha === null ? $this->errorDeFecha() : $this->errorDeNotas($datos);
         if ($error !== null || $fecha === null) {
             $this->flash($error ?? $this->errorDeFecha(), 'error');
@@ -429,12 +435,14 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
         }
 
-        // El input muestra hasta el minuto, y los eventos se guardan con segundos. Si el
-        // minuto no cambio (se edito solo una nota), se conserva la fecha guardada: si
-        // no, dos eventos del mismo minuto podrian invertir su orden.
-        if ($fecha->format('Y-m-d H:i') === $evento->ocurridoEl->format('Y-m-d H:i')) {
-            $fecha = $evento->ocurridoEl;
-        }
+        // El input muestra solo el dia, y los eventos se guardan con hora. Se conserva
+        // la hora guardada y cambia solo el dia: si no, editar una nota dejaria el
+        // evento a las 00:00 y podria invertir el orden con otro del mismo dia.
+        $fecha = $evento->ocurridoEl->setDate(
+            (int) $fecha->format('Y'),
+            (int) $fecha->format('m'),
+            (int) $fecha->format('d'),
+        );
 
         $this->tramites->editarEvento(
             $evento->id,
@@ -445,7 +453,7 @@ final class AdminTramitesController
         $this->flash(sprintf(
             'Se guardó %s, el %s.',
             $this->catalogo->label($tramite->flujo, $evento->etapa),
-            $fecha->format('d/m/Y H:i'),
+            $fecha->format('d/m/Y'),
         ));
 
         return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
@@ -471,7 +479,7 @@ final class AdminTramitesController
         $this->flash(sprintf(
             'Se borró %s del %s del historial.',
             $this->catalogo->label($tramite->flujo, $evento->etapa),
-            $evento->ocurridoEl->format('d/m/Y H:i'),
+            $evento->ocurridoEl->format('d/m/Y'),
         ));
 
         return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
@@ -504,20 +512,17 @@ final class AdminTramitesController
     }
 
     /**
-     * Fecha y hora de un <input type="datetime-local">. Algunos browsers mandan los
-     * segundos y otros no; se aceptan las dos formas. La vuelta por format() descarta
-     * lo que PHP "corrige" en silencio (un 31 de febrero pasaria como 3 de marzo).
+     * Dia de un <input type="date">, a las 00:00. La vuelta por format() descarta lo que
+     * PHP "corrige" en silencio (un 31 de febrero pasaria como 3 de marzo).
      */
-    private function fechaHora(string $valor): ?DateTimeImmutable
+    private function fecha(string $valor): ?DateTimeImmutable
     {
-        foreach (['!Y-m-d\TH:i', '!Y-m-d\TH:i:s'] as $formato) {
-            $fecha = DateTimeImmutable::createFromFormat($formato, $valor);
-            if ($fecha !== false && $fecha->format(substr($formato, 1)) === $valor) {
-                return $this->fechaEnRango($fecha) ? $fecha : null;
-            }
+        $fecha = DateTimeImmutable::createFromFormat('!Y-m-d', $valor);
+        if ($fecha === false || $fecha->format('Y-m-d') !== $valor) {
+            return null;
         }
 
-        return null;
+        return $this->fechaEnRango($fecha) ? $fecha : null;
     }
 
     /**
@@ -533,7 +538,7 @@ final class AdminTramitesController
 
     private function errorDeFecha(): string
     {
-        return sprintf('La fecha y hora no son válidas (tienen que estar entre %d y dentro de un año).', self::ANIO_MINIMO);
+        return sprintf('La fecha no es válida (tienen que estar entre %d y dentro de un año).', self::ANIO_MINIMO);
     }
 
     /** @param array<string, mixed> $datos */
