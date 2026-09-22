@@ -35,7 +35,8 @@ final class AdminHistorialTest extends BaseDeDatosTestCase
         $html = (string) $response->getBody();
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertStringContainsString('value="' . $evento->ocurridoEl->format('Y-m-d\TH:i') . '"', $html);
+        self::assertStringContainsString('value="' . $evento->ocurridoEl->format('Y-m-d') . '"', $html);
+        self::assertStringNotContainsString($evento->ocurridoEl->format('H:i'), $html);
         self::assertStringContainsString('/historial/' . $evento->id . '/eliminar', $html);
     }
 
@@ -44,16 +45,18 @@ final class AdminHistorialTest extends BaseDeDatosTestCase
         $id = $this->crearTramite('Fecha SRL');
         $this->tramites->avanzar($id, Etapa::PROCESANDO_DOCUMENTACION, null, null);
         $inicial = $this->eventoDe($id, Etapa::REUNIENDO_DOCUMENTACION);
+        $hora = $this->tramites->evento($id, $inicial)?->ocurridoEl->format('H:i:s');
 
         $response = $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $inicial, [
-            'ocurrido_el' => '2025-09-15T10:30',
+            'ocurrido_el' => '2025-09-15',
             'nota_publica' => 'Arrancamos.',
             'nota_interna' => '',
         ], csrf: true);
 
         self::assertSame(302, $response->getStatusCode());
         $editado = $this->tramites->evento($id, $inicial);
-        self::assertSame('2025-09-15 10:30', $editado?->ocurridoEl->format('Y-m-d H:i'));
+        self::assertSame('2025-09-15', $editado?->ocurridoEl->format('Y-m-d'));
+        self::assertSame($hora, $editado?->ocurridoEl->format('H:i:s'), 'Cambiar el dia no toca la hora guardada');
         self::assertSame('Arrancamos.', $editado?->notaPublica);
         self::assertNull($editado?->notaInterna);
         self::assertSame(Etapa::PROCESANDO_DOCUMENTACION, $this->tramites->porId($id)?->etapaActual);
@@ -65,7 +68,7 @@ final class AdminHistorialTest extends BaseDeDatosTestCase
         $evento = $this->tramites->eventos($id)[0];
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, [
-            'ocurrido_el' => '2025-02-31T10:00',
+            'ocurrido_el' => '2025-02-31',
         ], csrf: true);
 
         self::assertEquals($evento->ocurridoEl, $this->tramites->evento($id, $evento->id)?->ocurridoEl);
@@ -93,7 +96,7 @@ final class AdminHistorialTest extends BaseDeDatosTestCase
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $ajeno->id . '/eliminar', csrf: true);
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $ajeno->id, [
-            'ocurrido_el' => '2020-01-01T00:00',
+            'ocurrido_el' => '2020-01-01',
         ], csrf: true);
 
         self::assertEquals($ajeno, $this->tramites->evento($otro, $ajeno->id));
@@ -105,11 +108,11 @@ final class AdminHistorialTest extends BaseDeDatosTestCase
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', [
             'etapa' => Etapa::TRAMITE_INICIADO->value,
-            'ocurrido_el' => '2025-10-01T09:00',
+            'ocurrido_el' => '2025-10-01',
         ], csrf: true);
 
         $agregado = $this->eventoDe($id, Etapa::TRAMITE_INICIADO);
-        self::assertSame('2025-10-01 09:00', $this->tramites->evento($id, $agregado)?->ocurridoEl->format('Y-m-d H:i'));
+        self::assertSame('2025-10-01', $this->tramites->evento($id, $agregado)?->ocurridoEl->format('Y-m-d'));
         self::assertSame(Etapa::REUNIENDO_DOCUMENTACION, $this->tramites->porId($id)?->etapaActual);
     }
 
@@ -119,7 +122,7 @@ final class AdminHistorialTest extends BaseDeDatosTestCase
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', [
             'etapa' => 'LIBROS',
-            'ocurrido_el' => '2025-10-01T09:00',
+            'ocurrido_el' => '2025-10-01',
         ], csrf: true);
 
         self::assertCount(1, $this->tramites->eventos($id));

@@ -29,7 +29,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         $evento = $this->tramites->eventos($id)[0];
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, [
-            'ocurrido_el' => '2025-01-01T10:00',
+            'ocurrido_el' => '2025-01-01',
             'nota_publica' => 'PUB' . self::XSS,
             'nota_interna' => 'INT' . self::XSS,
         ], csrf: true);
@@ -70,7 +70,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         $this->tramites->agregarEvento($id, Etapa::TRAMITE_INICIADO, new \DateTimeImmutable('2025-05-05 05:05'), null, null);
 
         $html = (string) $this->pedirAlPanel('GET', '/admin/tramites/' . $id . '/historial')->getBody();
-        self::assertSame(1, preg_match_all('/onsubmit="return confirm\(\'¿Borrar ([^\']*) del 05\/05\/2025 05:05\?\'\);"/u', $html, $m));
+        self::assertSame(1, preg_match_all('/onsubmit="return confirm\(\'¿Borrar ([^\']*) del 05\/05\/2025\?\'\);"/u', $html, $m));
         // Twig js-escape de "Trámite iniciado": no debe quedar ni comilla ni < sin escapar.
         self::assertStringNotContainsString('"', $m[1][0]);
     }
@@ -85,13 +85,13 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         $enElTope = str_repeat('ñ', 5000);
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, [
-            'ocurrido_el' => '2025-01-01T10:00',
+            'ocurrido_el' => '2025-01-01',
             'nota_publica' => $enElTope,
         ], csrf: true);
         self::assertSame($enElTope, $this->tramites->evento($id, $evento->id)?->notaPublica);
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, [
-            'ocurrido_el' => '2025-01-01T10:00',
+            'ocurrido_el' => '2025-01-01',
             'nota_interna' => str_repeat('ñ', 5001),
         ], csrf: true);
         self::assertSame($enElTope, $this->tramites->evento($id, $evento->id)?->notaPublica);
@@ -107,7 +107,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
 
         try {
             $r = $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, [
-                'ocurrido_el' => '2025-01-01T10:00',
+                'ocurrido_el' => '2025-01-01',
                 'nota_publica' => $nota,
             ], csrf: true);
         } catch (\Throwable $e) {
@@ -124,16 +124,31 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
 
     // --- Fechas ------------------------------------------------------------------------
 
-    public function testFechaConSegundosSeAceptaYConservaLosSegundos(): void
+    public function testCambiarElDiaConservaLaHoraGuardada(): void
     {
-        $id = $this->crearTramite('Segundos SRL');
+        $id = $this->crearTramite('Hora SRL');
         $evento = $this->tramites->eventos($id)[0];
+        $this->tramites->editarEvento($evento->id, new \DateTimeImmutable('2025-01-01 10:30:45'), null, null);
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, [
-            'ocurrido_el' => '2025-09-15T10:30:45',
+            'ocurrido_el' => '2025-09-15',
         ], csrf: true);
 
         self::assertSame('2025-09-15 10:30:45', $this->tramites->evento($id, $evento->id)?->ocurridoEl->format('Y-m-d H:i:s'));
+    }
+
+    /** Sin hora en el form: lo agregado para hoy queda despues de lo ya registrado hoy. */
+    public function testAgregarParaHoyQuedaDespuesDeLoRegistradoHoy(): void
+    {
+        $id = $this->crearTramite('Hoy SRL');
+        $this->tramites->avanzar($id, Etapa::PROCESANDO_DOCUMENTACION, null, null);
+
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', [
+            'etapa' => Etapa::DICTAMENES->value,
+            'ocurrido_el' => (new \DateTimeImmutable())->format('Y-m-d'),
+        ], csrf: true);
+
+        self::assertSame(Etapa::DICTAMENES, $this->tramites->eventos($id)[0]->etapa);
     }
 
     /** @return array<string, array{0: mixed}> */
@@ -142,21 +157,18 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         return [
             'vacia' => [''],
             'basura' => ['garbage'],
-            'espacio en vez de T' => ['2025-09-15 10:30'],
-            'formato argentino' => ['15/09/2025 10:30'],
-            'sin ceros' => ['2025-9-5T1:2'],
-            'con Z' => ['2025-09-15T10:30Z'],
-            'con offset' => ['2025-09-15T10:30-03:00'],
-            'con milisegundos' => ['2025-09-15T10:30:00.000'],
-            'hora 24' => ['2025-09-15T24:00'],
-            'minuto 60' => ['2025-09-15T10:60'],
-            'mes 13' => ['2025-13-01T10:00'],
-            '31 de febrero' => ['2025-02-31T10:00'],
-            '29 feb no bisiesto' => ['2025-02-29T10:00'],
-            'solo fecha' => ['2025-09-15'],
-            'anio de 5 digitos' => ['20250-09-15T10:30'],
-            'anio negativo' => ['-2025-09-15T10:30'],
-            'array' => [['2025-09-15T10:30']],
+            'formato argentino' => ['15/09/2025'],
+            'sin ceros' => ['2025-9-5'],
+            'con hora' => ['2025-09-15T10:30'],
+            'con hora y espacio' => ['2025-09-15 10:30'],
+            'con Z' => ['2025-09-15Z'],
+            'mes 13' => ['2025-13-01'],
+            'dia 32' => ['2025-01-32'],
+            '31 de febrero' => ['2025-02-31'],
+            '29 feb no bisiesto' => ['2025-02-29'],
+            'anio de 5 digitos' => ['20250-09-15'],
+            'anio negativo' => ['-2025-09-15'],
+            'array' => [['2025-09-15']],
             'unix timestamp' => ['1757940600'],
             'relativa' => ['now'],
         ];
@@ -193,7 +205,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
     {
         $id = $this->crearTramite('Borde SRL');
         $resultados = [];
-        foreach (['0001-01-01T00:00', '0999-12-31T23:59', '1000-01-01T00:00', '9999-12-31T23:59', '2025-02-29T00:00', '2024-02-29T00:00'] as $f) {
+        foreach (['0001-01-01', '0999-12-31', '1000-01-01', '9999-12-31', '2025-02-29', '2024-02-29'] as $f) {
             try {
                 $r = $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', [
                     'etapa' => Etapa::DICTAMENES->value,
@@ -205,7 +217,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
             }
         }
         $guardadas = array_values(array_map(
-            static fn ($e): string => $e->ocurridoEl->format('Y-m-d H:i'),
+            static fn ($e): string => $e->ocurridoEl->format('Y-m-d'),
             array_filter($this->tramites->eventos($id), static fn ($e): bool => $e->etapa === Etapa::DICTAMENES),
         ));
         foreach ($resultados as $f => $res) {
@@ -214,12 +226,12 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
 
         // Solo entra la fecha real y dentro del rango (1990 a un año desde hoy): los
         // años absurdos son typos que el cliente veria tal cual.
-        self::assertSame(['2024-02-29 00:00'], $guardadas);
+        self::assertSame(['2024-02-29'], $guardadas);
     }
 
     /**
-     * El input muestra la fecha sin segundos. Guardar solo una nota re-envia ese valor
-     * y los segundos se pierden: dos eventos del mismo minuto pueden invertir su orden.
+     * El input muestra solo el dia. Guardar solo una nota re-envia ese valor, y si se
+     * perdiera la hora dos eventos del mismo dia podrian invertir su orden.
      */
     public function testEditarSoloLaNotaNoCambiaLaFechaGuardada(): void
     {
@@ -247,7 +259,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         self::assertSame(
             '2025-03-03 10:00:50',
             $this->tramites->evento($id, $ultimo->id)?->ocurridoEl->format('Y-m-d H:i:s'),
-            'Guardar solo la nota le borro los segundos a la fecha',
+            'Guardar solo la nota le cambio la hora guardada',
         );
     }
 
@@ -279,13 +291,13 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         $antes = $this->tramites->eventos($id);
 
         foreach (['0', '99999999999999999999999', '4294967296'] as $ev) {
-            $r1 = $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $ev, ['ocurrido_el' => '2020-01-01T00:00'], csrf: true);
+            $r1 = $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $ev, ['ocurrido_el' => '2020-01-01'], csrf: true);
             $r2 = $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $ev . '/eliminar', csrf: true);
             self::assertSame(302, $r1->getStatusCode());
             self::assertSame(302, $r2->getStatusCode());
         }
         foreach (['-1', 'abc'] as $ev) {
-            self::assertSame(404, $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $ev, ['ocurrido_el' => '2020-01-01T00:00'], csrf: true)->getStatusCode());
+            self::assertSame(404, $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $ev, ['ocurrido_el' => '2020-01-01'], csrf: true)->getStatusCode());
         }
 
         self::assertEquals($antes, $this->tramites->eventos($id));
@@ -297,7 +309,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         $r = $this->pedirAlPanel('POST', '/admin/tramites/99999999999999999999999/eliminar', csrf: true);
         self::assertSame(302, $r->getStatusCode());
         $r = $this->pedirAlPanel('POST', '/admin/tramites/99999999999999999999999/historial', [
-            'etapa' => Etapa::DICTAMENES->value, 'ocurrido_el' => '2020-01-01T00:00',
+            'etapa' => Etapa::DICTAMENES->value, 'ocurrido_el' => '2020-01-01',
         ], csrf: true);
         self::assertSame(302, $r->getStatusCode());
         self::assertNotNull($this->tramites->porId($id));
@@ -314,9 +326,9 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
 
         $respuestas = [
             $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/eliminar', csrf: true),
-            $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, ['ocurrido_el' => '2020-01-01T00:00'], csrf: true),
+            $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, ['ocurrido_el' => '2020-01-01'], csrf: true),
             $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id . '/eliminar', csrf: true),
-            $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', ['etapa' => Etapa::DICTAMENES->value, 'ocurrido_el' => '2020-01-01T00:00'], csrf: true),
+            $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', ['etapa' => Etapa::DICTAMENES->value, 'ocurrido_el' => '2020-01-01'], csrf: true),
             $this->pedirAlPanel('GET', '/admin/tramites/' . $id . '/historial'),
         ];
         foreach ($respuestas as $r) {
@@ -366,7 +378,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', [
             'etapa' => Etapa::TRAMITE_SUBIDO_TAD->value,
-            'ocurrido_el' => '2025-04-10T12:00',
+            'ocurrido_el' => '2025-04-10',
             'nota_publica' => 'Subimos a TAD.',
             'nota_interna' => 'SECRETO-INTERNO',
         ], csrf: true);
@@ -427,12 +439,12 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         $id = $this->crearTramite('Interna SRL');
         $evento = $this->tramites->eventos($id)[0];
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, [
-            'ocurrido_el' => '2025-01-01T10:00',
+            'ocurrido_el' => '2025-01-01',
             'nota_interna' => 'ZZ-INTERNA-EDITADA',
         ], csrf: true);
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', [
             'etapa' => Etapa::VISTA->value,
-            'ocurrido_el' => '2025-02-01T10:00',
+            'ocurrido_el' => '2025-02-01',
             'nota_interna' => 'ZZ-INTERNA-AGREGADA',
         ], csrf: true);
 
@@ -463,8 +475,8 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         $extra = $csrf === null ? [] : ['_csrf' => $csrf];
 
         $rutas = [
-            ['/admin/tramites/' . $id . '/historial', ['etapa' => Etapa::DICTAMENES->value, 'ocurrido_el' => '2020-01-01T00:00']],
-            ['/admin/tramites/' . $id . '/historial/' . $evento->id, ['ocurrido_el' => '2020-01-01T00:00', 'nota_publica' => 'x']],
+            ['/admin/tramites/' . $id . '/historial', ['etapa' => Etapa::DICTAMENES->value, 'ocurrido_el' => '2020-01-01']],
+            ['/admin/tramites/' . $id . '/historial/' . $evento->id, ['ocurrido_el' => '2020-01-01', 'nota_publica' => 'x']],
             ['/admin/tramites/' . $id . '/historial/' . $evento->id . '/eliminar', []],
             ['/admin/tramites/' . $id . '/eliminar', []],
         ];
@@ -502,8 +514,8 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
 
         $casos = [
             ['GET', '/admin/tramites/' . $id . '/historial', []],
-            ['POST', '/admin/tramites/' . $id . '/historial', ['etapa' => 'DICTAMENES', 'ocurrido_el' => '2020-01-01T00:00', '_csrf' => $csrf]],
-            ['POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, ['ocurrido_el' => '2020-01-01T00:00', '_csrf' => $csrf]],
+            ['POST', '/admin/tramites/' . $id . '/historial', ['etapa' => 'DICTAMENES', 'ocurrido_el' => '2020-01-01', '_csrf' => $csrf]],
+            ['POST', '/admin/tramites/' . $id . '/historial/' . $evento->id, ['ocurrido_el' => '2020-01-01', '_csrf' => $csrf]],
             ['POST', '/admin/tramites/' . $id . '/historial/' . $evento->id . '/eliminar', ['_csrf' => $csrf]],
             ['POST', '/admin/tramites/' . $id . '/eliminar', ['_csrf' => $csrf]],
         ];
@@ -525,7 +537,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
         self::assertStringNotContainsString('NOTA-INTERNA-DE-B', (string) $r->getBody());
 
         $r = $this->pedirAlPanel('POST', '/admin/tramites/' . $a . '/historial/' . $evB->id, [
-            'ocurrido_el' => '2020-01-01T00:00',
+            'ocurrido_el' => '2020-01-01',
             'nota_interna' => 'pisada',
         ], csrf: true);
         self::assertSame('/admin/tramites', $r->getHeaderLine('Location'));
@@ -540,7 +552,7 @@ final class AdminHistorialBordesTest extends BaseDeDatosTestCase
 
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial', [
             'etapa' => Etapa::PARA_RETIRAR->value,
-            'ocurrido_el' => '2025-01-01T00:00',
+            'ocurrido_el' => '2025-01-01',
         ], csrf: true);
         $evs = $this->tramites->eventos($id);
         $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/' . $evs[0]->id . '/eliminar', csrf: true);
