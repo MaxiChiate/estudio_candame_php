@@ -6,11 +6,13 @@ namespace EstudioCandame\Tests\Seguimiento;
 
 use DateTimeImmutable;
 use EstudioCandame\Seguimiento\AccesoRepository;
+use EstudioCandame\Seguimiento\CifradorToken;
 use EstudioCandame\Seguimiento\TokenGenerator;
 use EstudioCandame\Support\RelojFijo;
 
 /**
- * El token en claro no puede quedar guardado en ningun lado.
+ * El token en claro no puede quedar guardado en ningun lado: en base van el hash y una
+ * copia cifrada, que el panel descifra para volver a copiar el enlace.
  */
 final class TokenAccesoTest extends BaseDeDatosTestCase
 {
@@ -90,6 +92,63 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
         self::assertTrue($registro->estaRevocado());
     }
 
+    public function testElEnlaceSePuedeRecuperarDespuesDeEmitirlo(): void
+    {
+        $id = $this->crearTramite('Recupera SAS');
+        $token = $this->accesos->emitir($id, 'cliente');
+
+        $accesos = $this->accesos->porTramite($id);
+
+        self::assertCount(1, $accesos);
+        self::assertTrue($accesos[0]->sePuedeCopiar());
+        self::assertSame($token, $accesos[0]->token);
+        // Y una segunda lectura devuelve lo mismo: no se consume.
+        self::assertSame($token, $this->accesos->porTramite($id)[0]->token);
+    }
+
+    public function testRevocarBorraElTokenCifrado(): void
+    {
+        $id = $this->crearTramite('Revoca cifrado SAS');
+        $token = $this->accesos->emitir($id, 'cliente');
+        $acceso = $this->accesos->buscarPorToken($token);
+        self::assertNotNull($acceso);
+
+        $this->accesos->revocar($acceso->accesoId);
+
+        $cifrado = $this->conexion->pdo()->query('SELECT token_cifrado FROM tramite_acceso')->fetchColumn();
+        self::assertNull($cifrado, 'Un enlace revocado sigue guardando su token cifrado.');
+        self::assertFalse($this->accesos->porTramite($id)[0]->sePuedeCopiar());
+    }
+
+    public function testSinClaveElEnlaceSeEmiteYFuncionaPeroNoSeRecupera(): void
+    {
+        $id = $this->crearTramite('Sin clave SAS');
+        $sinClave = new AccesoRepository($this->conexion, new RelojFijo(new DateTimeImmutable()), new TokenGenerator(), new CifradorToken(''));
+
+        $token = $sinClave->emitir($id, 'cliente');
+
+        self::assertNotNull($sinClave->buscarPorToken($token), 'Sin clave el enlace tiene que andar igual.');
+        self::assertFalse($sinClave->porTramite($id)[0]->sePuedeCopiar());
+        self::assertNull($this->conexion->pdo()->query('SELECT token_cifrado FROM tramite_acceso')->fetchColumn());
+    }
+
+    public function testConOtraClaveElEnlaceSigueAndandoPeroNoSeRecupera(): void
+    {
+        // Rotar SEGUIMIENTO_TOKEN_KEY no rompe los enlaces ya emitidos: solo dejan de
+        // poder copiarse.
+        $id = $this->crearTramite('Rota clave SAS');
+        $token = $this->accesos->emitir($id, 'cliente');
+        $otraClave = new AccesoRepository(
+            $this->conexion,
+            new RelojFijo(new DateTimeImmutable()),
+            new TokenGenerator(),
+            new CifradorToken(base64_encode(random_bytes(32))),
+        );
+
+        self::assertNotNull($otraClave->buscarPorToken($token));
+        self::assertFalse($otraClave->porTramite($id)[0]->sePuedeCopiar());
+    }
+
     /**
      * Recargas y atras/adelante dentro de la ventana son la misma visita: el contador no
      * se mueve, pero la fecha del ultimo acceso si. Pasada la ventana, vuelve a sumar.
@@ -106,7 +165,7 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
         $inicio = new DateTimeImmutable('2026-09-14 10:00:00');
         $ventana = AccesoRepository::VENTANA_VISITA_MINUTOS;
         $registrarA = function (DateTimeImmutable $momento) use ($acceso): void {
-            (new AccesoRepository($this->conexion, new RelojFijo($momento), new TokenGenerator()))
+            (new AccesoRepository($this->conexion, new RelojFijo($momento), new TokenGenerator(), new CifradorToken(self::CLAVE_TOKEN)))
                 ->registrarAcceso($acceso->accesoId);
         };
 
@@ -141,7 +200,7 @@ final class TokenAccesoTest extends BaseDeDatosTestCase
         $inicio = new DateTimeImmutable('2026-09-14 10:00:00');
         $ventana = AccesoRepository::VENTANA_VISITA_MINUTOS;
         $registrarA = function (DateTimeImmutable $momento) use ($acceso): void {
-            (new AccesoRepository($this->conexion, new RelojFijo($momento), new TokenGenerator()))
+            (new AccesoRepository($this->conexion, new RelojFijo($momento), new TokenGenerator(), new CifradorToken(self::CLAVE_TOKEN)))
                 ->registrarAcceso($acceso->accesoId);
         };
 

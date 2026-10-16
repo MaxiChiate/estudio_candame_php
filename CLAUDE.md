@@ -136,7 +136,7 @@ dev server built-in.
     otro instrumento. Solo arma una ficha `.xlsx` con los datos (misma estructura que la
     ficha en papel del estudio) y manda dos mails — el resumen con el xlsx adjunto a
     `info@estudiocandame.com.ar`, y un acuse de texto fijo al remitente. Ver
-    `.claude/rules/configurador.md` para el detalle de qué quedó fuera y por qué.
+    `.claude/rules/configurador.md.deprecated` para el detalle de qué quedó fuera y por qué.
   - `ConsultaConstitucionController` — GET arma el form con el capital mínimo de los 3
     tipos ya resuelto, token CSRF y timestamp de servido; POST valida JSON (todos los
     errores juntos, nunca corta en el primero) y responde `200 {ok:true}` o
@@ -238,9 +238,17 @@ dev server built-in.
     el cliente y lo que ve la doctora se decide en el SQL y en el tipo, no en el
     template. Hay tests que lo verifican por reflexión; no reemplazar `EventoPublico`
     por `TramiteEvento` en la vista pública.
-  - `TokenGenerator` — 16 bytes → 32 hex. En base queda **sólo el sha256**; el token en
-    claro se muestra una única vez al emitirlo y no se puede recuperar. Nunca loguearlo
-    ni guardarlo en una `nota_interna`.
+  - `TokenGenerator` — 16 bytes → 32 hex. El token en claro **nunca** se guarda: en base
+    quedan el sha256 (`token_hash`, por donde se busca) y una copia cifrada
+    (`token_cifrado`, migración `005`) para que el panel pueda **volver a copiar el
+    enlace en cualquier momento** — en la práctica el mismo enlace se le manda al cliente
+    más de una vez. Nunca loguearlo ni guardarlo en una `nota_interna`.
+  - `CifradorToken` — AES-256-GCM con `SEGUIMIENTO_TOKEN_KEY` del `.env` (fuera de la
+    base: un dump sin el `.env` no arma ningún enlace). Sin clave, con otra clave, en
+    los enlaces previos a la migración y en los revocados (`revocar()` borra el cifrado)
+    `TramiteAcceso::$token` es `null`: el enlace sigue andando para el cliente, sólo que
+    el panel lo marca "sin copia". **Rotar la clave no rompe ningún enlace**, sólo deja
+    de poder copiar los ya emitidos.
   - `GET /seguimiento/{token}` devuelve **la misma respuesta byte a byte** para token
     inexistente, revocado y malformado. Es deliberado: distinguirlos convierte la ruta
     en un oráculo. Si se toca esa ruta, `PortalPublicoTest` compara los tres cuerpos.
@@ -273,7 +281,7 @@ dev server built-in.
 - Es un **port**, no un rediseño: preservar contenido y estructura del sitio Kotlin
   original salvo los bugs listados abajo, que sí se corrigieron a propósito. (La
   consulta de constitución es la excepción: dejó de ser un port cuando pasó a cubrir
-  SAS/SRL/SA y a no generar instrumentos — ver `.claude/rules/configurador.md`.)
+  SAS/SRL/SA y a no generar instrumentos — ver `.claude/rules/configurador.md.deprecated`.)
 - **Cuidado con interpolación de strings de PHP en doble comilla**: sólo funciona un
   nivel de `->` (`"$obj->prop"` OK, `"$obj->prop->prop2"` rompe con "Object could not be
   converted to string"). Ya pasó una vez en el builder de la ficha — usar concatenación
@@ -315,9 +323,9 @@ features separadas y no hay ningún vínculo entre ellas — un trámite del por
 a mano desde `/admin/tramites`, no sale de una consulta enviada. Tampoco pide, valida, guarda ni
 escribe en ningún archivo la clave fiscal ni el apellido materno de nadie — para eso
 alcanza con el checkbox de trámite urgente, la doctora junta esos datos por su cuenta.
-Ese pipeline aspiracional (el que describía `.claude/rules/configurador.md` del proyecto
+Ese pipeline aspiracional (el que describía `.claude/rules/configurador.md.deprecated` del proyecto
 Kotlin) nunca se implementó ahí tampoco — no hay nada que portar. Si se retoma ese
-trabajo, es una implementación nueva, no un port. Ver `.claude/rules/configurador.md`
+trabajo, es una implementación nueva, no un port. Ver `.claude/rules/configurador.md.deprecated`
 de este repo para el detalle completo de qué se sacó y por qué.
 
 ## Convenciones de git
