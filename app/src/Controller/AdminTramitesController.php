@@ -10,6 +10,7 @@ use EstudioCandame\Seguimiento\CatalogoFlujos;
 use EstudioCandame\Seguimiento\Etapa;
 use EstudioCandame\Seguimiento\Flujo;
 use EstudioCandame\Seguimiento\LineaEtapas;
+use EstudioCandame\Seguimiento\Novedad;
 use EstudioCandame\Seguimiento\Tramite;
 use EstudioCandame\Seguimiento\TramiteAcceso;
 use EstudioCandame\Seguimiento\TramiteRepository;
@@ -458,7 +459,7 @@ final class AdminTramitesController
      * Existe sobre todo por los tramites que ya venian avanzados cuando se cargaron: el
      * alta les pone "hoy" a la etapa inicial, y el tramite en realidad arranco hace un
      * año. Nada de lo que se hace aca mueve la etapa actual -- eso sigue siendo
-     * exclusivo de "Avanzar de etapa".
+     * exclusivo del bloque "Etapa" del detalle.
      *
      * @param array<string, string> $args
      */
@@ -474,6 +475,8 @@ final class AdminTramitesController
             'tramite' => $tramite,
             'etapaLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
             'eventos' => $this->tramites->eventos($tramite->id),
+            'novedades' => $this->tramites->novedades($tramite->id),
+            'notasInternas' => $this->tramites->notasInternas($tramite->id),
             'labelPorEtapa' => $this->labelPorEtapa($tramite),
             ...$this->etapasParaElegir($tramite),
             'ahora' => (new DateTimeImmutable())->format(self::FORMATO_INPUT),
@@ -556,14 +559,7 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
         }
 
-        // El input muestra solo el dia, y los eventos se guardan con hora. Se conserva
-        // la hora guardada y cambia solo el dia: si no, editar una nota dejaria el
-        // evento a las 00:00 y podria invertir el orden con otro del mismo dia.
-        $fecha = $evento->ocurridoEl->setDate(
-            (int) $fecha->format('Y'),
-            (int) $fecha->format('m'),
-            (int) $fecha->format('d'),
-        );
+        $fecha = $this->otroDiaMismaHora($evento->ocurridoEl, $fecha);
 
         $this->tramites->editarEvento(
             $evento->id,
@@ -604,6 +600,126 @@ final class AdminTramitesController
         ));
 
         return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /**
+     * Corrige dia y texto de una novedad suelta. Igual que con los eventos, la hora
+     * guardada se conserva. El texto es obligatorio: para sacarla esta borrar.
+     *
+     * @param array<string, string> $args
+     */
+    public function editarNovedad(Request $request, Response $response, array $args): Response
+    {
+        return $this->editarSuelta($request, $response, $args, 'novedad');
+    }
+
+    /** @param array<string, string> $args */
+    public function eliminarNovedad(Request $request, Response $response, array $args): Response
+    {
+        return $this->eliminarSuelta($request, $response, $args, 'novedad');
+    }
+
+    /** @param array<string, string> $args */
+    public function editarNotaInterna(Request $request, Response $response, array $args): Response
+    {
+        return $this->editarSuelta($request, $response, $args, 'interna');
+    }
+
+    /** @param array<string, string> $args */
+    public function eliminarNotaInterna(Request $request, Response $response, array $args): Response
+    {
+        return $this->eliminarSuelta($request, $response, $args, 'interna');
+    }
+
+    /**
+     * Novedades y notas internas se editan igual (dia + texto); solo cambia la tabla.
+     * Como con los eventos, el id se busca DENTRO del tramite de la URL: uno de otro
+     * tramite da null y no se toca.
+     *
+     * @param array<string, string> $args
+     * @param 'novedad'|'interna' $tipo
+     */
+    private function editarSuelta(Request $request, Response $response, array $args, string $tipo): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        $item = $tipo === 'novedad'
+            ? $this->tramites->novedad($id, (int) ($args['novedad'] ?? 0))
+            : $this->tramites->notaInterna($id, (int) ($args['nota'] ?? 0));
+        if ($tramite === null || $item === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $dia = $this->fecha($this->campo($datos, 'fecha'));
+        $texto = $this->campo($datos, 'texto');
+        $error = $dia === null
+            ? $this->errorDeFecha()
+            : $this->errorDeTexto($texto, 'El texto no puede quedar vacío. Para sacarla, borrala.');
+        if ($error !== null || $dia === null) {
+            $this->flash($error ?? $this->errorDeFecha(), 'error');
+
+            return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+        }
+
+        if ($item instanceof Novedad) {
+            $fecha = $this->otroDiaMismaHora($item->publicadoEl, $dia);
+            $this->tramites->editarNovedad($item->id, $fecha, $texto);
+            $this->flash(sprintf('Se guardó la novedad del %s.', $fecha->format('d/m/Y')));
+        } else {
+            $fecha = $this->otroDiaMismaHora($item->escritaEl, $dia);
+            $this->tramites->editarNotaInterna($item->id, $fecha, $texto);
+            $this->flash(sprintf('Se guardó la nota interna del %s.', $fecha->format('d/m/Y')));
+        }
+
+        return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /**
+     * @param array<string, string> $args
+     * @param 'novedad'|'interna' $tipo
+     */
+    private function eliminarSuelta(Request $request, Response $response, array $args, string $tipo): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        $item = $tipo === 'novedad'
+            ? $this->tramites->novedad($id, (int) ($args['novedad'] ?? 0))
+            : $this->tramites->notaInterna($id, (int) ($args['nota'] ?? 0));
+        if ($tramite === null || $item === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        if ($item instanceof Novedad) {
+            $this->tramites->eliminarNovedad($item->id);
+            $this->flash(sprintf('Se borró la novedad del %s.', $item->publicadoEl->format('d/m/Y')));
+        } else {
+            $this->tramites->eliminarNotaInterna($item->id);
+            $this->flash(sprintf('Se borró la nota interna del %s.', $item->escritaEl->format('d/m/Y')));
+        }
+
+        return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /**
+     * El historial se edita por dia y lo guardado tiene hora: se conserva la hora y cambia
+     * solo el dia. Si no, editar un texto dejaria el registro a las 00:00 y podria
+     * invertir el orden con otro del mismo dia.
+     */
+    private function otroDiaMismaHora(DateTimeImmutable $guardada, DateTimeImmutable $dia): DateTimeImmutable
+    {
+        return $guardada->setDate((int) $dia->format('Y'), (int) $dia->format('m'), (int) $dia->format('d'));
     }
 
     /**

@@ -130,4 +130,96 @@ final class AdminNovedadesTest extends BaseDeDatosTestCase
         self::assertMatchesRegularExpression('#href="[^"]*/seguimiento/' . $vigente . '"[^>]*>Ver como cliente#', $html);
         self::assertDoesNotMatchRegularExpression('#href="[^"]*/seguimiento/' . $revocado . '"[^>]*>Ver como cliente#', $html);
     }
+
+    public function testElEditorDelHistorialMuestraNovedadesYNotas(): void
+    {
+        $id = $this->crearTramite('Editor SRL');
+        $this->tramites->publicarNovedad($id, Etapa::REUNIENDO_DOCUMENTACION, 'NOVEDAD-EDITABLE');
+        $this->tramites->agregarNotaInterna($id, Etapa::REUNIENDO_DOCUMENTACION, 'INTERNA-EDITABLE');
+
+        $html = (string) $this->pedirAlPanel('GET', '/admin/tramites/' . $id . '/historial')->getBody();
+
+        self::assertStringContainsString('NOVEDAD-EDITABLE', $html);
+        self::assertStringContainsString('INTERNA-EDITABLE', $html);
+        self::assertStringContainsString('/historial/novedades/' . $this->tramites->novedades($id)[0]->id . '/eliminar', $html);
+        self::assertStringContainsString('/historial/notas-internas/' . $this->tramites->notasInternas($id)[0]->id . '/eliminar', $html);
+    }
+
+    public function testEditarUnaNovedadCambiaDiaYTextoYConservaLaHora(): void
+    {
+        $id = $this->crearTramite('Editar SRL');
+        $this->tramites->publicarNovedad($id, Etapa::REUNIENDO_DOCUMENTACION, 'Original');
+        $novedad = $this->tramites->novedades($id)[0];
+
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/novedades/' . $novedad->id, [
+            'fecha' => '2025-05-02',
+            'texto' => 'Corregida',
+        ], csrf: true);
+
+        $editada = $this->tramites->novedad($id, $novedad->id);
+        self::assertSame('Corregida', $editada?->texto);
+        self::assertSame('2025-05-02 ' . $novedad->publicadoEl->format('H:i:s'), $editada?->publicadoEl->format('Y-m-d H:i:s'));
+        self::assertCount(1, $this->tramites->eventos($id), 'Editar una novedad no toca los eventos.');
+    }
+
+    public function testUnaNovedadNoSePuedeDejarVacia(): void
+    {
+        $id = $this->crearTramite('Vaciar SRL');
+        $this->tramites->publicarNovedad($id, Etapa::REUNIENDO_DOCUMENTACION, 'Original');
+        $novedad = $this->tramites->novedades($id)[0];
+
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/novedades/' . $novedad->id, [
+            'fecha' => '2025-05-02',
+            'texto' => '',
+        ], csrf: true);
+
+        self::assertSame('Original', $this->tramites->novedad($id, $novedad->id)?->texto);
+        self::assertSame('error', $_SESSION['seguimientoFlash']['tipo'] ?? null);
+    }
+
+    public function testEditarYBorrarUnaNotaInterna(): void
+    {
+        $id = $this->crearTramite('Interna SRL');
+        $this->tramites->agregarNotaInterna($id, Etapa::REUNIENDO_DOCUMENTACION, 'Original');
+        $nota = $this->tramites->notasInternas($id)[0];
+
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/notas-internas/' . $nota->id, [
+            'fecha' => '2025-05-02',
+            'texto' => 'Corregida',
+        ], csrf: true);
+        self::assertSame('Corregida', $this->tramites->notaInterna($id, $nota->id)?->texto);
+
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/notas-internas/' . $nota->id . '/eliminar', [], csrf: true);
+        self::assertSame([], $this->tramites->notasInternas($id));
+    }
+
+    public function testBorrarUnaNovedad(): void
+    {
+        $id = $this->crearTramite('Borrar SRL');
+        $this->tramites->publicarNovedad($id, Etapa::REUNIENDO_DOCUMENTACION, 'Se va');
+        $novedad = $this->tramites->novedades($id)[0];
+
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/historial/novedades/' . $novedad->id . '/eliminar', [], csrf: true);
+
+        self::assertSame([], $this->tramites->novedades($id));
+        self::assertSame(Etapa::REUNIENDO_DOCUMENTACION, $this->tramites->porId($id)?->etapaActual);
+    }
+
+    /** La URL trae tramite y novedad: una novedad de OTRO tramite no se toca desde ahi. */
+    public function testUnaNovedadDeOtroTramiteNoSeTocaDesdeEstaUrl(): void
+    {
+        $a = $this->crearTramite('A SRL');
+        $b = $this->crearTramite('B SRL');
+        $this->tramites->publicarNovedad($b, Etapa::REUNIENDO_DOCUMENTACION, 'De B');
+        $this->tramites->agregarNotaInterna($b, Etapa::REUNIENDO_DOCUMENTACION, 'De B');
+        $novedad = $this->tramites->novedades($b)[0];
+        $nota = $this->tramites->notasInternas($b)[0];
+
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $a . '/historial/novedades/' . $novedad->id, ['fecha' => '2025-01-01', 'texto' => 'pisada'], csrf: true);
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $a . '/historial/novedades/' . $novedad->id . '/eliminar', [], csrf: true);
+        $this->pedirAlPanel('POST', '/admin/tramites/' . $a . '/historial/notas-internas/' . $nota->id . '/eliminar', [], csrf: true);
+
+        self::assertSame('De B', $this->tramites->novedad($b, $novedad->id)?->texto);
+        self::assertNotNull($this->tramites->notaInterna($b, $nota->id));
+    }
 }

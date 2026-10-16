@@ -166,6 +166,10 @@ return function (App $app, Twig $twig): void {
             $grupo->post('/tramites/{id:[0-9]+}/historial', [$adminController, 'agregarEvento']);
             $grupo->post('/tramites/{id:[0-9]+}/historial/{evento:[0-9]+}', [$adminController, 'editarEvento']);
             $grupo->post('/tramites/{id:[0-9]+}/historial/{evento:[0-9]+}/eliminar', [$adminController, 'eliminarEvento']);
+            $grupo->post('/tramites/{id:[0-9]+}/historial/novedades/{novedad:[0-9]+}', [$adminController, 'editarNovedad']);
+            $grupo->post('/tramites/{id:[0-9]+}/historial/novedades/{novedad:[0-9]+}/eliminar', [$adminController, 'eliminarNovedad']);
+            $grupo->post('/tramites/{id:[0-9]+}/historial/notas-internas/{nota:[0-9]+}', [$adminController, 'editarNotaInterna']);
+            $grupo->post('/tramites/{id:[0-9]+}/historial/notas-internas/{nota:[0-9]+}/eliminar', [$adminController, 'eliminarNotaInterna']);
             $grupo->post('/accesos/{id:[0-9]+}/revocar', [$adminController, 'revocarAcceso']);
         })->add($autenticacion);
     }
