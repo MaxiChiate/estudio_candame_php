@@ -183,6 +183,7 @@ Ver `app/.env.example`, documentado inline. Resumen:
 | `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASS` / `DB_CHARSET` | Base del portal. Sólo se usan con `SEGUIMIENTO_ENABLED=true` |
 | `ADMIN_USER` / `ADMIN_PASS_HASH` | Credenciales HTTP Basic del panel. El hash va entre comillas simples; con cualquiera de las dos vacía el panel queda cerrado |
 | `SEGUIMIENTO_TOKEN_KEY` | Clave (32 bytes en base64) para guardar cifrado el token de cada enlace y poder volver a copiarlo desde el panel. Vacía, los enlaces andan pero sólo se copian al emitirlos |
+| `SEGUIMIENTO_MAIL_CLIENTE_ENABLED` | Muestra el checkbox "Avisar al cliente por mail" al publicar una novedad. Default `false`; en `true` el envío todavía es un stub y no manda nada |
 | `APP_URL` | Origen del sitio, para armar el link completo del token en el panel |
 
 ## Bugs conocidos de la versión anterior (Kotlin/Thymeleaf) — corregidos en este port

@@ -198,9 +198,13 @@ dev server built-in.
     son trámites distintos con el mismo pipeline. No colapsarlos en uno.
   - El recorrido **no es lineal ni dentro del propio flujo**: la vista es un loop — el
     inspector puede despachar más de una, así que un trámite vuelve de `VISTA_CONTESTADA`
-    a `VISTA`. El operador además puede saltar a **cualquier** etapa del catálogo,
-    incluidas las de afuera de su flujo; el panel no se lo discute (el select del detalle
-    las ofrece en un segundo grupo).
+    a `VISTA`. Desde el detalle el operador puede saltar a cualquier etapa **de su
+    flujo**, hacia adelante o hacia atrás (con `confirm` al volver, porque el cliente lo
+    ve). `/avanzar` **rechaza la etapa actual** (eso es "Publicar novedad", ver abajo) y
+    **las de otro flujo**. El repositorio no valida nada de esto: la regla vive en el
+    controller, y `LineaEtapas` sigue sabiendo dibujar etapas fuera de flujo por los
+    datos de antes de la regla (el detalle muestra la actual igual, con un aviso). El
+    "Agregar una etapa" del editor del historial todavía ofrece el catálogo entero.
   - Por eso **una etapa está cumplida si tiene al menos un evento en `tramite_evento`**,
     no por comparar posiciones contra `etapa_actual` (que sólo marca la que está en
     curso). Con el criterio viejo, volver atrás des-completaba las etapas previas. Como
@@ -226,15 +230,40 @@ dev server built-in.
     cuando se cargaron (el alta les pone "hoy").
     **Nada de esa pantalla mueve `etapa_actual`** — eso es exclusivo de `/avanzar` —, así
     que ahí `etapa_actual` y el último evento pueden diferir a propósito. El trámite
-    entero se puede borrar desde el detalle (`/eliminar`); eventos y enlaces caen por
-    `ON DELETE CASCADE`.
+    entero se puede borrar desde el detalle (`/eliminar`); eventos, novedades, notas
+    internas y enlaces caen por `ON DELETE CASCADE`.
+  - **Cambio de etapa, novedad y nota interna son tres cosas distintas** (migración
+    `006`), y el detalle las separa en tres bloques:
+    - `tramite_evento` es **sólo cambios de etapa**. Su `nota_publica` es el mensaje que
+      viajó con ese cambio (el "+ Agregar mensaje" de "Avanzar a"). Su `nota_interna`
+      queda por los datos viejos: el avance ya no la recibe.
+    - `tramite_novedad` (`POST .../novedades`) es un mensaje al cliente **sin cambio de
+      etapa**. Guarda la etapa vigente como referencia, no como transición: no crea
+      evento, así que no mueve la fecha de "Etapa actual desde el…" ni el contador de la
+      vista. En "Novedades" del portal va con la fecha y **sin label de etapa**.
+    - `tramite_nota_interna` (`POST .../notas-internas`) es la nota de la doctora sin
+      cambio de etapa. Tabla aparte a propósito: ninguna consulta del portal la lee.
+    Antes de esto, para publicar sin avanzar había que "registrar" la etapa en curso, y
+    el cliente lo veía como un cambio de etapa (y en `VISTA`, como "2ª vista"). La `006`
+    convirtió esos eventos repetidos con notas; los repetidos **sin** nota los dejó, con
+    el comando para borrarlos comentado al final del `.sql`.
+  - Los textos que escribe la doctora se muestran con `|e|nl2br`, en ese orden.
+  - "Ver como cliente ↗" abre el **enlace real** del cliente (el primero vigente que se
+    pueda descifrar), así que cuenta como un acceso más en la tabla de enlaces. Sin
+    enlace vigente, el detalle invita a emitir uno.
+  - `SEGUIMIENTO_MAIL_CLIENTE_ENABLED` (default `false`) muestra el checkbox "Avisar al
+    cliente por mail" al publicar una novedad. Apagado, el backend ignora el campo aunque
+    llegue en el POST. Prendido, el envío es un **stub** (`avisarAlClientePorMail`, con
+    TODO): no manda nada todavía.
+  - Todos los forms del panel se mandan una sola vez (script en `admin/layout`).
   - `observado` es un **flag ortogonal**, no una etapa: un trámite observado sigue
     perteneciendo a su etapa. No meterlo en el enum. Cubre sólo observaciones de **fuera
     de IGJ** (escribanía, documentación incompleta); las vistas de IGJ son etapas.
   - `Conexion` — PDO perezoso (abre recién en el primer `pdo()`). No hay container de DI
     en este proyecto: el "singleton lazy" es esta clase, instanciada en `routes.php`.
   - `TramiteRepository::eventosPublicos()` **no trae `nota_interna` en el SELECT**, y
-    devuelve `EventoPublico`, que no tiene esa propiedad. La separación entre lo que ve
+    devuelve `EventoPublico`, que no tiene esa propiedad (`novedadesPublicas()` devuelve
+    `NovedadPublica`, que sólo tiene fecha y texto). La separación entre lo que ve
     el cliente y lo que ve la doctora se decide en el SQL y en el tipo, no en el
     template. Hay tests que lo verifican por reflexión; no reemplazar `EventoPublico`
     por `TramiteEvento` en la vista pública.
