@@ -101,8 +101,15 @@ abstract class BaseDeDatosTestCase extends TestCase
      * para no repetir el armado de la app en cada uno.
      *
      * @param array<string, string> $cuerpo
+     * @param string $claveToken SEGUIMIENTO_TOKEN_KEY del panel; vacia simula un .env sin clave.
      */
-    protected function pedirAlPanel(string $metodo, string $ruta, array $cuerpo = [], bool $csrf = false): ResponseInterface
+    protected function pedirAlPanel(
+        string $metodo,
+        string $ruta,
+        array $cuerpo = [],
+        bool $csrf = false,
+        string $claveToken = self::CLAVE_TOKEN,
+    ): ResponseInterface
     {
         self::definirAppPath();
 
@@ -126,7 +133,7 @@ abstract class BaseDeDatosTestCase extends TestCase
         $_ENV['DB_USER'] = $config['user'];
         $_ENV['DB_PASS'] = $config['pass'];
         $_ENV['DB_CHARSET'] = $config['charset'];
-        $_ENV['SEGUIMIENTO_TOKEN_KEY'] = self::CLAVE_TOKEN;
+        $_ENV['SEGUIMIENTO_TOKEN_KEY'] = $claveToken;
 
         $app = AppFactory::create();
         $twig = Twig::create(APP_PATH . '/templates', ['cache' => false, 'charset' => 'utf-8']);
