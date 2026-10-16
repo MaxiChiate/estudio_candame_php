@@ -295,15 +295,30 @@ final class AdminTramitesController
 
         // Si no viene etapa explicita, avanza a la siguiente DEL FLUJO del tramite: ese
         // es el camino de un click desde el detalle. Con etapa explicita se puede ir a
-        // CUALQUIERA del catalogo, incluidas anteriores (el loop de la vista) y las que
-        // no pertenecen al flujo. Lo unico que se valida es que sea un valor del enum:
-        // el operador sabe lo que hace y el portal no le discute el recorrido.
+        // cualquiera DEL FLUJO, incluidas anteriores (el loop de la vista, o corregir un
+        // avance de mas). No a la misma: eso era la unica forma de publicar una nota sin
+        // avanzar, y le mostraba al cliente un cambio de etapa que no existio -- ahora
+        // es "Publicar novedad". Tampoco a una de otro tipo de tramite.
         $etapaPedida = $this->campo($datos, 'etapa');
 
         if ($etapaPedida !== '') {
             $etapa = Etapa::tryFrom($etapaPedida);
-            if ($etapa === null) {
-                $this->flash('La etapa indicada no existe.', 'error');
+            $error = match (true) {
+                $etapa === null => 'La etapa indicada no existe.',
+                $etapa === $tramite->etapaActual => sprintf(
+                    'El trámite %s ya está en %s. Para avisarle algo al cliente sin cambiar de etapa, usá «Publicar novedad».',
+                    $tramite->referencia,
+                    $this->catalogo->label($tramite->flujo, $etapa),
+                ),
+                !$this->catalogo->pertenece($tramite->flujo, $etapa) => sprintf(
+                    '%s no es una etapa de %s.',
+                    $this->catalogo->label($tramite->flujo, $etapa),
+                    $this->catalogo->nombre($tramite->flujo),
+                ),
+                default => null,
+            };
+            if ($error !== null || $etapa === null) {
+                $this->flash($error ?? 'La etapa indicada no existe.', 'error');
 
                 return $this->redirigir($response, '/admin/tramites/' . $id);
             }
@@ -323,12 +338,9 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites/' . $id);
         }
 
-        $this->tramites->avanzar(
-            $id,
-            $etapa,
-            $this->campoONull($datos, 'nota_publica'),
-            $this->campoONull($datos, 'nota_interna'),
-        );
+        // Con el avance viaja solo el mensaje al cliente. La nota interna tiene su propio
+        // bloque y su propia ruta: no se mezcla en el form de lo que ve el cliente.
+        $this->tramites->avanzar($id, $etapa, $this->campoONull($datos, 'nota_publica'), null);
 
         $this->flash(sprintf(
             '%s pasó a %s.',
