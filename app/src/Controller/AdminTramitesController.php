@@ -249,6 +249,9 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites');
         }
 
+        $accesos = $this->accesos->porTramite($tramite->id);
+        $tokenNuevo = $this->tomarTokenNuevo();
+
         return $this->render($response, 'admin/detalle.html.twig', [
             'pageTitle' => sprintf('%s - Panel', $tramite->referencia),
             'tramite' => $tramite,
@@ -256,15 +259,21 @@ final class AdminTramitesController
             // Dato de solo lectura: el flujo se eligio al crear y no se puede cambiar.
             'flujoNombre' => $this->catalogo->nombre($tramite->flujo),
             'eventos' => $this->tramites->eventos($tramite->id),
-            'accesos' => $this->accesos->porTramite($tramite->id),
+            'accesos' => $accesos,
             ...$this->etapasParaElegir($tramite),
             'siguientes' => $this->siguientes($tramite),
             // Labels resueltos con el flujo, para que el historial muestre el mismo
             // texto que la linea del cliente cuando la etapa tiene override.
             'labelPorEtapa' => $this->labelPorEtapa($tramite),
             'flash' => $this->tomarFlash(),
-            // El token en claro se muestra UNA vez, en el redirect posterior a emitirlo.
-            'tokenNuevo' => $this->tomarTokenNuevo(),
+            // Aviso en el redirect posterior a emitirlo, solo si el token NO quedo
+            // guardado cifrado (sin clave). Si quedo, se copia desde la tabla.
+            'tokenNuevo' => $tokenNuevo,
+            'tokenNuevoRecuperable' => $tokenNuevo !== null && in_array(
+                $tokenNuevo,
+                array_map(static fn ($acceso): ?string => $acceso->token, $accesos),
+                true,
+            ),
             'appUrl' => rtrim($this->appUrl, '/'),
         ]);
     }
@@ -672,12 +681,12 @@ final class AdminTramitesController
 
         $token = $this->accesos->emitir($id, mb_substr($etiqueta, 0, 120));
 
-        // Unica vez que el token existe en claro fuera de la URL del cliente. Va por
-        // sesion (no por query string) para que no quede en el historial ni en los logs
-        // de acceso del servidor, y se consume en el primer render del detalle.
+        // Va por sesion (no por query string) para que no quede en el historial ni en los
+        // logs de acceso del servidor, y se consume en el primer render del detalle.
         $_SESSION['seguimientoTokenNuevo'] = $token;
 
-        return $this->redirigir($response, '/admin/tramites/' . $id);
+        // Vuelve a la seccion de enlaces, no al tope de la pagina.
+        return $this->redirigir($response, '/admin/tramites/' . $id . '#enlaces');
     }
 
     /** @param array<string, string> $args */

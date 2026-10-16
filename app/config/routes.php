@@ -12,6 +12,7 @@ use EstudioCandame\Pruebas\EnvioPruebaService;
 use EstudioCandame\Seguimiento\AccesoRepository;
 use EstudioCandame\Seguimiento\BarraSeguimiento;
 use EstudioCandame\Seguimiento\CatalogoFlujos;
+use EstudioCandame\Seguimiento\CifradorToken;
 use EstudioCandame\Seguimiento\Conexion;
 use EstudioCandame\Seguimiento\TokenGenerator;
 use EstudioCandame\Seguimiento\TramiteRepository;
@@ -54,7 +55,12 @@ return function (App $app, Twig $twig): void {
         // flujo revienta aca, al arrancar, y no cuando un cliente abre su enlace.
         $catalogoFlujos = new CatalogoFlujos(require APP_PATH . '/config/flujos.php', $etapasConfig);
         $tramiteRepository = new TramiteRepository($conexion, $relojSeguimiento);
-        $accesoRepository = new AccesoRepository($conexion, $relojSeguimiento, new TokenGenerator());
+        $accesoRepository = new AccesoRepository(
+            $conexion,
+            $relojSeguimiento,
+            new TokenGenerator(),
+            new CifradorToken((string) ($_ENV['SEGUIMIENTO_TOKEN_KEY'] ?? '')),
+        );
         $barraSeguimiento = new BarraSeguimiento($accesoRepository, $tramiteRepository, $catalogoFlujos);
     }
 
