@@ -71,6 +71,8 @@ abstract class BaseDeDatosTestCase extends TestCase
             // desactiva el chequeo igual por si el orden cambia en el futuro.
             $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
             $pdo->exec('TRUNCATE TABLE tramite_evento');
+            $pdo->exec('TRUNCATE TABLE tramite_novedad');
+            $pdo->exec('TRUNCATE TABLE tramite_nota_interna');
             $pdo->exec('TRUNCATE TABLE tramite_acceso');
             $pdo->exec('TRUNCATE TABLE tramite');
             $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
