@@ -14,25 +14,22 @@
 <p class="adminSubtitulo adminTenue">Tipo de tr&aacute;mite: {{ flujoNombre }}</p>
 
 {% if tokenNuevo %}
-    {# Unica vez que se puede ver este token: en base solo queda el sha256. #}
+    {# Se muestra al emitirlo. Si quedo guardado cifrado, despues se puede volver a
+       copiar desde la tabla de enlaces; si no (falta SEGUIMIENTO_TOKEN_KEY), es la
+       unica vez. #}
     <div class="adminTokenNuevo">
-        <p class="adminTokenTitulo">Enlace generado &mdash; copialo ahora</p>
-        <p class="adminTokenAviso">Es la <strong>&uacute;nica vez</strong> que se muestra. Despu&eacute;s solo queda el hash y no se puede recuperar.</p>
+        {% if tokenNuevoRecuperable %}
+            <p class="adminTokenTitulo">Enlace generado</p>
+            <p class="adminTokenAviso">Lo pod&eacute;s volver a copiar cuando quieras desde <strong>Enlaces de acceso</strong>, m&aacute;s abajo.</p>
+        {% else %}
+            <p class="adminTokenTitulo">Enlace generado &mdash; copialo ahora</p>
+            <p class="adminTokenAviso">Es la <strong>&uacute;nica vez</strong> que se muestra: no qued&oacute; guardado para volver a copiarlo.</p>
+        {% endif %}
         <div class="adminTokenFila">
             <input type="text" id="tokenNuevo" readonly value="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}"/>
-            <button type="button" class="adminBtn" id="copiarToken">Copiar</button>
+            <button type="button" class="adminBtn" data-copiar="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}">Copiar</button>
         </div>
     </div>
-    <script>
-        document.getElementById('copiarToken').addEventListener('click', function () {
-            var campo = document.getElementById('tokenNuevo');
-            campo.select();
-            campo.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(campo.value).then(function () {
-                document.getElementById('copiarToken').textContent = 'Copiado';
-            });
-        });
-    </script>
 {% endif %}
 
 <section class="adminSeccion">
@@ -136,10 +133,19 @@
                             {% if acceso.estaRevocado %}
                                 <span class="adminTenue">revocado el {{ acceso.revocadoEl|date('d/m/Y') }}</span>
                             {% else %}
-                                <form method="post" action="{{ basePath }}/admin/accesos/{{ acceso.id }}/revocar">
-                                    <input type="hidden" name="_csrf" value="{{ csrf }}"/>
-                                    <button type="submit" class="adminBtnTexto">Revocar</button>
-                                </form>
+                                <div class="adminAccionesAcceso">
+                                    {% if acceso.sePuedeCopiar %}
+                                        <button type="button" class="adminBtnTexto" data-copiar="{{ appUrl }}{{ basePath }}/seguimiento/{{ acceso.token }}">Copiar enlace</button>
+                                    {% else %}
+                                        {# Emitido antes de que se guardara el token, o sin
+                                           SEGUIMIENTO_TOKEN_KEY: anda, pero no se puede copiar. #}
+                                        <span class="adminTenue" title="Este enlace se emiti&oacute; sin guardar una copia. Sigue funcionando; si hace falta mandarlo de nuevo, emit&iacute; uno nuevo.">sin copia</span>
+                                    {% endif %}
+                                    <form method="post" action="{{ basePath }}/admin/accesos/{{ acceso.id }}/revocar">
+                                        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+                                        <button type="submit" class="adminBtnTexto">Revocar</button>
+                                    </form>
+                                </div>
                             {% endif %}
                         </td>
                     </tr>
@@ -179,6 +185,46 @@
     </form>
 </dialog>
 <script>
+    // Copiar enlace: el del aviso de recien emitido y los de la tabla. navigator.clipboard
+    // solo existe en contexto seguro (https o localhost); afuera de eso se cae al
+    // execCommand de siempre con un textarea temporal.
+    (function () {
+        function copiarConFallback(texto) {
+            var area = document.createElement('textarea');
+            area.value = texto;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.opacity = '0';
+            document.body.appendChild(area);
+            area.select();
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            document.body.removeChild(area);
+            return ok ? Promise.resolve() : Promise.reject();
+        }
+
+        function copiar(texto) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(texto).catch(function () { return copiarConFallback(texto); });
+            }
+            return copiarConFallback(texto);
+        }
+
+        document.addEventListener('click', function (e) {
+            var boton = e.target.closest('[data-copiar]');
+            if (!boton) { return; }
+            var original = boton.dataset.textoOriginal || boton.textContent;
+            boton.dataset.textoOriginal = original;
+            copiar(boton.dataset.copiar).then(function () {
+                boton.textContent = 'Copiado';
+            }, function () {
+                boton.textContent = 'No se pudo copiar';
+            }).then(function () {
+                setTimeout(function () { boton.textContent = original; }, 2000);
+            });
+        });
+    })();
+
     (function () {
         var dialogo = document.getElementById('dialogoEliminar');
         document.getElementById('abrirEliminar').addEventListener('click', function () { dialogo.showModal(); });

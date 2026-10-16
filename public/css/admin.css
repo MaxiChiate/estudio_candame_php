@@ -94,6 +94,7 @@ body {
 .adminTabla td a { color: var(--admin-accent); text-decoration: none; font-weight: 600; }
 .adminTabla tr.is-observado td:first-child { box-shadow: inset 3px 0 0 var(--admin-accent); }
 .adminTabla tr.is-revocado { opacity: 0.55; }
+.adminAccionesAcceso { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 /* Fila clickeable: el link ocupa la celda entera (el padding pasa de la celda al <a>),
    asi cualquier punto de la fila navega. */
 .adminFilaLink td { padding: 0; }
