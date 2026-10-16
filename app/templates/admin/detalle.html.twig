@@ -130,7 +130,7 @@
                             {% else %}
                                 <div class="adminAccionesAcceso">
                                     {% if acceso.sePuedeCopiar %}
-                                        <button type="button" class="adminBtnTexto" data-copiar="{{ appUrl }}{{ basePath }}/seguimiento/{{ acceso.token }}">Copiar enlace</button>
+                                        <button type="button" class="adminBtn" data-copiar="{{ appUrl }}{{ basePath }}/seguimiento/{{ acceso.token }}">Copiar</button>
                                     {% else %}
                                         {# Emitido antes de que se guardara el token, o sin
                                            SEGUIMIENTO_TOKEN_KEY: anda, pero no se puede copiar. #}
