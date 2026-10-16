@@ -159,7 +159,7 @@ body {
 
 .adminForm { display: flex; flex-direction: column; gap: 6px; max-width: 620px; }
 .adminForm label { font-size: 0.86rem; color: var(--admin-label); margin-top: 8px; }
-.adminForm input[type="text"], .adminForm input[type="datetime-local"], .adminForm select, .adminForm textarea {
+.adminForm input[type="text"], .adminForm input[type="date"], .adminForm input[type="datetime-local"], .adminForm select, .adminForm textarea {
     padding: 9px 12px;
     border: 1px solid var(--admin-border);
     background: var(--admin-surface);
@@ -242,6 +242,9 @@ body {
 .adminMensajeAvance { display: flex; flex-direction: column; gap: 6px; }
 .adminMensajeAvance > summary, .adminOtraEtapa > summary { cursor: pointer; color: var(--admin-accent); font-size: 0.92rem; }
 .adminMensajeAvance[open] { display: flex; flex-direction: column; }
+/* El "+" del texto ya hace de marca: sin el triangulo del navegador. */
+.adminMensajeAvance > summary { list-style: none; }
+.adminMensajeAvance > summary::-webkit-details-marker { display: none; }
 .adminMensajeAvance textarea { margin-top: 2px; }
 .adminOtraEtapa { margin-top: 18px; }
 .adminOtraEtapa .adminForm { margin-top: 6px; }
@@ -293,7 +296,7 @@ body {
 
 .adminHistorialEtapa { margin: 0 0 4px; font-weight: 600; color: var(--admin-ink); }
 .adminHistorialEtapa .adminChip { vertical-align: middle; }
-.adminForm input[type="datetime-local"] { max-width: 260px; }
+.adminForm input[type="date"], .adminForm input[type="datetime-local"] { max-width: 260px; }
 .adminHistorialEliminar {
     margin: 16px 0 0;
     padding-top: 12px;
