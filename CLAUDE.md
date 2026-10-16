@@ -184,9 +184,9 @@ dev server built-in.
     y sin colapsar), `repeticion` (formato del contador, sólo en las etapas que son un
     loop) y `opcional` (las de la vista: pueden no ocurrir nunca, así que no se anuncian
     de antemano — no aparecen en la línea hasta que el trámite pasa por ahí).
-  - **El pipeline lo define el flujo del trámite, no el enum.** `Flujo` (7 casos:
+  - **El pipeline lo define el flujo del trámite, no el enum.** `Flujo` (8 casos:
     constitución SRL/SA, asoc. civil designación/reforma, art. 60, reforma SRL con y sin
-    cambio de gerencia, SAS, constitución asoc. civil) se elige **al crear el trámite** y
+    cambio de gerencia, SAS, constitución asoc. civil, solo vistas) se elige **al crear el trámite** y
     **no se puede cambiar después** — no hay ninguna ruta ni método que lo modifique, y
     hay un test que lo verifica. Qué etapas recorre cada flujo, en qué orden, y los
     overrides de `label`/`detalle` por flujo viven en `app/config/flujos.php`: config, no
