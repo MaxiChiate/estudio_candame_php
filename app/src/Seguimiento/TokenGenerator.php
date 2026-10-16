@@ -7,9 +7,9 @@ namespace EstudioCandame\Seguimiento;
 /**
  * Tokens de acceso al portal de seguimiento.
  *
- * El token en claro existe UNA sola vez: se genera, se muestra al emitirlo en el panel
- * y se descarta. En base solo queda el sha256. No loguearlo, no guardarlo en una
- * nota_interna, no mandarlo por un canal que quede registrado del lado del estudio.
+ * El token en claro nunca se guarda: en base quedan el sha256 (para buscar) y una copia
+ * cifrada (CifradorToken) para que el panel pueda volver a mostrar el enlace. No
+ * loguearlo, no guardarlo en una nota_interna.
  *
  * 16 bytes = 128 bits de entropia, 32 caracteres hex. Alcanza de sobra para que no sea
  * enumerable, y entra comodo en una URL corta que se pueda pasar por mail.

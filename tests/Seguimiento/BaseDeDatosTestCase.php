@@ -6,6 +6,7 @@ namespace EstudioCandame\Tests\Seguimiento;
 
 use EstudioCandame\Seguimiento\AccesoRepository;
 use EstudioCandame\Seguimiento\CatalogoFlujos;
+use EstudioCandame\Seguimiento\CifradorToken;
 use EstudioCandame\Seguimiento\Conexion;
 use EstudioCandame\Seguimiento\Flujo;
 use EstudioCandame\Seguimiento\TokenGenerator;
@@ -32,6 +33,13 @@ use Throwable;
  */
 abstract class BaseDeDatosTestCase extends TestCase
 {
+    /**
+     * Clave de cifrado de los tests. La usan tanto $this->accesos como el panel (via
+     * $_ENV en pedirAlPanel), para que un enlace emitido desde el test se pueda copiar
+     * desde el panel y al reves.
+     */
+    protected const CLAVE_TOKEN = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=';
+
     protected Conexion $conexion;
     protected TramiteRepository $tramites;
     protected AccesoRepository $accesos;
@@ -72,7 +80,7 @@ abstract class BaseDeDatosTestCase extends TestCase
 
         $reloj = new RelojSistema();
         $this->tramites = new TramiteRepository($this->conexion, $reloj);
-        $this->accesos = new AccesoRepository($this->conexion, $reloj, new TokenGenerator());
+        $this->accesos = new AccesoRepository($this->conexion, $reloj, new TokenGenerator(), new CifradorToken(self::CLAVE_TOKEN));
         $this->catalogo = CatalogoFlujos::desdeConfig(dirname(__DIR__, 2) . '/app');
     }
 
@@ -118,6 +126,7 @@ abstract class BaseDeDatosTestCase extends TestCase
         $_ENV['DB_USER'] = $config['user'];
         $_ENV['DB_PASS'] = $config['pass'];
         $_ENV['DB_CHARSET'] = $config['charset'];
+        $_ENV['SEGUIMIENTO_TOKEN_KEY'] = self::CLAVE_TOKEN;
 
         $app = AppFactory::create();
         $twig = Twig::create(APP_PATH . '/templates', ['cache' => false, 'charset' => 'utf-8']);
