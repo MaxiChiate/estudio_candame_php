@@ -33,9 +33,12 @@
             <h2>Novedades</h2>
             <ul>
                 {% for novedad in novedades %}
+                    {# Sin label es una novedad suelta: no hubo cambio de etapa, y con
+                       el nombre de la etapa al lado se leeria como uno. El texto se
+                       escapa ANTES del nl2br, asi solo los saltos de linea son HTML. #}
                     <li>
-                        <p class="seguimientoNotaFecha">{{ novedad.fecha|date('d/m/Y') }} &mdash; {{ novedad.label }}</p>
-                        <p>{{ novedad.nota }}</p>
+                        <p class="seguimientoNotaFecha">{{ novedad.fecha|date('d/m/Y') }}{% if novedad.label %} &mdash; {{ novedad.label }}{% endif %}</p>
+                        <p>{{ novedad.nota|e|nl2br }}</p>
                     </li>
                 {% endfor %}
             </ul>

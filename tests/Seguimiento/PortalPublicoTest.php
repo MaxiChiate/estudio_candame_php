@@ -109,6 +109,56 @@ final class PortalPublicoTest extends BaseDeDatosTestCase
         self::assertStringContainsString('Se firmó el instrumento constitutivo.', $html);
     }
 
+    /** Las notas internas sueltas, ni las de un cambio de etapa, nunca llegan al portal. */
+    public function testLaNotaInternaSueltaTampocoLlega(): void
+    {
+        $id = $this->crearTramite('Portal SRL');
+        $this->tramites->avanzar($id, Etapa::PROCESANDO_DOCUMENTACION, 'Recibimos todo.', 'INTERNA-DEL-EVENTO');
+        $this->tramites->agregarNotaInterna($id, Etapa::PROCESANDO_DOCUMENTACION, 'INTERNA-SUELTA');
+        $this->tramites->publicarNovedad($id, Etapa::PROCESANDO_DOCUMENTACION, 'Novedad visible.');
+        $token = $this->accesos->emitir($id, 'cliente');
+
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+
+        self::assertStringNotContainsString('INTERNA-DEL-EVENTO', $html);
+        self::assertStringNotContainsString('INTERNA-SUELTA', $html);
+        // Lo publico si: si no, el test pasaria con una pagina que no muestra nada.
+        self::assertStringContainsString('Recibimos todo.', $html);
+        self::assertStringContainsString('Novedad visible.', $html);
+    }
+
+    /**
+     * Una novedad suelta no se presenta como un cambio de etapa: va con la fecha y sin el
+     * nombre de la etapa. El mensaje que viajo con un cambio de etapa si lo lleva.
+     */
+    public function testUnaNovedadSueltaNoApareceComoCambioDeEtapa(): void
+    {
+        $id = $this->crearTramite('Suelta SRL');
+        $this->tramites->avanzar($id, Etapa::VISTA, 'Nos corrieron vista.', null);
+        $this->tramites->publicarNovedad($id, Etapa::VISTA, 'Estamos preparando la respuesta.');
+        $token = $this->accesos->emitir($id, 'cliente');
+
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+        $novedades = substr($html, (int) strpos($html, '<h2>Novedades</h2>'));
+
+        self::assertSame(1, substr_count($novedades, '&mdash; Trámite con vista'), 'Solo el cambio de etapa lleva el label.');
+        self::assertStringContainsString('Estamos preparando la respuesta.', $novedades);
+        // Y la linea no cuenta una vista de mas.
+        self::assertStringNotContainsString('2ª vista', $html);
+    }
+
+    public function testLasNovedadesRespetanLosSaltosDeLineaYEscapanElHtml(): void
+    {
+        $id = $this->crearTramite('Saltos SRL');
+        $this->tramites->publicarNovedad($id, Etapa::REUNIENDO_DOCUMENTACION, "Primera línea\n<script>alert(1)</script>");
+        $token = $this->accesos->emitir($id, 'cliente');
+
+        $html = (string) $this->get('/seguimiento/' . $token)->getBody();
+
+        self::assertStringContainsString("Primera línea<br />\n&lt;script&gt;alert(1)&lt;/script&gt;", $html);
+        self::assertStringNotContainsString('<script>alert(1)</script>', $html);
+    }
+
     public function testNingunDatoPersonalLlegaALaVistaPublica(): void
     {
         $id = $this->crearTramite('Litoral Norte SAS');
