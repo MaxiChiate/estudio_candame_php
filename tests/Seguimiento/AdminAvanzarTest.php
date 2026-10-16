@@ -117,13 +117,24 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
         $html = (string) $response->getBody();
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertStringContainsString('Siguiente: Trámite con vista', $html);
-        self::assertStringContainsString('Siguiente: Trámite terminado', $html);
+        self::assertStringContainsString('Avanzar a: Trámite con vista', $html);
+        self::assertStringContainsString('Avanzar a: Trámite terminado', $html);
 
-        // El escape para saltear o volver: el select con las 12 etapas.
+        // El escape para saltear o volver: solo las etapas DEL FLUJO. Las de otros tipos
+        // de tramite ya no se ofrecen.
+        $tramite = $this->tramites->porId($id);
+        self::assertNotNull($tramite);
         foreach (Etapa::cases() as $etapa) {
-            self::assertStringContainsString('value="' . $etapa->value . '"', $html);
+            $opcion = 'value="' . $etapa->value . '" data-posicion=';
+            if ($this->catalogo->pertenece($tramite->flujo, $etapa)) {
+                self::assertStringContainsString($opcion, $html);
+            } else {
+                self::assertStringNotContainsString($opcion, $html, $etapa->value . ' no es de este flujo.');
+            }
         }
+        self::assertStringNotContainsString('Otras etapas', $html);
+        // La actual se ve pero no se puede elegir: eso es "Publicar novedad".
+        self::assertMatchesRegularExpression('/value="VISTA_CONTESTADA" data-posicion="\\d+" disabled>/', $html);
 
         // La observacion es para lo de fuera de IGJ; la vista tiene etapas propias.
         self::assertStringContainsString('Vista contestada', $html);
@@ -140,8 +151,26 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
 
         $html = (string) $this->pedirAlPanel('GET', '/admin/tramites/' . $id)->getBody();
 
-        self::assertStringContainsString('Siguiente: Trámite con vista', $html);
-        self::assertStringContainsString('Siguiente: Trámite terminado', $html);
+        self::assertStringContainsString('Avanzar a: Trámite con vista', $html);
+        self::assertStringContainsString('Avanzar a: Trámite terminado', $html);
+    }
+
+    /**
+     * Datos de antes de la regla: un tramite parado en una etapa de otro flujo. El
+     * detalle no se rompe, muestra la actual y avisa.
+     */
+    public function testUnaEtapaActualDeOtroFlujoSeMuestraConAviso(): void
+    {
+        $id = $this->crearTramite('Heredado SAS', Flujo::SAS);
+        // Por repositorio: el panel ya no deja hacerlo.
+        $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
+
+        $response = $this->pedirAlPanel('GET', '/admin/tramites/' . $id);
+        $html = (string) $response->getBody();
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString('Etapa actual: <strong>Trámite iniciado</strong>', $html);
+        self::assertStringContainsString('no es de SAS', $html);
     }
 
     /** @param array<string, string> $cuerpo */

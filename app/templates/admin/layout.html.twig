@@ -20,5 +20,32 @@
     {% endif %}
     {% block content %}{% endblock %}
 </main>
+<script>
+    // Un form del panel se manda una sola vez: un doble click publicaba la misma novedad
+    // dos veces o avanzaba dos etapas. Escucha en document, asi corre DESPUES de los
+    // handlers del form: si un confirm() cancelo el envio, no se bloquea nada. Los
+    // botones se deshabilitan recien en el tick siguiente, porque un boton deshabilitado
+    // antes de armar el envio no manda su name/value (los de "Avanzar a" llevan la etapa).
+    (function () {
+        document.addEventListener('submit', function (e) {
+            var form = e.target;
+            if (form.dataset.enviando) { e.preventDefault(); return; }
+            if (e.defaultPrevented) { return; }
+            form.dataset.enviando = '1';
+            setTimeout(function () {
+                form.querySelectorAll('button[type="submit"]').forEach(function (b) { b.disabled = true; });
+            }, 0);
+        });
+        // Volver con el boton "atras" restaura la pagina desde el cache con los botones
+        // deshabilitados: se rehabilitan.
+        window.addEventListener('pageshow', function (e) {
+            if (!e.persisted) { return; }
+            document.querySelectorAll('form[data-enviando]').forEach(function (form) {
+                delete form.dataset.enviando;
+                form.querySelectorAll('button[type="submit"]').forEach(function (b) { b.disabled = false; });
+            });
+        });
+    })();
+</script>
 </body>
 </html>

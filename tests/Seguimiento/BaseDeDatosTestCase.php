@@ -104,6 +104,9 @@ abstract class BaseDeDatosTestCase extends TestCase
      *
      * @param array<string, string> $cuerpo
      * @param string $claveToken SEGUIMIENTO_TOKEN_KEY del panel; vacia simula un .env sin clave.
+     * @param bool $mailCliente SEGUIMIENTO_MAIL_CLIENTE_ENABLED. Se fija en cada request
+     *                          para que un test que lo prende no se lo deje prendido al
+     *                          siguiente.
      */
     protected function pedirAlPanel(
         string $metodo,
@@ -111,6 +114,7 @@ abstract class BaseDeDatosTestCase extends TestCase
         array $cuerpo = [],
         bool $csrf = false,
         string $claveToken = self::CLAVE_TOKEN,
+        bool $mailCliente = false,
     ): ResponseInterface
     {
         self::definirAppPath();
@@ -136,6 +140,7 @@ abstract class BaseDeDatosTestCase extends TestCase
         $_ENV['DB_PASS'] = $config['pass'];
         $_ENV['DB_CHARSET'] = $config['charset'];
         $_ENV['SEGUIMIENTO_TOKEN_KEY'] = $claveToken;
+        $_ENV['SEGUIMIENTO_MAIL_CLIENTE_ENABLED'] = $mailCliente ? 'true' : 'false';
 
         $app = AppFactory::create();
         $twig = Twig::create(APP_PATH . '/templates', ['cache' => false, 'charset' => 'utf-8']);

@@ -133,6 +133,7 @@ return function (App $app, Twig $twig): void {
             $catalogoFlujos,
             $basePath,
             (string) ($_ENV['APP_URL'] ?? ''),
+            filter_var($_ENV['SEGUIMIENTO_MAIL_CLIENTE_ENABLED'] ?? false, FILTER_VALIDATE_BOOL),
         );
 
         // HTTP Basic sobre todo el grupo. Si ADMIN_USER o ADMIN_PASS_HASH estan vacios,
@@ -155,6 +156,8 @@ return function (App $app, Twig $twig): void {
             $grupo->post('/tramites', [$adminController, 'crear']);
             $grupo->get('/tramites/{id:[0-9]+}', [$adminController, 'detalle']);
             $grupo->post('/tramites/{id:[0-9]+}/avanzar', [$adminController, 'avanzar']);
+            $grupo->post('/tramites/{id:[0-9]+}/novedades', [$adminController, 'publicarNovedad']);
+            $grupo->post('/tramites/{id:[0-9]+}/notas-internas', [$adminController, 'agregarNotaInterna']);
             $grupo->post('/tramites/{id:[0-9]+}/observacion', [$adminController, 'observacion']);
             $grupo->post('/tramites/{id:[0-9]+}/accesos', [$adminController, 'emitirAcceso']);
             $grupo->post('/tramites/{id:[0-9]+}/eliminar', [$adminController, 'eliminar']);
