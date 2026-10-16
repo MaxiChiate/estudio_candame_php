@@ -238,9 +238,17 @@ dev server built-in.
     el cliente y lo que ve la doctora se decide en el SQL y en el tipo, no en el
     template. Hay tests que lo verifican por reflexión; no reemplazar `EventoPublico`
     por `TramiteEvento` en la vista pública.
-  - `TokenGenerator` — 16 bytes → 32 hex. En base queda **sólo el sha256**; el token en
-    claro se muestra una única vez al emitirlo y no se puede recuperar. Nunca loguearlo
-    ni guardarlo en una `nota_interna`.
+  - `TokenGenerator` — 16 bytes → 32 hex. El token en claro **nunca** se guarda: en base
+    quedan el sha256 (`token_hash`, por donde se busca) y una copia cifrada
+    (`token_cifrado`, migración `005`) para que el panel pueda **volver a copiar el
+    enlace en cualquier momento** — en la práctica el mismo enlace se le manda al cliente
+    más de una vez. Nunca loguearlo ni guardarlo en una `nota_interna`.
+  - `CifradorToken` — AES-256-GCM con `SEGUIMIENTO_TOKEN_KEY` del `.env` (fuera de la
+    base: un dump sin el `.env` no arma ningún enlace). Sin clave, con otra clave, en
+    los enlaces previos a la migración y en los revocados (`revocar()` borra el cifrado)
+    `TramiteAcceso::$token` es `null`: el enlace sigue andando para el cliente, sólo que
+    el panel lo marca "sin copia". **Rotar la clave no rompe ningún enlace**, sólo deja
+    de poder copiar los ya emitidos.
   - `GET /seguimiento/{token}` devuelve **la misma respuesta byte a byte** para token
     inexistente, revocado y malformado. Es deliberado: distinguirlos convierte la ruta
     en un oráculo. Si se toca esa ruta, `PortalPublicoTest` compara los tres cuerpos.
