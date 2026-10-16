@@ -34,21 +34,21 @@ final class AdminCopiarEnlaceTest extends BaseDeDatosTestCase
         }
     }
 
-    public function testElAvisoDeRecienEmitidoDiceQueSePuedeVolverACopiar(): void
+    public function testAlEmitirVuelveALaSeccionDeEnlacesSinAviso(): void
     {
         $id = $this->crearTramite('Aviso SRL');
 
         $response = $this->pedirAlPanel('POST', '/admin/tramites/' . $id . '/accesos', ['etiqueta' => 'cliente'], csrf: true);
         self::assertSame(302, $response->getStatusCode());
+        self::assertSame('/admin/tramites/' . $id . '#enlaces', $response->getHeaderLine('Location'));
 
         $html = (string) $this->pedirAlPanel('GET', '/admin/tramites/' . $id)->getBody();
         $token = $this->accesos->porTramite($id)[0]->token;
 
         self::assertNotNull($token);
-        self::assertStringContainsString('Lo pod&eacute;s volver a copiar', $html);
-        self::assertStringNotContainsString('&uacute;nica vez', $html);
-        // El aviso y la fila de la tabla: dos botones con el mismo enlace.
-        self::assertSame(2, substr_count($html, 'data-copiar="/seguimiento/' . $token . '"'));
+        // Con el token guardado no hay cuadro: solo el boton de la fila de la tabla.
+        self::assertStringNotContainsString('adminTokenNuevo', $html);
+        self::assertSame(1, substr_count($html, 'data-copiar="/seguimiento/' . $token . '"'));
     }
 
     public function testUnEnlaceRevocadoNoSeOfreceParaCopiar(): void

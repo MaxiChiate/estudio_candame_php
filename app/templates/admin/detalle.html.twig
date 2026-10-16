@@ -13,25 +13,6 @@
    ninguna ruta que lo modifique. #}
 <p class="adminSubtitulo adminTenue">Tipo de tr&aacute;mite: {{ flujoNombre }}</p>
 
-{% if tokenNuevo %}
-    {# Se muestra al emitirlo. Si quedo guardado cifrado, despues se puede volver a
-       copiar desde la tabla de enlaces; si no (falta SEGUIMIENTO_TOKEN_KEY), es la
-       unica vez. #}
-    <div class="adminTokenNuevo">
-        {% if tokenNuevoRecuperable %}
-            <p class="adminTokenTitulo">Enlace generado</p>
-            <p class="adminTokenAviso">Lo pod&eacute;s volver a copiar cuando quieras desde <strong>Enlaces de acceso</strong>, m&aacute;s abajo.</p>
-        {% else %}
-            <p class="adminTokenTitulo">Enlace generado &mdash; copialo ahora</p>
-            <p class="adminTokenAviso">Es la <strong>&uacute;nica vez</strong> que se muestra: no qued&oacute; guardado para volver a copiarlo.</p>
-        {% endif %}
-        <div class="adminTokenFila">
-            <input type="text" id="tokenNuevo" readonly value="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}"/>
-            <button type="button" class="adminBtn" data-copiar="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}">Copiar</button>
-        </div>
-    </div>
-{% endif %}
-
 <section class="adminSeccion">
     <h2>Avanzar de etapa</h2>
 
@@ -105,7 +86,7 @@
     {% endif %}
 </section>
 
-<section class="adminSeccion">
+<section class="adminSeccion" id="enlaces">
     <h2>Enlaces de acceso</h2>
 
     <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/accesos" class="adminForm adminFormInline">
@@ -114,6 +95,20 @@
         <input type="text" id="etiqueta" name="etiqueta" maxlength="120" required placeholder="cliente Juan P&eacute;rez"/>
         <button type="submit" class="adminBtn">Emitir enlace</button>
     </form>
+
+    {% if tokenNuevo and not tokenNuevoRecuperable %}
+        {# Solo sin SEGUIMIENTO_TOKEN_KEY: el token no quedo guardado y esta es la unica
+           vez que existe en claro. Con la clave no hace falta aviso, se copia desde la
+           tabla. #}
+        <div class="adminTokenNuevo">
+            <p class="adminTokenTitulo">Enlace generado &mdash; copialo ahora</p>
+            <p class="adminTokenAviso">Es la <strong>&uacute;nica vez</strong> que se muestra: no qued&oacute; guardado para volver a copiarlo.</p>
+            <div class="adminTokenFila">
+                <input type="text" id="tokenNuevo" readonly value="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}"/>
+                <button type="button" class="adminBtn" data-copiar="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}">Copiar</button>
+            </div>
+        </div>
+    {% endif %}
 
     {% if accesos is empty %}
         <p class="adminVacio">Sin enlaces emitidos.</p>

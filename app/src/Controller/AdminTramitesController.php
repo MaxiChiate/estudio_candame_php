@@ -266,8 +266,8 @@ final class AdminTramitesController
             // texto que la linea del cliente cuando la etapa tiene override.
             'labelPorEtapa' => $this->labelPorEtapa($tramite),
             'flash' => $this->tomarFlash(),
-            // Aviso destacado en el redirect posterior a emitirlo. Si el token quedo
-            // guardado cifrado, despues se puede volver a copiar desde la tabla.
+            // Aviso en el redirect posterior a emitirlo, solo si el token NO quedo
+            // guardado cifrado (sin clave). Si quedo, se copia desde la tabla.
             'tokenNuevo' => $tokenNuevo,
             'tokenNuevoRecuperable' => $tokenNuevo !== null && in_array(
                 $tokenNuevo,
@@ -685,7 +685,8 @@ final class AdminTramitesController
         // logs de acceso del servidor, y se consume en el primer render del detalle.
         $_SESSION['seguimientoTokenNuevo'] = $token;
 
-        return $this->redirigir($response, '/admin/tramites/' . $id);
+        // Vuelve a la seccion de enlaces, no al tope de la pagina.
+        return $this->redirigir($response, '/admin/tramites/' . $id . '#enlaces');
     }
 
     /** @param array<string, string> $args */
