@@ -184,9 +184,9 @@ dev server built-in.
     y sin colapsar), `repeticion` (formato del contador, sólo en las etapas que son un
     loop) y `opcional` (las de la vista: pueden no ocurrir nunca, así que no se anuncian
     de antemano — no aparecen en la línea hasta que el trámite pasa por ahí).
-  - **El pipeline lo define el flujo del trámite, no el enum.** `Flujo` (8 casos:
+  - **El pipeline lo define el flujo del trámite, no el enum.** `Flujo` (7 casos:
     constitución SRL/SA, asoc. civil designación/reforma, art. 60, reforma SRL con y sin
-    cambio de gerencia, SAS, constitución asoc. civil, solo vistas) se elige **al crear el trámite** y
+    cambio de gerencia, SAS, constitución asoc. civil) se elige **al crear el trámite** y
     **no se puede cambiar después** — no hay ninguna ruta ni método que lo modifique, y
     hay un test que lo verifica. Qué etapas recorre cada flujo, en qué orden, y los
     overrides de `label`/`detalle` por flujo viven en `app/config/flujos.php`: config, no
@@ -218,12 +218,9 @@ dev server built-in.
     partial Twig que la vista pública (`seguimiento/_linea.html.twig`), porque el flujo no
     se puede cambiar después. La previsualización **no guarda nada** y el endpoint de
     creación revalida por su cuenta.
-  - El historial se puede **editar** (`/admin/tramites/{id}/historial`): fecha y
-    notas de cada evento (la hora sigue en la base para ordenar los eventos del mismo
-    día, pero el panel no la muestra ni la pide: al cambiar el día se conserva la hora
-    guardada, y lo agregado lleva la hora del momento de cargarlo), borrar eventos y
-    agregar eventos con fecha pasada. Existe por los trámites que ya venían avanzados
-    cuando se cargaron (el alta les pone "hoy").
+  - El historial se puede **editar** (`/admin/tramites/{id}/historial`): fecha, hora y
+    notas de cada evento, borrar eventos y agregar eventos con fecha pasada. Existe por
+    los trámites que ya venían avanzados cuando se cargaron (el alta les pone "hoy").
     **Nada de esa pantalla mueve `etapa_actual`** — eso es exclusivo de `/avanzar` —, así
     que ahí `etapa_actual` y el último evento pueden diferir a propósito. El trámite
     entero se puede borrar desde el detalle (`/eliminar`); eventos y enlaces caen por

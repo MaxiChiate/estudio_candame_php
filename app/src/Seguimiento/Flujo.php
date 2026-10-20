@@ -31,7 +31,6 @@ enum Flujo: string
     case REFORMA_SRL_CON_CAMBIO_GERENCIA = 'reforma_srl_con_cambio_gerencia';
     case SAS = 'sas';
     case CONSTITUCION_ASOC_CIVIL = 'constitucion_asoc_civil';
-    case SOLO_VISTAS = 'solo_vistas';
 
     /** @return string[] */
     public static function valores(): array
