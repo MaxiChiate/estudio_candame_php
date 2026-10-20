@@ -1,0 +1,24 @@
+-- Enlaces de acceso que se pueden volver a copiar desde el panel.
+--
+-- Hasta aca el token en claro se mostraba una unica vez, al emitirlo, y en base quedaba
+-- solo el sha256. En la practica el mismo enlace se le manda al cliente mas de una vez,
+-- asi que el panel tiene que poder mostrarlo de nuevo en cualquier momento.
+--
+-- Se aplica A MANO, igual que las anteriores: no hay framework de migraciones ni SSH.
+--   local: mysql candame_local < database/migrations/005_token_recuperable.sql
+--   test:  mysql candame_test  < database/migrations/005_token_recuperable.sql
+--   prod:  pegar en phpMyAdmin (cPanel), sobre la base del portal
+--
+-- El token NO se guarda en claro: va cifrado (AES-256-GCM) con SEGUIMIENTO_TOKEN_KEY,
+-- que vive en el .env y no en la base. Un dump de la base sin el .env no alcanza para
+-- armar ningun enlace. La busqueda sigue yendo por token_hash, que no cambia.
+--
+-- NULL en los enlaces emitidos antes de esta migracion (no hay forma de recuperar su
+-- token: nunca se guardo), en los revocados (se borra al revocar) y en los emitidos sin
+-- SEGUIMIENTO_TOKEN_KEY configurada. En los tres casos el enlace sigue funcionando para
+-- el cliente; lo unico que no se puede es volver a copiarlo.
+--
+-- base64 de nonce (12) + tag (16) + token (32) = 60 bytes -> 80 caracteres. VARCHAR(255)
+-- deja margen por si algun dia cambia el formato.
+
+ALTER TABLE tramite_acceso ADD COLUMN token_cifrado VARCHAR(255) NULL AFTER token_hash;

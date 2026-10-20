@@ -182,7 +182,8 @@ Ver `app/.env.example`, documentado inline. Resumen:
 | `SEGUIMIENTO_ENABLED` | Feature flag del portal de seguimiento (`/seguimiento`, `/admin/tramites`). En `false` no se registra ninguna ruta ni se abre conexión a la base |
 | `DB_HOST` / `DB_NAME` / `DB_USER` / `DB_PASS` / `DB_CHARSET` | Base del portal. Sólo se usan con `SEGUIMIENTO_ENABLED=true` |
 | `ADMIN_USER` / `ADMIN_PASS_HASH` | Credenciales HTTP Basic del panel. El hash va entre comillas simples; con cualquiera de las dos vacía el panel queda cerrado |
-| `APP_URL` | Origen del sitio, para armar el link completo del token al emitirlo |
+| `SEGUIMIENTO_TOKEN_KEY` | Clave (32 bytes en base64) para guardar cifrado el token de cada enlace y poder volver a copiarlo desde el panel. Vacía, los enlaces andan pero sólo se copian al emitirlos |
+| `APP_URL` | Origen del sitio, para armar el link completo del token en el panel |
 
 ## Bugs conocidos de la versión anterior (Kotlin/Thymeleaf) — corregidos en este port
 
