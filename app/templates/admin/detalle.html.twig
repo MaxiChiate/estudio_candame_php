@@ -13,59 +13,100 @@
    ninguna ruta que lo modifique. #}
 <p class="adminSubtitulo adminTenue">Tipo de tr&aacute;mite: {{ flujoNombre }}</p>
 
-{% if tokenNuevo %}
-    {# Unica vez que se puede ver este token: en base solo queda el sha256. #}
-    <div class="adminTokenNuevo">
-        <p class="adminTokenTitulo">Enlace generado &mdash; copialo ahora</p>
-        <p class="adminTokenAviso">Es la <strong>&uacute;nica vez</strong> que se muestra. Despu&eacute;s solo queda el hash y no se puede recuperar.</p>
-        <div class="adminTokenFila">
-            <input type="text" id="tokenNuevo" readonly value="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}"/>
-            <button type="button" class="adminBtn" id="copiarToken">Copiar</button>
-        </div>
+{# Tres bloques separados a proposito: publicar algo al cliente, mover la etapa, y lo
+   interno. Antes eran un solo form, y para publicar una nota sin avanzar habia que
+   "registrar" la etapa en curso -- el cliente lo veia como un cambio de etapa. #}
+<section class="adminSeccion" id="novedad">
+    <div class="adminSeccionCabecera">
+        <h2>Publicar novedad</h2>
+        {% if enlaceCliente %}
+            {# El enlace real del cliente: abrirlo suma un acceso en la tabla de enlaces. #}
+            <a class="adminLink" href="{{ enlaceCliente }}" target="_blank" rel="noopener noreferrer">Ver como cliente &#8599;</a>
+        {% else %}
+            <span class="adminTenue">Para verlo como el cliente, <a class="adminLink" href="#enlaces">emit&iacute; un enlace</a>.</span>
+        {% endif %}
     </div>
-    <script>
-        document.getElementById('copiarToken').addEventListener('click', function () {
-            var campo = document.getElementById('tokenNuevo');
-            campo.select();
-            campo.setSelectionRange(0, 99999);
-            navigator.clipboard.writeText(campo.value).then(function () {
-                document.getElementById('copiarToken').textContent = 'Copiado';
-            });
-        });
-    </script>
-{% endif %}
+    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/novedades" class="adminForm">
+        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+        <label for="novedad_texto">Mensaje para el cliente</label>
+        <textarea id="novedad_texto" name="texto" rows="3" required maxlength="{{ maxNota }}"></textarea>
+        <p class="adminAyuda">No cambia la etapa. El cliente lo ve en &laquo;Novedades&raquo;, con la fecha de hoy.</p>
+        {% if mailClienteEnabled %}
+            <label class="adminCheck"><input type="checkbox" name="avisar_cliente" value="1"/> Avisar al cliente por mail</label>
+        {% endif %}
+        <button type="submit" class="adminBtn">Publicar</button>
+    </form>
+</section>
 
-<section class="adminSeccion">
-    <h2>Avanzar de etapa</h2>
+<section class="adminSeccion" id="etapa">
+    <h2>Etapa</h2>
 
-    {# El caso del 90%: un click. En Vista contestada son dos botones, porque el
-       inspector puede despachar otra vista en vez de dar por terminado el tramite. #}
-    {% if siguientes is not empty %}
-        <div class="adminAccionesEtapa">
-            {% for siguiente in siguientes %}
-                <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/avanzar">
-                    <input type="hidden" name="_csrf" value="{{ csrf }}"/>
-                    <input type="hidden" name="etapa" value="{{ siguiente.valor }}"/>
-                    <button type="submit" class="adminBtn">Siguiente: {{ siguiente.label }}</button>
-                </form>
-            {% endfor %}
-        </div>
+    {% if etapaActualFueraDeFlujo %}
+        {# Datos de antes de que el panel dejara de ofrecer etapas de otros tipos de
+           tramite. No se rompe nada: se muestra la actual y se puede volver al flujo. #}
+        <p class="adminAviso">
+            La etapa actual, <strong>{{ etapaLabel }}</strong>, no es de {{ flujoNombre }}.
+            Eleg&iacute; una etapa de este tr&aacute;mite en &laquo;Cambiar a otra etapa&raquo;.
+        </p>
     {% endif %}
 
-    {# Escape: saltear las etapas que no aplican a este tramite, o volver atras. #}
-    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/avanzar" class="adminForm">
+    <ol class="adminPasos">
+        {% for paso in pasos %}
+            <li class="adminPaso is-{{ paso.estado }}"{% if paso.estado == 'actual' %} aria-current="step"{% endif %}>{{ paso.label }}</li>
+        {% endfor %}
+    </ol>
+
+    {# El caso del 90%: un click. En Vista contestada son dos botones, porque el
+       inspector puede despachar otra vista en vez de dar por terminado el tramite. El
+       mensaje opcional esta DENTRO del mismo form y de la misma caja que los botones:
+       sale con el que se toque. #}
+    {% if siguientes is not empty %}
+        <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/avanzar" class="adminForm adminCajaAvance">
+            <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+            <details class="adminMensajeAvance">
+                <summary>+ Agregar mensaje para el cliente a este cambio</summary>
+                <label for="nota_publica">Mensaje para el cliente <span class="adminTenue">(sale junto con el cambio de etapa)</span></label>
+                <textarea id="nota_publica" name="nota_publica" rows="3" maxlength="{{ maxNota }}"></textarea>
+            </details>
+            <div class="adminAccionesEtapa">
+                {% for siguiente in siguientes %}
+                    <button type="submit" name="etapa" value="{{ siguiente.valor }}" class="adminBtn">Avanzar a: {{ siguiente.label }}</button>
+                {% endfor %}
+            </div>
+        </form>
+    {% elseif not etapaActualFueraDeFlujo %}
+        <p class="adminVacio">Es la &uacute;ltima etapa de este tr&aacute;mite.</p>
+    {% endif %}
+
+    {# Escape: saltear etapas o volver atras, siempre dentro del flujo. La actual va
+       deshabilitada: ir a la misma etapa es "Publicar novedad". #}
+    <details class="adminOtraEtapa"{% if etapaActualFueraDeFlujo %} open{% endif %}>
+        <summary>Cambiar a otra etapa&hellip;</summary>
+        <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/avanzar" class="adminForm"
+              data-confirmar-retroceso data-posicion-actual="{{ posicionActual }}">
+            <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+            <label for="etapa_destino">Etapa</label>
+            <select id="etapa_destino" name="etapa" required>
+                <option value="" selected disabled>Eleg&iacute; la etapa&hellip;</option>
+                {% for etapa in etapasDelFlujo %}
+                    <option value="{{ etapa.valor }}" data-posicion="{{ loop.index0 }}"{% if etapa.actual %} disabled{% endif %}>
+                        {{- etapa.label }}{% if etapa.actual %} (actual){% endif -%}
+                    </option>
+                {% endfor %}
+            </select>
+            <button type="submit" class="adminBtn adminBtnInverso">Cambiar de etapa</button>
+        </form>
+    </details>
+</section>
+
+<section class="adminSeccion adminSeccionInterna" id="nota-interna">
+    <h2>Nota interna &#128274; <span class="adminTenue">(solo panel)</span></h2>
+    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/notas-internas" class="adminForm">
         <input type="hidden" name="_csrf" value="{{ csrf }}"/>
-
-        <label for="etapa">Otra etapa <span class="adminTenue">(saltear o volver)</span></label>
-        {% include 'admin/_select_etapa.html.twig' with {idSelect: 'etapa', marcarActual: true} %}
-
-        <label for="nota_publica">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
-        <textarea id="nota_publica" name="nota_publica" rows="2"></textarea>
-
-        <label for="nota_interna">Nota interna <span class="adminTenue">(nunca sale del panel)</span></label>
-        <textarea id="nota_interna" name="nota_interna" rows="2"></textarea>
-
-        <button type="submit" class="adminBtn">Registrar</button>
+        <label for="nota_interna_texto">Nota</label>
+        <textarea id="nota_interna_texto" name="texto" rows="2" required maxlength="{{ maxNota }}"></textarea>
+        <p class="adminAyuda">Nunca sale del panel: no cambia la etapa ni le publica nada al cliente.</p>
+        <button type="submit" class="adminBtn adminBtnInverso">Guardar nota interna</button>
     </form>
 </section>
 
@@ -90,25 +131,33 @@
         <h2>Historial</h2>
         <a class="adminBtn adminBtnInverso adminBtnChico" href="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial">Editar historial</a>
     </div>
-    {% if eventos is empty %}
+    {% if historial is empty %}
         <p class="adminVacio">Sin eventos.</p>
     {% else %}
+        {# Cambios de etapa, novedades y notas internas, mas recientes primero. Novedades
+           y notas llevan la etapa en la que estaba el tramite, como referencia. #}
         <ul class="adminEventos">
-            {% for evento in eventos %}
-                <li>
+            {% for item in historial %}
+                <li class="is-{{ item.tipo }}">
                     <p class="adminEventoCabecera">
-                        {{ evento.ocurridoEl|date('d/m/Y') }} &middot;
-                        {{ labelPorEtapa[evento.etapa.value]|default(evento.etapa.value) }}
+                        {{ item.fecha|date('d/m/Y') }} &middot;
+                        {% if item.tipo == 'etapa' %}
+                            {{ item.etapa }}
+                        {% elseif item.tipo == 'novedad' %}
+                            Novedad para el cliente <span class="adminTenue">(en {{ item.etapa }})</span>
+                        {% else %}
+                            Nota interna &#128274; <span class="adminTenue">(en {{ item.etapa }})</span>
+                        {% endif %}
                     </p>
-                    {% if evento.notaPublica %}<p class="adminNotaPublica">{{ evento.notaPublica }}</p>{% endif %}
-                    {% if evento.notaInterna %}<p class="adminNotaInterna">Interna: {{ evento.notaInterna }}</p>{% endif %}
+                    {% if item.notaPublica %}<p class="adminNotaPublica">{{ item.notaPublica|e|nl2br }}</p>{% endif %}
+                    {% if item.notaInterna %}<p class="adminNotaInterna">{% if item.tipo == 'etapa' %}Interna: {% endif %}{{ item.notaInterna|e|nl2br }}</p>{% endif %}
                 </li>
             {% endfor %}
         </ul>
     {% endif %}
 </section>
 
-<section class="adminSeccion">
+<section class="adminSeccion" id="enlaces">
     <h2>Enlaces de acceso</h2>
 
     <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/accesos" class="adminForm adminFormInline">
@@ -117,6 +166,20 @@
         <input type="text" id="etiqueta" name="etiqueta" maxlength="120" required placeholder="cliente Juan P&eacute;rez"/>
         <button type="submit" class="adminBtn">Emitir enlace</button>
     </form>
+
+    {% if tokenNuevo and not tokenNuevoRecuperable %}
+        {# Solo sin SEGUIMIENTO_TOKEN_KEY: el token no quedo guardado y esta es la unica
+           vez que existe en claro. Con la clave no hace falta aviso, se copia desde la
+           tabla. #}
+        <div class="adminTokenNuevo">
+            <p class="adminTokenTitulo">Enlace generado &mdash; copialo ahora</p>
+            <p class="adminTokenAviso">Es la <strong>&uacute;nica vez</strong> que se muestra: no qued&oacute; guardado para volver a copiarlo.</p>
+            <div class="adminTokenFila">
+                <input type="text" id="tokenNuevo" readonly value="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}"/>
+                <button type="button" class="adminBtn" data-copiar="{{ appUrl }}{{ basePath }}/seguimiento/{{ tokenNuevo }}">Copiar</button>
+            </div>
+        </div>
+    {% endif %}
 
     {% if accesos is empty %}
         <p class="adminVacio">Sin enlaces emitidos.</p>
@@ -136,10 +199,19 @@
                             {% if acceso.estaRevocado %}
                                 <span class="adminTenue">revocado el {{ acceso.revocadoEl|date('d/m/Y') }}</span>
                             {% else %}
-                                <form method="post" action="{{ basePath }}/admin/accesos/{{ acceso.id }}/revocar">
-                                    <input type="hidden" name="_csrf" value="{{ csrf }}"/>
-                                    <button type="submit" class="adminBtnTexto">Revocar</button>
-                                </form>
+                                <div class="adminAccionesAcceso">
+                                    {% if acceso.sePuedeCopiar %}
+                                        <button type="button" class="adminBtn" data-copiar="{{ appUrl }}{{ basePath }}/seguimiento/{{ acceso.token }}">Copiar</button>
+                                    {% else %}
+                                        {# Emitido antes de que se guardara el token, o sin
+                                           SEGUIMIENTO_TOKEN_KEY: anda, pero no se puede copiar. #}
+                                        <span class="adminTenue" title="Este enlace se emiti&oacute; sin guardar una copia. Sigue funcionando; si hace falta mandarlo de nuevo, emit&iacute; uno nuevo.">sin copia</span>
+                                    {% endif %}
+                                    <form method="post" action="{{ basePath }}/admin/accesos/{{ acceso.id }}/revocar">
+                                        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+                                        <button type="submit" class="adminBtnTexto">Revocar</button>
+                                    </form>
+                                </div>
                             {% endif %}
                         </td>
                     </tr>
@@ -179,6 +251,61 @@
     </form>
 </dialog>
 <script>
+    // Copiar enlace: el del aviso de recien emitido y los de la tabla. navigator.clipboard
+    // solo existe en contexto seguro (https o localhost); afuera de eso se cae al
+    // execCommand de siempre con un textarea temporal.
+    (function () {
+        function copiarConFallback(texto) {
+            var area = document.createElement('textarea');
+            area.value = texto;
+            area.setAttribute('readonly', '');
+            area.style.position = 'fixed';
+            area.style.opacity = '0';
+            document.body.appendChild(area);
+            area.select();
+            var ok = false;
+            try { ok = document.execCommand('copy'); } catch (e) { ok = false; }
+            document.body.removeChild(area);
+            return ok ? Promise.resolve() : Promise.reject();
+        }
+
+        function copiar(texto) {
+            if (navigator.clipboard && window.isSecureContext) {
+                return navigator.clipboard.writeText(texto).catch(function () { return copiarConFallback(texto); });
+            }
+            return copiarConFallback(texto);
+        }
+
+        document.addEventListener('click', function (e) {
+            var boton = e.target.closest('[data-copiar]');
+            if (!boton) { return; }
+            var original = boton.dataset.textoOriginal || boton.textContent;
+            boton.dataset.textoOriginal = original;
+            copiar(boton.dataset.copiar).then(function () {
+                boton.textContent = 'Copiado';
+            }, function () {
+                boton.textContent = 'No se pudo copiar';
+            }).then(function () {
+                setTimeout(function () { boton.textContent = original; }, 2000);
+            });
+        });
+    })();
+
+    // Volver a una etapa anterior se le muestra al cliente: se confirma. Saltear hacia
+    // adelante no, es lo normal. Con la actual fuera del flujo (-1) no hay "anterior".
+    (function () {
+        var form = document.querySelector('[data-confirmar-retroceso]');
+        if (!form) { return; }
+        form.addEventListener('submit', function (e) {
+            var actual = parseInt(form.dataset.posicionActual, 10);
+            var opcion = form.elements.etapa.options[form.elements.etapa.selectedIndex];
+            if (actual < 0 || !opcion || parseInt(opcion.dataset.posicion, 10) >= actual) { return; }
+            if (!confirm('Vas a volver el trámite a «' + opcion.text.trim() + '». El cliente lo va a ver en su seguimiento. ¿Seguir?')) {
+                e.preventDefault();
+            }
+        });
+    })();
+
     (function () {
         var dialogo = document.getElementById('dialogoEliminar');
         document.getElementById('abrirEliminar').addEventListener('click', function () { dialogo.showModal(); });

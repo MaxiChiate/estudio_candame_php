@@ -136,7 +136,7 @@ dev server built-in.
     otro instrumento. Solo arma una ficha `.xlsx` con los datos (misma estructura que la
     ficha en papel del estudio) y manda dos mails — el resumen con el xlsx adjunto a
     `info@estudiocandame.com.ar`, y un acuse de texto fijo al remitente. Ver
-    `.claude/rules/configurador.md` para el detalle de qué quedó fuera y por qué.
+    `.claude/rules/configurador.md.deprecated` para el detalle de qué quedó fuera y por qué.
   - `ConsultaConstitucionController` — GET arma el form con el capital mínimo de los 3
     tipos ya resuelto, token CSRF y timestamp de servido; POST valida JSON (todos los
     errores juntos, nunca corta en el primero) y responde `200 {ok:true}` o
@@ -184,9 +184,9 @@ dev server built-in.
     y sin colapsar), `repeticion` (formato del contador, sólo en las etapas que son un
     loop) y `opcional` (las de la vista: pueden no ocurrir nunca, así que no se anuncian
     de antemano — no aparecen en la línea hasta que el trámite pasa por ahí).
-  - **El pipeline lo define el flujo del trámite, no el enum.** `Flujo` (7 casos:
+  - **El pipeline lo define el flujo del trámite, no el enum.** `Flujo` (8 casos:
     constitución SRL/SA, asoc. civil designación/reforma, art. 60, reforma SRL con y sin
-    cambio de gerencia, SAS, constitución asoc. civil) se elige **al crear el trámite** y
+    cambio de gerencia, SAS, constitución asoc. civil, solo vistas) se elige **al crear el trámite** y
     **no se puede cambiar después** — no hay ninguna ruta ni método que lo modifique, y
     hay un test que lo verifica. Qué etapas recorre cada flujo, en qué orden, y los
     overrides de `label`/`detalle` por flujo viven en `app/config/flujos.php`: config, no
@@ -198,9 +198,13 @@ dev server built-in.
     son trámites distintos con el mismo pipeline. No colapsarlos en uno.
   - El recorrido **no es lineal ni dentro del propio flujo**: la vista es un loop — el
     inspector puede despachar más de una, así que un trámite vuelve de `VISTA_CONTESTADA`
-    a `VISTA`. El operador además puede saltar a **cualquier** etapa del catálogo,
-    incluidas las de afuera de su flujo; el panel no se lo discute (el select del detalle
-    las ofrece en un segundo grupo).
+    a `VISTA`. Desde el detalle el operador puede saltar a cualquier etapa **de su
+    flujo**, hacia adelante o hacia atrás (con `confirm` al volver, porque el cliente lo
+    ve). `/avanzar` **rechaza la etapa actual** (eso es "Publicar novedad", ver abajo) y
+    **las de otro flujo**. El repositorio no valida nada de esto: la regla vive en el
+    controller, y `LineaEtapas` sigue sabiendo dibujar etapas fuera de flujo por los
+    datos de antes de la regla (el detalle muestra la actual igual, con un aviso). El
+    "Agregar una etapa" del editor del historial todavía ofrece el catálogo entero.
   - Por eso **una etapa está cumplida si tiene al menos un evento en `tramite_evento`**,
     no por comparar posiciones contra `etapa_actual` (que sólo marca la que está en
     curso). Con el criterio viejo, volver atrás des-completaba las etapas previas. Como
@@ -226,21 +230,54 @@ dev server built-in.
     cuando se cargaron (el alta les pone "hoy").
     **Nada de esa pantalla mueve `etapa_actual`** — eso es exclusivo de `/avanzar` —, así
     que ahí `etapa_actual` y el último evento pueden diferir a propósito. El trámite
-    entero se puede borrar desde el detalle (`/eliminar`); eventos y enlaces caen por
-    `ON DELETE CASCADE`.
+    entero se puede borrar desde el detalle (`/eliminar`); eventos, novedades, notas
+    internas y enlaces caen por `ON DELETE CASCADE`.
+  - **Cambio de etapa, novedad y nota interna son tres cosas distintas** (migración
+    `006`), y el detalle las separa en tres bloques:
+    - `tramite_evento` es **sólo cambios de etapa**. Su `nota_publica` es el mensaje que
+      viajó con ese cambio (el "+ Agregar mensaje" de "Avanzar a"). Su `nota_interna`
+      queda por los datos viejos: el avance ya no la recibe.
+    - `tramite_novedad` (`POST .../novedades`) es un mensaje al cliente **sin cambio de
+      etapa**. Guarda la etapa vigente como referencia, no como transición: no crea
+      evento, así que no mueve la fecha de "Etapa actual desde el…" ni el contador de la
+      vista. En "Novedades" del portal va con la fecha y **sin label de etapa**.
+    - `tramite_nota_interna` (`POST .../notas-internas`) es la nota de la doctora sin
+      cambio de etapa. Tabla aparte a propósito: ninguna consulta del portal la lee.
+    Antes de esto, para publicar sin avanzar había que "registrar" la etapa en curso, y
+    el cliente lo veía como un cambio de etapa (y en `VISTA`, como "2ª vista"). La `006`
+    convirtió esos eventos repetidos con notas; los repetidos **sin** nota los dejó, con
+    el comando para borrarlos comentado al final del `.sql`.
+  - Los textos que escribe la doctora se muestran con `|e|nl2br`, en ese orden.
+  - "Ver como cliente ↗" abre el **enlace real** del cliente (el primero vigente que se
+    pueda descifrar), así que cuenta como un acceso más en la tabla de enlaces. Sin
+    enlace vigente, el detalle invita a emitir uno.
+  - `SEGUIMIENTO_MAIL_CLIENTE_ENABLED` (default `false`) muestra el checkbox "Avisar al
+    cliente por mail" al publicar una novedad. Apagado, el backend ignora el campo aunque
+    llegue en el POST. Prendido, el envío es un **stub** (`avisarAlClientePorMail`, con
+    TODO): no manda nada todavía.
+  - Todos los forms del panel se mandan una sola vez (script en `admin/layout`).
   - `observado` es un **flag ortogonal**, no una etapa: un trámite observado sigue
     perteneciendo a su etapa. No meterlo en el enum. Cubre sólo observaciones de **fuera
     de IGJ** (escribanía, documentación incompleta); las vistas de IGJ son etapas.
   - `Conexion` — PDO perezoso (abre recién en el primer `pdo()`). No hay container de DI
     en este proyecto: el "singleton lazy" es esta clase, instanciada en `routes.php`.
   - `TramiteRepository::eventosPublicos()` **no trae `nota_interna` en el SELECT**, y
-    devuelve `EventoPublico`, que no tiene esa propiedad. La separación entre lo que ve
+    devuelve `EventoPublico`, que no tiene esa propiedad (`novedadesPublicas()` devuelve
+    `NovedadPublica`, que sólo tiene fecha y texto). La separación entre lo que ve
     el cliente y lo que ve la doctora se decide en el SQL y en el tipo, no en el
     template. Hay tests que lo verifican por reflexión; no reemplazar `EventoPublico`
     por `TramiteEvento` en la vista pública.
-  - `TokenGenerator` — 16 bytes → 32 hex. En base queda **sólo el sha256**; el token en
-    claro se muestra una única vez al emitirlo y no se puede recuperar. Nunca loguearlo
-    ni guardarlo en una `nota_interna`.
+  - `TokenGenerator` — 16 bytes → 32 hex. El token en claro **nunca** se guarda: en base
+    quedan el sha256 (`token_hash`, por donde se busca) y una copia cifrada
+    (`token_cifrado`, migración `005`) para que el panel pueda **volver a copiar el
+    enlace en cualquier momento** — en la práctica el mismo enlace se le manda al cliente
+    más de una vez. Nunca loguearlo ni guardarlo en una `nota_interna`.
+  - `CifradorToken` — AES-256-GCM con `SEGUIMIENTO_TOKEN_KEY` del `.env` (fuera de la
+    base: un dump sin el `.env` no arma ningún enlace). Sin clave, con otra clave, en
+    los enlaces previos a la migración y en los revocados (`revocar()` borra el cifrado)
+    `TramiteAcceso::$token` es `null`: el enlace sigue andando para el cliente, sólo que
+    el panel lo marca "sin copia". **Rotar la clave no rompe ningún enlace**, sólo deja
+    de poder copiar los ya emitidos.
   - `GET /seguimiento/{token}` devuelve **la misma respuesta byte a byte** para token
     inexistente, revocado y malformado. Es deliberado: distinguirlos convierte la ruta
     en un oráculo. Si se toca esa ruta, `PortalPublicoTest` compara los tres cuerpos.
@@ -273,7 +310,7 @@ dev server built-in.
 - Es un **port**, no un rediseño: preservar contenido y estructura del sitio Kotlin
   original salvo los bugs listados abajo, que sí se corrigieron a propósito. (La
   consulta de constitución es la excepción: dejó de ser un port cuando pasó a cubrir
-  SAS/SRL/SA y a no generar instrumentos — ver `.claude/rules/configurador.md`.)
+  SAS/SRL/SA y a no generar instrumentos — ver `.claude/rules/configurador.md.deprecated`.)
 - **Cuidado con interpolación de strings de PHP en doble comilla**: sólo funciona un
   nivel de `->` (`"$obj->prop"` OK, `"$obj->prop->prop2"` rompe con "Object could not be
   converted to string"). Ya pasó una vez en el builder de la ficha — usar concatenación
@@ -315,9 +352,9 @@ features separadas y no hay ningún vínculo entre ellas — un trámite del por
 a mano desde `/admin/tramites`, no sale de una consulta enviada. Tampoco pide, valida, guarda ni
 escribe en ningún archivo la clave fiscal ni el apellido materno de nadie — para eso
 alcanza con el checkbox de trámite urgente, la doctora junta esos datos por su cuenta.
-Ese pipeline aspiracional (el que describía `.claude/rules/configurador.md` del proyecto
+Ese pipeline aspiracional (el que describía `.claude/rules/configurador.md.deprecated` del proyecto
 Kotlin) nunca se implementó ahí tampoco — no hay nada que portar. Si se retoma ese
-trabajo, es una implementación nueva, no un port. Ver `.claude/rules/configurador.md`
+trabajo, es una implementación nueva, no un port. Ver `.claude/rules/configurador.md.deprecated`
 de este repo para el detalle completo de qué se sacó y por qué.
 
 ## Convenciones de git

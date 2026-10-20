@@ -5,14 +5,14 @@ declare(strict_types=1);
 namespace EstudioCandame\Tests\Seguimiento;
 
 use EstudioCandame\Seguimiento\Etapa;
+use EstudioCandame\Seguimiento\Flujo;
 use Psr\Http\Message\ResponseInterface;
 
 /**
  * POST /admin/tramites/{id}/avanzar, pasando por routes.php de verdad.
  *
- * Se puede ir a CUALQUIER etapa del enum -- anteriores incluidas, porque la vista es un
- * loop, y salteando las que no aplican al tramite. Lo unico que se valida es que el
- * valor exista en el enum.
+ * Se puede ir a cualquier etapa DEL FLUJO del tramite -- anteriores incluidas, porque la
+ * vista es un loop. No a la misma (eso es "Publicar novedad") ni a una de otro flujo.
  */
 final class AdminAvanzarTest extends BaseDeDatosTestCase
 {
@@ -51,6 +51,49 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
         self::assertCount(1, $this->tramites->eventos($id), 'Una etapa invalida no puede crear un evento.');
     }
 
+    /**
+     * "Registrar" la etapa en curso era la unica forma de publicar una nota sin avanzar,
+     * y le mostraba al cliente un cambio de etapa que no existio.
+     */
+    public function testLaMismaEtapaActualEsRechazada(): void
+    {
+        $id = $this->crearTramite('Misma SRL');
+        $this->tramites->avanzar($id, Etapa::VISTA, null, null);
+
+        $this->avanzar($id, ['etapa' => Etapa::VISTA->value, 'nota_publica' => 'Hola']);
+
+        self::assertSame(Etapa::VISTA, $this->tramites->porId($id)?->etapaActual);
+        self::assertCount(2, $this->tramites->eventos($id), 'Ir a la misma etapa no puede crear un evento.');
+        self::assertSame([], $this->tramites->novedades($id));
+        self::assertSame('error', $_SESSION['seguimientoFlash']['tipo'] ?? null);
+        self::assertStringContainsString('Publicar novedad', $_SESSION['seguimientoFlash']['mensaje'] ?? '');
+    }
+
+    public function testUnaEtapaDeOtroFlujoEsRechazada(): void
+    {
+        // TRAMITE_SUBIDO_TAD es de la SAS; Constitucion SRL/SA no lo recorre.
+        $id = $this->crearTramite('Otro flujo SRL');
+        self::assertFalse($this->catalogo->pertenece(Flujo::CONSTITUCION_SRL_SA, Etapa::TRAMITE_SUBIDO_TAD));
+
+        $this->avanzar($id, ['etapa' => Etapa::TRAMITE_SUBIDO_TAD->value]);
+
+        self::assertSame(Etapa::REUNIENDO_DOCUMENTACION, $this->tramites->porId($id)?->etapaActual);
+        self::assertCount(1, $this->tramites->eventos($id));
+        self::assertSame('error', $_SESSION['seguimientoFlash']['tipo'] ?? null);
+    }
+
+    public function testElMensajeViajaConElAvanceYLaNotaInternaNo(): void
+    {
+        $id = $this->crearTramite('Mensaje SRL');
+
+        $this->avanzar($id, ['nota_publica' => 'Recibimos todo.', 'nota_interna' => 'no va acá']);
+
+        $evento = $this->tramites->eventos($id)[0];
+        self::assertSame(Etapa::PROCESANDO_DOCUMENTACION, $evento->etapa);
+        self::assertSame('Recibimos todo.', $evento->notaPublica);
+        self::assertNull($evento->notaInterna, 'La nota interna tiene su propio bloque, no viaja con el avance.');
+    }
+
     public function testSinTokenCsrfNoAvanza(): void
     {
         $id = $this->crearTramite('Csrf SAS');
@@ -74,13 +117,24 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
         $html = (string) $response->getBody();
 
         self::assertSame(200, $response->getStatusCode());
-        self::assertStringContainsString('Siguiente: Trámite con vista', $html);
-        self::assertStringContainsString('Siguiente: Trámite terminado', $html);
+        self::assertStringContainsString('Avanzar a: Trámite con vista', $html);
+        self::assertStringContainsString('Avanzar a: Trámite terminado', $html);
 
-        // El escape para saltear o volver: el select con las 12 etapas.
+        // El escape para saltear o volver: solo las etapas DEL FLUJO. Las de otros tipos
+        // de tramite ya no se ofrecen.
+        $tramite = $this->tramites->porId($id);
+        self::assertNotNull($tramite);
         foreach (Etapa::cases() as $etapa) {
-            self::assertStringContainsString('value="' . $etapa->value . '"', $html);
+            $opcion = 'value="' . $etapa->value . '" data-posicion=';
+            if ($this->catalogo->pertenece($tramite->flujo, $etapa)) {
+                self::assertStringContainsString($opcion, $html);
+            } else {
+                self::assertStringNotContainsString($opcion, $html, $etapa->value . ' no es de este flujo.');
+            }
         }
+        self::assertStringNotContainsString('Otras etapas', $html);
+        // La actual se ve pero no se puede elegir: eso es "Publicar novedad".
+        self::assertMatchesRegularExpression('/value="VISTA_CONTESTADA" data-posicion="\\d+" disabled>/', $html);
 
         // La observacion es para lo de fuera de IGJ; la vista tiene etapas propias.
         self::assertStringContainsString('Vista contestada', $html);
@@ -97,8 +151,26 @@ final class AdminAvanzarTest extends BaseDeDatosTestCase
 
         $html = (string) $this->pedirAlPanel('GET', '/admin/tramites/' . $id)->getBody();
 
-        self::assertStringContainsString('Siguiente: Trámite con vista', $html);
-        self::assertStringContainsString('Siguiente: Trámite terminado', $html);
+        self::assertStringContainsString('Avanzar a: Trámite con vista', $html);
+        self::assertStringContainsString('Avanzar a: Trámite terminado', $html);
+    }
+
+    /**
+     * Datos de antes de la regla: un tramite parado en una etapa de otro flujo. El
+     * detalle no se rompe, muestra la actual y avisa.
+     */
+    public function testUnaEtapaActualDeOtroFlujoSeMuestraConAviso(): void
+    {
+        $id = $this->crearTramite('Heredado SAS', Flujo::SAS);
+        // Por repositorio: el panel ya no deja hacerlo.
+        $this->tramites->avanzar($id, Etapa::TRAMITE_INICIADO, null, null);
+
+        $response = $this->pedirAlPanel('GET', '/admin/tramites/' . $id);
+        $html = (string) $response->getBody();
+
+        self::assertSame(200, $response->getStatusCode());
+        self::assertStringContainsString('Etapa actual: <strong>Trámite iniciado</strong>', $html);
+        self::assertStringContainsString('no es de SAS', $html);
     }
 
     /** @param array<string, string> $cuerpo */

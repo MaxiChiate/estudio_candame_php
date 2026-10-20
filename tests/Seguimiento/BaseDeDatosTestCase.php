@@ -6,6 +6,7 @@ namespace EstudioCandame\Tests\Seguimiento;
 
 use EstudioCandame\Seguimiento\AccesoRepository;
 use EstudioCandame\Seguimiento\CatalogoFlujos;
+use EstudioCandame\Seguimiento\CifradorToken;
 use EstudioCandame\Seguimiento\Conexion;
 use EstudioCandame\Seguimiento\Flujo;
 use EstudioCandame\Seguimiento\TokenGenerator;
@@ -32,6 +33,13 @@ use Throwable;
  */
 abstract class BaseDeDatosTestCase extends TestCase
 {
+    /**
+     * Clave de cifrado de los tests. La usan tanto $this->accesos como el panel (via
+     * $_ENV en pedirAlPanel), para que un enlace emitido desde el test se pueda copiar
+     * desde el panel y al reves.
+     */
+    protected const CLAVE_TOKEN = 'MDEyMzQ1Njc4OWFiY2RlZjAxMjM0NTY3ODlhYmNkZWY=';
+
     protected Conexion $conexion;
     protected TramiteRepository $tramites;
     protected AccesoRepository $accesos;
@@ -63,6 +71,8 @@ abstract class BaseDeDatosTestCase extends TestCase
             // desactiva el chequeo igual por si el orden cambia en el futuro.
             $pdo->exec('SET FOREIGN_KEY_CHECKS = 0');
             $pdo->exec('TRUNCATE TABLE tramite_evento');
+            $pdo->exec('TRUNCATE TABLE tramite_novedad');
+            $pdo->exec('TRUNCATE TABLE tramite_nota_interna');
             $pdo->exec('TRUNCATE TABLE tramite_acceso');
             $pdo->exec('TRUNCATE TABLE tramite');
             $pdo->exec('SET FOREIGN_KEY_CHECKS = 1');
@@ -72,7 +82,7 @@ abstract class BaseDeDatosTestCase extends TestCase
 
         $reloj = new RelojSistema();
         $this->tramites = new TramiteRepository($this->conexion, $reloj);
-        $this->accesos = new AccesoRepository($this->conexion, $reloj, new TokenGenerator());
+        $this->accesos = new AccesoRepository($this->conexion, $reloj, new TokenGenerator(), new CifradorToken(self::CLAVE_TOKEN));
         $this->catalogo = CatalogoFlujos::desdeConfig(dirname(__DIR__, 2) . '/app');
     }
 
@@ -93,8 +103,19 @@ abstract class BaseDeDatosTestCase extends TestCase
      * para no repetir el armado de la app en cada uno.
      *
      * @param array<string, string> $cuerpo
+     * @param string $claveToken SEGUIMIENTO_TOKEN_KEY del panel; vacia simula un .env sin clave.
+     * @param bool $mailCliente SEGUIMIENTO_MAIL_CLIENTE_ENABLED. Se fija en cada request
+     *                          para que un test que lo prende no se lo deje prendido al
+     *                          siguiente.
      */
-    protected function pedirAlPanel(string $metodo, string $ruta, array $cuerpo = [], bool $csrf = false): ResponseInterface
+    protected function pedirAlPanel(
+        string $metodo,
+        string $ruta,
+        array $cuerpo = [],
+        bool $csrf = false,
+        string $claveToken = self::CLAVE_TOKEN,
+        bool $mailCliente = false,
+    ): ResponseInterface
     {
         self::definirAppPath();
 
@@ -118,6 +139,8 @@ abstract class BaseDeDatosTestCase extends TestCase
         $_ENV['DB_USER'] = $config['user'];
         $_ENV['DB_PASS'] = $config['pass'];
         $_ENV['DB_CHARSET'] = $config['charset'];
+        $_ENV['SEGUIMIENTO_TOKEN_KEY'] = $claveToken;
+        $_ENV['SEGUIMIENTO_MAIL_CLIENTE_ENABLED'] = $mailCliente ? 'true' : 'false';
 
         $app = AppFactory::create();
         $twig = Twig::create(APP_PATH . '/templates', ['cache' => false, 'charset' => 'utf-8']);

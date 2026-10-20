@@ -15,7 +15,7 @@
    detalle. #}
 <p class="adminAyuda">
     Ac&aacute; se corrige el pasado: fechas y notas de cada etapa registrada, o etapas que sobran o faltan.
-    Nada de esto cambia la etapa actual &mdash; para eso est&aacute; &laquo;Avanzar de etapa&raquo; en el tr&aacute;mite.
+    Nada de esto cambia la etapa actual &mdash; para eso est&aacute; el bloque &laquo;Etapa&raquo; en el tr&aacute;mite.
     Si borr&aacute;s el registro de la etapa actual o de una anterior, el cliente la sigue viendo, sin fecha.
 </p>
 
@@ -40,7 +40,7 @@
                         <input type="date" id="ocurrido_el_{{ evento.id }}" name="ocurrido_el" required min="{{ fechaMinima }}" max="{{ fechaMaxima }}"
                                value="{{ evento.ocurridoEl|date('Y-m-d') }}"/>
 
-                        <label for="nota_publica_{{ evento.id }}">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
+                        <label for="nota_publica_{{ evento.id }}">Mensaje para el cliente <span class="adminTenue">(sali&oacute; con este cambio de etapa)</span></label>
                         <textarea id="nota_publica_{{ evento.id }}" name="nota_publica" rows="2" maxlength="{{ maxNota }}">{{ evento.notaPublica }}</textarea>
 
                         <label for="nota_interna_{{ evento.id }}">Nota interna <span class="adminTenue">(nunca sale del panel)</span></label>
@@ -63,6 +63,84 @@
     {% endif %}
 </section>
 
+{# Novedades y notas internas sueltas: no son etapas, asi que no se agregan aca (se
+   publican desde el detalle). Aca solo se corrigen el dia y el texto, o se borran. #}
+<section class="adminSeccion">
+    <h2>Novedades publicadas <span class="adminTenue">(las ve el cliente, sin cambio de etapa)</span></h2>
+
+    {% if novedades is empty %}
+        <p class="adminVacio">Sin novedades.</p>
+    {% else %}
+        <ul class="adminHistorialEditable">
+            {% for novedad in novedades %}
+                <li class="adminHistorialItem">
+                    <p class="adminHistorialEtapa">
+                        Novedad <span class="adminTenue">(en {{ labelPorEtapa[novedad.etapa.value]|default(novedad.etapa.value) }})</span>
+                    </p>
+
+                    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial/novedades/{{ novedad.id }}" class="adminForm adminFormHistorial">
+                        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+
+                        <label for="novedad_fecha_{{ novedad.id }}">Fecha</label>
+                        <input type="date" id="novedad_fecha_{{ novedad.id }}" name="fecha" required min="{{ fechaMinima }}" max="{{ fechaMaxima }}"
+                               value="{{ novedad.publicadoEl|date('Y-m-d') }}"/>
+
+                        <label for="novedad_texto_{{ novedad.id }}">Mensaje para el cliente</label>
+                        <textarea id="novedad_texto_{{ novedad.id }}" name="texto" rows="3" required maxlength="{{ maxNota }}">{{ novedad.texto }}</textarea>
+
+                        <button type="submit" class="adminBtn adminBtnChico">Guardar</button>
+                    </form>
+
+                    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial/novedades/{{ novedad.id }}/eliminar"
+                          class="adminHistorialEliminar"
+                          onsubmit="return confirm('¿Borrar la novedad del {{ novedad.publicadoEl|date('d/m/Y') }}? El cliente deja de verla.');">
+                        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+                        <button type="submit" class="adminBtnTexto">Borrar esta novedad</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+
+<section class="adminSeccion adminSeccionInterna">
+    <h2>Notas internas &#128274; <span class="adminTenue">(solo panel)</span></h2>
+
+    {% if notasInternas is empty %}
+        <p class="adminVacio">Sin notas internas.</p>
+    {% else %}
+        <ul class="adminHistorialEditable">
+            {% for nota in notasInternas %}
+                <li class="adminHistorialItem">
+                    <p class="adminHistorialEtapa">
+                        Nota interna <span class="adminTenue">(en {{ labelPorEtapa[nota.etapa.value]|default(nota.etapa.value) }})</span>
+                    </p>
+
+                    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial/notas-internas/{{ nota.id }}" class="adminForm adminFormHistorial">
+                        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+
+                        <label for="nota_fecha_{{ nota.id }}">Fecha</label>
+                        <input type="date" id="nota_fecha_{{ nota.id }}" name="fecha" required min="{{ fechaMinima }}" max="{{ fechaMaxima }}"
+                               value="{{ nota.escritaEl|date('Y-m-d') }}"/>
+
+                        <label for="nota_texto_{{ nota.id }}">Nota</label>
+                        <textarea id="nota_texto_{{ nota.id }}" name="texto" rows="2" required maxlength="{{ maxNota }}">{{ nota.texto }}</textarea>
+
+                        <button type="submit" class="adminBtn adminBtnChico">Guardar</button>
+                    </form>
+
+                    <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial/notas-internas/{{ nota.id }}/eliminar"
+                          class="adminHistorialEliminar"
+                          onsubmit="return confirm('¿Borrar la nota interna del {{ nota.escritaEl|date('d/m/Y') }}?');">
+                        <input type="hidden" name="_csrf" value="{{ csrf }}"/>
+                        <button type="submit" class="adminBtnTexto">Borrar esta nota</button>
+                    </form>
+                </li>
+            {% endfor %}
+        </ul>
+    {% endif %}
+</section>
+
 <section class="adminSeccion">
     <h2>Agregar una etapa</h2>
     <form method="post" action="{{ basePath }}/admin/tramites/{{ tramite.id }}/historial" class="adminForm">
@@ -74,7 +152,7 @@
         <label for="ocurrido_el">Fecha</label>
         <input type="date" id="ocurrido_el" name="ocurrido_el" required min="{{ fechaMinima }}" max="{{ fechaMaxima }}" value="{{ ahora }}"/>
 
-        <label for="nota_publica">Nota p&uacute;blica <span class="adminTenue">(la ve el cliente)</span></label>
+        <label for="nota_publica">Mensaje para el cliente <span class="adminTenue">(va con esta etapa)</span></label>
         <textarea id="nota_publica" name="nota_publica" rows="2" maxlength="{{ maxNota }}"></textarea>
 
         <label for="nota_interna">Nota interna <span class="adminTenue">(nunca sale del panel)</span></label>

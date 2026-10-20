@@ -11,7 +11,7 @@ use PHPUnit\Framework\TestCase;
 use RuntimeException;
 
 /**
- * Los 7 flujos y su definicion en config. Dominio puro: no necesita base.
+ * Los 8 flujos y su definicion en config. Dominio puro: no necesita base.
  *
  * Es el test que sostiene la promesa de "los flujos viven en config, no en codigo": si
  * la config se rompe (una etapa que no existe, una repetida, un flujo que no cierra),
@@ -147,6 +147,23 @@ final class FlujoTest extends TestCase
 
         self::assertTrue($catalogo->pertenece(Flujo::SAS, Etapa::ESPERANDO_CONFIRMACION));
         self::assertFalse($catalogo->pertenece(Flujo::SAS, Etapa::ACTA_ENVIADA_REVISION));
+    }
+
+    /** Solo vistas: documentacion, presentacion en IGJ y la cola comun, nada mas. */
+    public function testSoloVistasEsElRecorridoMinimo(): void
+    {
+        self::assertSame(
+            [
+                Etapa::REUNIENDO_DOCUMENTACION,
+                Etapa::PROCESANDO_DOCUMENTACION,
+                Etapa::TRAMITE_INICIADO,
+                Etapa::VISTA,
+                Etapa::VISTA_CONTESTADA,
+                Etapa::TERMINADO,
+                Etapa::PARA_RETIRAR,
+            ],
+            self::catalogo()->etapas(Flujo::SOLO_VISTAS),
+        );
     }
 
     public function testLosFlujosSinEscribaniaNiEdictosNoLosIncluyen(): void

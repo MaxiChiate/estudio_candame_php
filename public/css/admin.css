@@ -13,6 +13,11 @@
     --admin-divider: #ece5db;
     --admin-accent: #8a1524;
     --admin-ok: #1f5136;
+    /* Lo interno (nunca sale del panel) va en un gris azulado: que no se confunda de un
+       vistazo con lo que ve el cliente. */
+    --admin-interna-bg: #eef1f4;
+    --admin-interna-border: #c5ccd4;
+    --admin-interna-ink: #3d4a57;
     --admin-font: "Karla", "Segoe UI", Helvetica, Arial, sans-serif;
 }
 
@@ -94,6 +99,7 @@ body {
 .adminTabla td a { color: var(--admin-accent); text-decoration: none; font-weight: 600; }
 .adminTabla tr.is-observado td:first-child { box-shadow: inset 3px 0 0 var(--admin-accent); }
 .adminTabla tr.is-revocado { opacity: 0.55; }
+.adminAccionesAcceso { display: flex; gap: 16px; align-items: center; flex-wrap: wrap; }
 /* Fila clickeable: el link ocupa la celda entera (el padding pasa de la celda al <a>),
    asi cualquier punto de la fila navega. */
 .adminFilaLink td { padding: 0; }
@@ -153,7 +159,7 @@ body {
 
 .adminForm { display: flex; flex-direction: column; gap: 6px; max-width: 620px; }
 .adminForm label { font-size: 0.86rem; color: var(--admin-label); margin-top: 8px; }
-.adminForm input[type="text"], .adminForm input[type="datetime-local"], .adminForm select, .adminForm textarea {
+.adminForm input[type="text"], .adminForm input[type="date"], .adminForm input[type="datetime-local"], .adminForm select, .adminForm textarea {
     padding: 9px 12px;
     border: 1px solid var(--admin-border);
     background: var(--admin-surface);
@@ -178,7 +184,70 @@ body {
 .adminEventos li p { margin: 0; }
 .adminEventoCabecera { font-size: 0.85rem; color: var(--admin-label); margin-bottom: 4px !important; }
 .adminNotaPublica { margin-bottom: 4px !important; }
-.adminNotaInterna { color: var(--admin-soft); font-size: 0.9rem; border-left: 2px solid var(--admin-border); padding-left: 10px; }
+.adminNotaInterna { color: var(--admin-interna-ink); font-size: 0.9rem; border-left: 2px solid var(--admin-interna-border); padding-left: 10px; }
+.adminEventos li.is-interna { background: var(--admin-interna-bg); padding-left: 12px; padding-right: 12px; }
+
+/* Bloque de la nota interna: fondo propio, separado de lo que se publica al cliente. */
+.adminSeccionInterna {
+    padding: 20px 24px 24px;
+    border: 1px solid var(--admin-interna-border);
+    border-left: 4px solid var(--admin-interna-ink);
+    background: var(--admin-interna-bg);
+}
+.adminSeccionInterna h2 { color: var(--admin-interna-ink); }
+.adminSeccionInterna .adminForm textarea { border-color: var(--admin-interna-border); }
+
+.adminCheck { display: flex; gap: 8px; align-items: center; color: var(--admin-text) !important; }
+
+.adminAviso {
+    margin: 0 0 16px;
+    padding: 10px 16px;
+    border-left: 3px solid var(--admin-accent);
+    background: var(--admin-surface);
+}
+
+/* Indicador de etapa del detalle: las etapas del flujo en fila, la actual destacada. */
+.adminPasos {
+    list-style: none;
+    margin: 0 0 18px;
+    padding: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 6px;
+    counter-reset: paso;
+}
+.adminPaso {
+    counter-increment: paso;
+    padding: 3px 10px;
+    border: 1px solid var(--admin-border);
+    border-radius: 999px;
+    font-size: 0.8rem;
+    color: var(--admin-label);
+    background: var(--admin-surface);
+}
+.adminPaso::before { content: counter(paso) ". "; }
+.adminPaso.is-cumplida { color: var(--admin-soft); background: var(--admin-divider); }
+.adminPaso.is-actual { color: #fff; background: var(--admin-accent); border-color: var(--admin-accent); font-weight: 600; }
+
+/* Avance: el mensaje opcional y los botones en la misma caja, para que se lea que el
+   mensaje sale con el boton que se toque. */
+.adminCajaAvance {
+    max-width: 620px;
+    padding: 14px 18px 16px;
+    border: 1px solid var(--admin-border);
+    background: var(--admin-surface);
+}
+.adminCajaAvance .adminAccionesEtapa { margin: 12px 0 0; }
+.adminCajaAvance .adminAccionesEtapa button { margin: 0; }
+.adminMensajeAvance { display: flex; flex-direction: column; gap: 6px; }
+.adminMensajeAvance > summary, .adminOtraEtapa > summary { cursor: pointer; color: var(--admin-accent); font-size: 0.92rem; }
+.adminMensajeAvance[open] { display: flex; flex-direction: column; }
+/* El "+" del texto ya hace de marca: sin el triangulo del navegador. */
+.adminMensajeAvance > summary { list-style: none; }
+.adminMensajeAvance > summary::-webkit-details-marker { display: none; }
+.adminMensajeAvance textarea { margin-top: 2px; }
+.adminOtraEtapa { margin-top: 18px; }
+.adminOtraEtapa .adminForm { margin-top: 6px; }
 
 /* Bloque del token recien emitido: se ve una sola vez, tiene que gritar. */
 .adminTokenNuevo {
@@ -227,7 +296,7 @@ body {
 
 .adminHistorialEtapa { margin: 0 0 4px; font-weight: 600; color: var(--admin-ink); }
 .adminHistorialEtapa .adminChip { vertical-align: middle; }
-.adminForm input[type="datetime-local"] { max-width: 260px; }
+.adminForm input[type="date"], .adminForm input[type="datetime-local"] { max-width: 260px; }
 .adminHistorialEliminar {
     margin: 16px 0 0;
     padding-top: 12px;

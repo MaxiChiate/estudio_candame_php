@@ -201,4 +201,25 @@ return [
             ['etapa' => Etapa::PARA_RETIRAR->value],
         ],
     ],
+
+    // El recorrido minimo: documentacion, presentacion en IGJ y la cola comun. Sin
+    // escribania, actas, edictos ni dictamenes.
+    'solo_vistas' => [
+        'nombre' => 'Solo vistas',
+        'descripcion' => 'Sin escribanía, actas, edictos ni dictámenes: documentación, presentación en IGJ y vistas.',
+        'etapas' => [
+            ['etapa' => Etapa::REUNIENDO_DOCUMENTACION->value],
+            [
+                'etapa' => Etapa::PROCESANDO_DOCUMENTACION->value,
+                // El detalle generico habla del copiado de actas a los libros, que
+                // este flujo no tiene.
+                'detalle' => 'Se revisa y organiza la documentación recibida.',
+            ],
+            ['etapa' => Etapa::TRAMITE_INICIADO->value],
+            ['etapa' => Etapa::VISTA->value],
+            ['etapa' => Etapa::VISTA_CONTESTADA->value],
+            ['etapa' => Etapa::TERMINADO->value],
+            ['etapa' => Etapa::PARA_RETIRAR->value],
+        ],
+    ],
 ];
