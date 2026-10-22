@@ -9,6 +9,7 @@ use EstudioCandame\Seguimiento\CatalogoFlujos;
 use EstudioCandame\Seguimiento\CookieSeguimiento;
 use EstudioCandame\Seguimiento\EventoPublico;
 use EstudioCandame\Seguimiento\LineaEtapas;
+use EstudioCandame\Seguimiento\NovedadPublica;
 use EstudioCandame\Seguimiento\Tramite;
 use EstudioCandame\Seguimiento\TramiteRepository;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -87,7 +88,7 @@ final class SeguimientoController
             // Para el detalle bajo la linea: solo los eventos que tienen algo que decir.
             // El label se resuelve aca, con el flujo, para que una etapa con override lo
             // muestre igual que en la linea.
-            'novedades' => $this->novedades($tramite, $eventos),
+            'novedades' => $this->novedades($tramite, $eventos, $this->tramites->novedadesPublicas($tramite->id)),
         ]);
 
         return $this->conCabecerasPrivadas($response)
@@ -98,14 +99,17 @@ final class SeguimientoController
     }
 
     /**
-     * Eventos con nota publica, listos para el template: fecha, etapa con el label del
-     * flujo, y la nota. Los que no tienen nada que decir no se listan.
+     * Lo que va en "Novedades", de lo mas viejo a lo mas nuevo: los mensajes que viajaron
+     * con un cambio de etapa (con el label de esa etapa, resuelto con el flujo) y las
+     * novedades sueltas, SIN label. Una novedad suelta no es un cambio de etapa, y con
+     * el label se leia como uno ("16/10/2026 -- Tramite con vista" repetido).
      *
      * @param EventoPublico[] $eventos
+     * @param NovedadPublica[] $sueltas
      *
-     * @return list<array{fecha: \DateTimeImmutable, label: string, nota: string}>
+     * @return list<array{fecha: \DateTimeImmutable, label: ?string, nota: string}>
      */
-    private function novedades(Tramite $tramite, array $eventos): array
+    private function novedades(Tramite $tramite, array $eventos, array $sueltas): array
     {
         $novedades = [];
         foreach ($eventos as $evento) {
@@ -119,6 +123,16 @@ final class SeguimientoController
                 'nota' => $evento->notaPublica,
             ];
         }
+        foreach ($sueltas as $novedad) {
+            $novedades[] = [
+                'fecha' => $novedad->publicadoEl,
+                'label' => null,
+                'nota' => $novedad->texto,
+            ];
+        }
+
+        // usort es estable: a igual fecha, el mensaje del cambio de etapa va primero.
+        usort($novedades, static fn (array $a, array $b): int => $a['fecha'] <=> $b['fecha']);
 
         return $novedades;
     }

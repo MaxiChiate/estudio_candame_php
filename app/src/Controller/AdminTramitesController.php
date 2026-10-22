@@ -10,7 +10,9 @@ use EstudioCandame\Seguimiento\CatalogoFlujos;
 use EstudioCandame\Seguimiento\Etapa;
 use EstudioCandame\Seguimiento\Flujo;
 use EstudioCandame\Seguimiento\LineaEtapas;
+use EstudioCandame\Seguimiento\Novedad;
 use EstudioCandame\Seguimiento\Tramite;
+use EstudioCandame\Seguimiento\TramiteAcceso;
 use EstudioCandame\Seguimiento\TramiteRepository;
 use EstudioCandame\Support\AntiAbuso\CsrfToken;
 use Psr\Http\Message\ResponseInterface as Response;
@@ -56,6 +58,11 @@ final class AdminTramitesController
         private readonly CatalogoFlujos $catalogo,
         private readonly string $basePath = '',
         private readonly string $appUrl = '',
+        /**
+         * SEGUIMIENTO_MAIL_CLIENTE_ENABLED. Apagado, el checkbox "Avisar al cliente por
+         * mail" no se dibuja y el backend ignora el campo aunque llegue en el POST.
+         */
+        private readonly bool $mailClienteEnabled = false,
     ) {
     }
 
@@ -258,13 +265,21 @@ final class AdminTramitesController
             'etapaLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
             // Dato de solo lectura: el flujo se eligio al crear y no se puede cambiar.
             'flujoNombre' => $this->catalogo->nombre($tramite->flujo),
-            'eventos' => $this->tramites->eventos($tramite->id),
+            // Cambios de etapa, novedades y notas internas juntos, mas recientes primero.
+            'historial' => $this->historialDelPanel($tramite),
             'accesos' => $accesos,
-            ...$this->etapasParaElegir($tramite),
+            // Solo las del flujo: ir a una etapa de otro tipo de tramite ya no se ofrece
+            // (y avanzar() la rechaza). Si la actual es de afuera -- datos de antes de
+            // esta regla --, se muestra igual y el template avisa.
+            'etapasDelFlujo' => $this->opciones($tramite, $this->catalogo->etapas($tramite->flujo)),
+            'etapaActualFueraDeFlujo' => !$this->catalogo->pertenece($tramite->flujo, $tramite->etapaActual),
+            'pasos' => $this->pasos($tramite),
+            // -1 si la actual es de afuera del flujo. Lo usa el confirm de "volver atras".
+            'posicionActual' => $this->posicionActual($tramite),
             'siguientes' => $this->siguientes($tramite),
-            // Labels resueltos con el flujo, para que el historial muestre el mismo
-            // texto que la linea del cliente cuando la etapa tiene override.
-            'labelPorEtapa' => $this->labelPorEtapa($tramite),
+            'enlaceCliente' => $this->enlaceCliente($accesos),
+            'mailClienteEnabled' => $this->mailClienteEnabled,
+            'maxNota' => self::MAX_NOTA,
             'flash' => $this->tomarFlash(),
             // Aviso en el redirect posterior a emitirlo, solo si el token NO quedo
             // guardado cifrado (sin clave). Si quedo, se copia desde la tabla.
@@ -295,15 +310,30 @@ final class AdminTramitesController
 
         // Si no viene etapa explicita, avanza a la siguiente DEL FLUJO del tramite: ese
         // es el camino de un click desde el detalle. Con etapa explicita se puede ir a
-        // CUALQUIERA del catalogo, incluidas anteriores (el loop de la vista) y las que
-        // no pertenecen al flujo. Lo unico que se valida es que sea un valor del enum:
-        // el operador sabe lo que hace y el portal no le discute el recorrido.
+        // cualquiera DEL FLUJO, incluidas anteriores (el loop de la vista, o corregir un
+        // avance de mas). No a la misma: eso era la unica forma de publicar una nota sin
+        // avanzar, y le mostraba al cliente un cambio de etapa que no existio -- ahora
+        // es "Publicar novedad". Tampoco a una de otro tipo de tramite.
         $etapaPedida = $this->campo($datos, 'etapa');
 
         if ($etapaPedida !== '') {
             $etapa = Etapa::tryFrom($etapaPedida);
-            if ($etapa === null) {
-                $this->flash('La etapa indicada no existe.', 'error');
+            $error = match (true) {
+                $etapa === null => 'La etapa indicada no existe.',
+                $etapa === $tramite->etapaActual => sprintf(
+                    'El trámite %s ya está en %s. Para avisarle algo al cliente sin cambiar de etapa, usá «Publicar novedad».',
+                    $tramite->referencia,
+                    $this->catalogo->label($tramite->flujo, $etapa),
+                ),
+                !$this->catalogo->pertenece($tramite->flujo, $etapa) => sprintf(
+                    '%s no es una etapa de %s.',
+                    $this->catalogo->label($tramite->flujo, $etapa),
+                    $this->catalogo->nombre($tramite->flujo),
+                ),
+                default => null,
+            };
+            if ($error !== null || $etapa === null) {
+                $this->flash($error ?? 'La etapa indicada no existe.', 'error');
 
                 return $this->redirigir($response, '/admin/tramites/' . $id);
             }
@@ -323,12 +353,9 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites/' . $id);
         }
 
-        $this->tramites->avanzar(
-            $id,
-            $etapa,
-            $this->campoONull($datos, 'nota_publica'),
-            $this->campoONull($datos, 'nota_interna'),
-        );
+        // Con el avance viaja solo el mensaje al cliente. La nota interna tiene su propio
+        // bloque y su propia ruta: no se mezcla en el form de lo que ve el cliente.
+        $this->tramites->avanzar($id, $etapa, $this->campoONull($datos, 'nota_publica'), null);
 
         $this->flash(sprintf(
             '%s pasó a %s.',
@@ -340,13 +367,99 @@ final class AdminTramitesController
     }
 
     /**
+     * Mensaje al cliente SIN cambio de etapa. Antes la unica forma era "registrar" la
+     * etapa en curso, que creaba un evento y el cliente lo veia como un cambio de etapa.
+     *
+     * @param array<string, string> $args
+     */
+    public function publicarNovedad(Request $request, Response $response, array $args): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        if ($tramite === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $texto = $this->campo($datos, 'texto');
+        $error = $this->errorDeTexto($texto, 'Escribí el mensaje para el cliente.');
+        if ($error !== null) {
+            $this->flash($error, 'error');
+
+            return $this->redirigir($response, '/admin/tramites/' . $id);
+        }
+
+        $this->tramites->publicarNovedad($id, $tramite->etapaActual, $texto);
+
+        $mensaje = sprintf('Novedad publicada en %s.', $tramite->referencia);
+        // Con el flag apagado el campo se ignora aunque llegue en el POST: que no haya
+        // checkbox en la pagina no alcanza, el POST se puede armar a mano.
+        if ($this->mailClienteEnabled && $this->campo($datos, 'avisar_cliente') !== '') {
+            $mensaje .= ' ' . $this->avisarAlClientePorMail($tramite, $texto);
+        }
+        $this->flash($mensaje);
+
+        return $this->redirigir($response, '/admin/tramites/' . $id);
+    }
+
+    /**
+     * TODO(mail-cliente): STUB. No manda nada. El envio de mails a clientes no esta
+     * implementado: el tramite no guarda ningun mail del cliente todavia, y falta
+     * decidir a quien(es) se le manda (enlaces de acceso emitidos? un campo nuevo?).
+     * Cuando se implemente, este es el unico lugar a cambiar: devuelve el texto que se
+     * suma al flash.
+     */
+    private function avisarAlClientePorMail(Tramite $tramite, string $texto): string
+    {
+        return 'El aviso por mail al cliente todavía no está implementado: no se envió ningún mail.';
+    }
+
+    /**
+     * Nota interna suelta: no cambia la etapa ni le publica nada al cliente.
+     *
+     * @param array<string, string> $args
+     */
+    public function agregarNotaInterna(Request $request, Response $response, array $args): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        if ($tramite === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $texto = $this->campo($datos, 'texto');
+        $error = $this->errorDeTexto($texto, 'Escribí la nota interna.');
+        if ($error !== null) {
+            $this->flash($error, 'error');
+
+            return $this->redirigir($response, '/admin/tramites/' . $id);
+        }
+
+        $this->tramites->agregarNotaInterna($id, $tramite->etapaActual, $texto);
+        $this->flash(sprintf('Nota interna guardada en %s.', $tramite->referencia));
+
+        return $this->redirigir($response, '/admin/tramites/' . $id);
+    }
+
+    /**
      * Editor del historial: fecha, hora y notas de cada evento, borrar eventos y cargar
      * eventos nuevos con fecha pasada.
      *
      * Existe sobre todo por los tramites que ya venian avanzados cuando se cargaron: el
      * alta les pone "hoy" a la etapa inicial, y el tramite en realidad arranco hace un
      * año. Nada de lo que se hace aca mueve la etapa actual -- eso sigue siendo
-     * exclusivo de "Avanzar de etapa".
+     * exclusivo del bloque "Etapa" del detalle.
      *
      * @param array<string, string> $args
      */
@@ -362,6 +475,8 @@ final class AdminTramitesController
             'tramite' => $tramite,
             'etapaLabel' => $this->catalogo->label($tramite->flujo, $tramite->etapaActual),
             'eventos' => $this->tramites->eventos($tramite->id),
+            'novedades' => $this->tramites->novedades($tramite->id),
+            'notasInternas' => $this->tramites->notasInternas($tramite->id),
             'labelPorEtapa' => $this->labelPorEtapa($tramite),
             ...$this->etapasParaElegir($tramite),
             'ahora' => (new DateTimeImmutable())->format(self::FORMATO_INPUT),
@@ -444,14 +559,7 @@ final class AdminTramitesController
             return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
         }
 
-        // El input muestra solo el dia, y los eventos se guardan con hora. Se conserva
-        // la hora guardada y cambia solo el dia: si no, editar una nota dejaria el
-        // evento a las 00:00 y podria invertir el orden con otro del mismo dia.
-        $fecha = $evento->ocurridoEl->setDate(
-            (int) $fecha->format('Y'),
-            (int) $fecha->format('m'),
-            (int) $fecha->format('d'),
-        );
+        $fecha = $this->otroDiaMismaHora($evento->ocurridoEl, $fecha);
 
         $this->tramites->editarEvento(
             $evento->id,
@@ -492,6 +600,126 @@ final class AdminTramitesController
         ));
 
         return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /**
+     * Corrige dia y texto de una novedad suelta. Igual que con los eventos, la hora
+     * guardada se conserva. El texto es obligatorio: para sacarla esta borrar.
+     *
+     * @param array<string, string> $args
+     */
+    public function editarNovedad(Request $request, Response $response, array $args): Response
+    {
+        return $this->editarSuelta($request, $response, $args, 'novedad');
+    }
+
+    /** @param array<string, string> $args */
+    public function eliminarNovedad(Request $request, Response $response, array $args): Response
+    {
+        return $this->eliminarSuelta($request, $response, $args, 'novedad');
+    }
+
+    /** @param array<string, string> $args */
+    public function editarNotaInterna(Request $request, Response $response, array $args): Response
+    {
+        return $this->editarSuelta($request, $response, $args, 'interna');
+    }
+
+    /** @param array<string, string> $args */
+    public function eliminarNotaInterna(Request $request, Response $response, array $args): Response
+    {
+        return $this->eliminarSuelta($request, $response, $args, 'interna');
+    }
+
+    /**
+     * Novedades y notas internas se editan igual (dia + texto); solo cambia la tabla.
+     * Como con los eventos, el id se busca DENTRO del tramite de la URL: uno de otro
+     * tramite da null y no se toca.
+     *
+     * @param array<string, string> $args
+     * @param 'novedad'|'interna' $tipo
+     */
+    private function editarSuelta(Request $request, Response $response, array $args, string $tipo): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        $item = $tipo === 'novedad'
+            ? $this->tramites->novedad($id, (int) ($args['novedad'] ?? 0))
+            : $this->tramites->notaInterna($id, (int) ($args['nota'] ?? 0));
+        if ($tramite === null || $item === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $dia = $this->fecha($this->campo($datos, 'fecha'));
+        $texto = $this->campo($datos, 'texto');
+        $error = $dia === null
+            ? $this->errorDeFecha()
+            : $this->errorDeTexto($texto, 'El texto no puede quedar vacío. Para sacarla, borrala.');
+        if ($error !== null || $dia === null) {
+            $this->flash($error ?? $this->errorDeFecha(), 'error');
+
+            return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+        }
+
+        if ($item instanceof Novedad) {
+            $fecha = $this->otroDiaMismaHora($item->publicadoEl, $dia);
+            $this->tramites->editarNovedad($item->id, $fecha, $texto);
+            $this->flash(sprintf('Se guardó la novedad del %s.', $fecha->format('d/m/Y')));
+        } else {
+            $fecha = $this->otroDiaMismaHora($item->escritaEl, $dia);
+            $this->tramites->editarNotaInterna($item->id, $fecha, $texto);
+            $this->flash(sprintf('Se guardó la nota interna del %s.', $fecha->format('d/m/Y')));
+        }
+
+        return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /**
+     * @param array<string, string> $args
+     * @param 'novedad'|'interna' $tipo
+     */
+    private function eliminarSuelta(Request $request, Response $response, array $args, string $tipo): Response
+    {
+        $id = (int) ($args['id'] ?? 0);
+        $datos = (array) $request->getParsedBody();
+
+        if (!CsrfToken::validar($this->campo($datos, '_csrf'), self::CLAVE_CSRF)) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        $tramite = $this->tramites->porId($id);
+        $item = $tipo === 'novedad'
+            ? $this->tramites->novedad($id, (int) ($args['novedad'] ?? 0))
+            : $this->tramites->notaInterna($id, (int) ($args['nota'] ?? 0));
+        if ($tramite === null || $item === null) {
+            return $this->redirigir($response, '/admin/tramites');
+        }
+
+        if ($item instanceof Novedad) {
+            $this->tramites->eliminarNovedad($item->id);
+            $this->flash(sprintf('Se borró la novedad del %s.', $item->publicadoEl->format('d/m/Y')));
+        } else {
+            $this->tramites->eliminarNotaInterna($item->id);
+            $this->flash(sprintf('Se borró la nota interna del %s.', $item->escritaEl->format('d/m/Y')));
+        }
+
+        return $this->redirigir($response, '/admin/tramites/' . $id . '/historial');
+    }
+
+    /**
+     * El historial se edita por dia y lo guardado tiene hora: se conserva la hora y cambia
+     * solo el dia. Si no, editar un texto dejaria el registro a las 00:00 y podria
+     * invertir el orden con otro del mismo dia.
+     */
+    private function otroDiaMismaHora(DateTimeImmutable $guardada, DateTimeImmutable $dia): DateTimeImmutable
+    {
+        return $guardada->setDate((int) $dia->format('Y'), (int) $dia->format('m'), (int) $dia->format('d'));
     }
 
     /**
@@ -548,6 +776,114 @@ final class AdminTramitesController
     private function errorDeFecha(): string
     {
         return sprintf('La fecha no es válida (tienen que estar entre %d y dentro de un año).', self::ANIO_MINIMO);
+    }
+
+    /**
+     * Indicador de etapa del detalle: las etapas del flujo con su estado. Es posicional a
+     * proposito (lo de antes de la actual, cumplido): es un mapa para la doctora, no la
+     * linea del cliente -- esa la arma LineaEtapas, con eventos y opcionales.
+     *
+     * @return list<array{label: string, estado: string}>
+     */
+    private function pasos(Tramite $tramite): array
+    {
+        $actual = $this->posicionActual($tramite);
+        $pasos = [];
+        foreach ($this->catalogo->etapas($tramite->flujo) as $posicion => $etapa) {
+            $pasos[] = [
+                'label' => $this->catalogo->label($tramite->flujo, $etapa),
+                'estado' => match (true) {
+                    $posicion === $actual => LineaEtapas::ACTUAL,
+                    $actual >= 0 && $posicion < $actual => LineaEtapas::CUMPLIDA,
+                    default => LineaEtapas::PENDIENTE,
+                },
+            ];
+        }
+
+        return $pasos;
+    }
+
+    private function posicionActual(Tramite $tramite): int
+    {
+        $posicion = array_search($tramite->etapaActual, $this->catalogo->etapas($tramite->flujo), true);
+
+        return $posicion === false ? -1 : (int) $posicion;
+    }
+
+    /** Texto obligatorio de novedades y notas internas: no vacio y dentro del tope. */
+    private function errorDeTexto(string $texto, string $siVacio): ?string
+    {
+        if ($texto === '') {
+            return $siVacio;
+        }
+
+        return mb_strlen($texto) > self::MAX_NOTA
+            ? sprintf('El texto no puede superar los %d caracteres.', self::MAX_NOTA)
+            : null;
+    }
+
+    /**
+     * Link para "Ver como cliente": el primer enlace vigente que se pueda recuperar en
+     * claro. null si no hay ninguno (sin emitir, todos revocados, o sin
+     * SEGUIMIENTO_TOKEN_KEY): el template ofrece emitir uno.
+     *
+     * Es el enlace REAL del cliente: abrirlo cuenta como un acceso mas en la tabla.
+     *
+     * @param TramiteAcceso[] $accesos
+     */
+    private function enlaceCliente(array $accesos): ?string
+    {
+        foreach ($accesos as $acceso) {
+            if (!$acceso->estaRevocado() && $acceso->token !== null) {
+                return rtrim($this->appUrl, '/') . $this->basePath . '/seguimiento/' . $acceso->token;
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Cambios de etapa, novedades sueltas y notas internas sueltas en una sola lista,
+     * mas recientes primero, lista para el template del detalle.
+     *
+     * @return list<array{tipo: string, fecha: DateTimeImmutable, etapa: string,
+     *                    notaPublica: ?string, notaInterna: ?string}>
+     */
+    private function historialDelPanel(Tramite $tramite): array
+    {
+        $items = [];
+        foreach ($this->tramites->eventos($tramite->id) as $evento) {
+            $items[] = [
+                'tipo' => 'etapa',
+                'fecha' => $evento->ocurridoEl,
+                'etapa' => $this->catalogo->label($tramite->flujo, $evento->etapa),
+                'notaPublica' => $evento->notaPublica,
+                'notaInterna' => $evento->notaInterna,
+            ];
+        }
+        foreach ($this->tramites->novedades($tramite->id) as $novedad) {
+            $items[] = [
+                'tipo' => 'novedad',
+                'fecha' => $novedad->publicadoEl,
+                'etapa' => $this->catalogo->label($tramite->flujo, $novedad->etapa),
+                'notaPublica' => $novedad->texto,
+                'notaInterna' => null,
+            ];
+        }
+        foreach ($this->tramites->notasInternas($tramite->id) as $nota) {
+            $items[] = [
+                'tipo' => 'interna',
+                'fecha' => $nota->escritaEl,
+                'etapa' => $this->catalogo->label($tramite->flujo, $nota->etapa),
+                'notaPublica' => null,
+                'notaInterna' => $nota->texto,
+            ];
+        }
+
+        // usort es estable: a igual fecha (mismo segundo) queda el orden de arriba.
+        usort($items, static fn (array $a, array $b): int => $b['fecha'] <=> $a['fecha']);
+
+        return $items;
     }
 
     /** @param array<string, mixed> $datos */
