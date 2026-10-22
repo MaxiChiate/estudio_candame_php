@@ -160,9 +160,9 @@ dev server built-in.
     `SmvmService`, ver el punto de "Cache de archivo" más abajo).
   - **Borrador local** (`public/js/constitucion.js`) — lo cargado se guarda sólo en el
     `localStorage` del navegador (`candame.constitucion.borrador`, `{v, guardadoEn,
-    datos}`) y se restaura solo al volver; vence a los 30 días de la última
-    modificación y se borra al enviar con éxito. Usa `collectFormData()`, que **nunca**
-    incluye CSRF, timestamp ni honeypot (eso lo suma `buildSubmitPayload()` sólo para
+    datos}`) y se restaura solo al volver. **No vence** (decisión del usuario,
+    2026-10-21): queda hasta que se envía con éxito o se usa "Borrar todo". Usa
+    `collectFormData()`, que **nunca** incluye CSRF, timestamp ni honeypot (eso lo suma `buildSubmitPayload()` sólo para
     el POST). Nada de esto toca el backend. Si se cambia la forma de los datos de
     manera incompatible, subir `DRAFT_VERSION`: los borradores viejos se descartan.
 - **Portal de seguimiento de trámites** (`/seguimiento`, `/admin/tramites`) — detrás del
