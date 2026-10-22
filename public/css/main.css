@@ -895,6 +895,35 @@ section[id] {
     color: var(--color-accent);
 }
 
+/* Borrador local de la consulta de constitucion (js/constitucion.js). Los [hidden]
+   van explicitos porque el display de cada clase le gana al atributo. */
+.borradorAviso {
+    display: flex;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 6px 12px;
+}
+
+.borradorAviso[hidden],
+.borradorEtiqueta[hidden] {
+    display: none;
+}
+
+.borradorAviso .formHint {
+    flex: 1 1 320px;
+}
+
+.borradorEtiqueta {
+    display: inline-block;
+    padding: 2px 10px;
+    border: 1px solid var(--color-accent);
+    border-radius: 999px;
+    font-size: 11px;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--color-accent);
+}
+
 .tramiteFormPanel select {
     font-family: var(--font-body);
     font-size: 15px;
