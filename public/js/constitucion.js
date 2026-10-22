@@ -411,6 +411,10 @@ document.addEventListener("DOMContentLoaded", function () {
     addSocioCard();
     addAdministradorCard();
 
+    // Solo los datos que carga el usuario: es lo que guarda el borrador local, que
+    // nunca debe llevar el token CSRF, el timestamp de servido ni el honeypot. Los
+    // numeros van como texto (tal cual estan en el campo) para que un campo vacio
+    // se restaure vacio y no como 0; la conversion la hace buildSubmitPayload().
     function collectFormData() {
         var socios = [];
         sociosList.querySelectorAll("[data-socio]").forEach(function (card) {
@@ -428,9 +432,7 @@ document.addEventListener("DOMContentLoaded", function () {
             administradores.push(persona);
         });
 
-        var honeypotInput = document.getElementById("honeypotField");
-
-        var payload = {
+        return {
             tipoSocietario: tipoActualSeleccionado(),
             contacto: {
                 nombre: document.getElementById("contactoNombre").value.trim(),
@@ -443,10 +445,10 @@ document.addEventListener("DOMContentLoaded", function () {
                 nombreOpcion2: document.getElementById("nombreOpcion2").value.trim(),
                 nombreOpcion3: document.getElementById("nombreOpcion3").value.trim(),
                 objetoSocial: document.getElementById("objetoSocial").value.trim(),
-                capitalSocial: parseInt(document.getElementById("capitalSocial").value, 10) || 0,
-                duracionAnios: parseInt(document.getElementById("duracionAnios").value, 10) || 0,
-                cierreEjercicioDia: parseInt(document.getElementById("cierreEjercicioDia").value, 10) || 0,
-                cierreEjercicioMes: parseInt(document.getElementById("cierreEjercicioMes").value, 10) || 0,
+                capitalSocial: document.getElementById("capitalSocial").value.trim(),
+                duracionAnios: document.getElementById("duracionAnios").value.trim(),
+                cierreEjercicioDia: document.getElementById("cierreEjercicioDia").value.trim(),
+                cierreEjercicioMes: document.getElementById("cierreEjercicioMes").value.trim(),
                 sede: {
                     calle: document.getElementById("sedeCalle").value.trim(),
                     numero: document.getElementById("sedeNumero").value.trim(),
@@ -460,9 +462,20 @@ document.addEventListener("DOMContentLoaded", function () {
             },
             socios: socios,
             administradores: administradores,
-            csrfToken: document.getElementById("csrfToken").value,
-            formularioServidoEn: parseInt(document.getElementById("formularioServidoEn").value, 10) || 0,
         };
+    }
+
+    // Lo que viaja en el POST: los datos del form con los numeros ya convertidos,
+    // mas los campos antispam. El contrato es el mismo de siempre.
+    function buildSubmitPayload() {
+        var payload = collectFormData();
+        ["capitalSocial", "duracionAnios", "cierreEjercicioDia", "cierreEjercicioMes"].forEach(function (campo) {
+            payload.sociedad[campo] = parseInt(payload.sociedad[campo], 10) || 0;
+        });
+        payload.csrfToken = document.getElementById("csrfToken").value;
+        payload.formularioServidoEn = parseInt(document.getElementById("formularioServidoEn").value, 10) || 0;
+
+        var honeypotInput = document.getElementById("honeypotField");
         payload[honeypotInput.name] = honeypotInput.value;
 
         return payload;
@@ -537,7 +550,7 @@ document.addEventListener("DOMContentLoaded", function () {
         fetch(form.getAttribute("action") || window.location.pathname, {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify(collectFormData()),
+            body: JSON.stringify(buildSubmitPayload()),
         }).then(function (response) {
             return response.json().catch(function () {
                 return null;
