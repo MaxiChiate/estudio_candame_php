@@ -434,6 +434,7 @@ document.addEventListener("DOMContentLoaded", function () {
     // que andar igual y sin mostrarle ningun error al usuario.
     var DRAFT_KEY = "candame.constitucion.borrador";
     var DRAFT_VERSION = 1;
+    var DRAFT_MAX_AGE_MS = 30 * 24 * 60 * 60 * 1000;
     var DRAFT_SAVE_DELAY_MS = 500;
 
     var draftStorage = detectDraftStorage();
@@ -506,9 +507,8 @@ document.addEventListener("DOMContentLoaded", function () {
         }
     }
 
-    // Devuelve los datos del borrador, o null. Un borrador ilegible o de otra
-    // version se borra en silencio. No vence: queda hasta que se envia la consulta
-    // o se usa "Borrar todo" (guardadoEn se guarda como dato, no se usa para eso).
+    // Devuelve los datos del borrador, o null. Un borrador ilegible, de otra version
+    // o vencido se borra en silencio.
     function readDraft() {
         var raw = null;
         try {
@@ -529,7 +529,12 @@ document.addEventListener("DOMContentLoaded", function () {
 
         var valido = !!draft && typeof draft === "object"
             && draft.v === DRAFT_VERSION
+            && typeof draft.guardadoEn === "string"
             && !!draft.datos && typeof draft.datos === "object";
+        if (valido) {
+            var guardadoEn = Date.parse(draft.guardadoEn);
+            valido = !isNaN(guardadoEn) && Date.now() - guardadoEn <= DRAFT_MAX_AGE_MS;
+        }
         if (!valido) {
             removeDraft();
             return null;
