@@ -924,6 +924,60 @@ section[id] {
     color: var(--color-accent);
 }
 
+/* "Borrar todo" vuelve al inicio del form: que no quede debajo del header fijo
+   (mismo margen que section[id]). */
+.tramiteFormPanel {
+    scroll-margin-top: 88px;
+}
+
+.borradorLimpiar {
+    display: flex;
+    justify-content: flex-end;
+    border-top: 1px solid var(--color-divider);
+    padding-top: 20px;
+    margin-top: 12px;
+}
+
+/* Confirmacion de la parte publica. Mismo esquema que .adminDialogo (admin.css),
+   con la paleta de :root. */
+.formDialogo {
+    width: min(460px, calc(100vw - 32px));
+    padding: 0;
+    border: none;
+    border-top: 4px solid var(--color-accent);
+    border-radius: 2px;
+    background: var(--color-surface);
+    color: var(--color-text);
+    box-shadow: 0 18px 48px rgba(28, 25, 23, 0.28);
+}
+
+.formDialogo::backdrop {
+    background: rgba(28, 16, 19, 0.55);
+}
+
+.formDialogoCuerpo {
+    padding: 24px 26px 22px;
+}
+
+.formDialogo h2 {
+    margin: 0 0 10px;
+    font-size: 24px;
+}
+
+.formDialogo p {
+    margin: 0;
+    color: var(--color-text-muted);
+    line-height: 1.6;
+}
+
+.formDialogoAcciones {
+    display: flex;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-top: 22px;
+}
+
 .tramiteFormPanel select {
     font-family: var(--font-body);
     font-size: 15px;

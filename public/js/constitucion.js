@@ -698,6 +698,57 @@ document.addEventListener("DOMContentLoaded", function () {
     addAdministradorCard();
     initDraft();
 
+    // --- Borrar todo y empezar de nuevo -------------------------------------
+    var clearButton = document.getElementById("borradorLimpiar");
+    var clearDialog = document.getElementById("borradorDialogo");
+    var clearCancel = document.getElementById("borradorCancelar");
+    var clearConfirm = document.getElementById("borradorConfirmar");
+
+    // Sin mensaje posterior: el form vacio y la etiqueta que desaparece alcanzan.
+    function clearDraftAndForm() {
+        removeDraft();
+        resetFormToFresh();
+        setDraftLabelVisible(false);
+        (form.closest(".tramiteFormPanel") || form).scrollIntoView({ behavior: "smooth", block: "start" });
+        var primerCampo = form.querySelector('input[name="tipoSocietario"]:checked');
+        if (primerCampo) {
+            primerCampo.focus({ preventScroll: true });
+        }
+    }
+
+    function normalizarTexto(el) {
+        return el ? el.textContent.replace(/\s+/g, " ").trim() : "";
+    }
+
+    if (clearButton && clearDialog && clearCancel && clearConfirm) {
+        clearButton.addEventListener("click", function () {
+            // Navegadores sin <dialog>: el confirm nativo, con los mismos textos.
+            if (typeof clearDialog.showModal !== "function") {
+                var pregunta = normalizarTexto(document.getElementById("borradorDialogoTitulo"))
+                    + "\n\n" + normalizarTexto(document.getElementById("borradorDialogoTexto"));
+                if (window.confirm(pregunta)) {
+                    clearDraftAndForm();
+                }
+                return;
+            }
+            clearDialog.showModal();
+            clearCancel.focus();
+        });
+        clearCancel.addEventListener("click", function () {
+            clearDialog.close();
+        });
+        clearConfirm.addEventListener("click", function () {
+            clearDialog.close();
+            clearDraftAndForm();
+        });
+        // Click en el fondo (fuera de la caja) cancela. Escape lo resuelve el <dialog>.
+        clearDialog.addEventListener("click", function (event) {
+            if (event.target === clearDialog) {
+                clearDialog.close();
+            }
+        });
+    }
+
     // Solo los datos que carga el usuario: es lo que guarda el borrador local, que
     // nunca debe llevar el token CSRF, el timestamp de servido ni el honeypot. Los
     // numeros van como texto (tal cual estan en el campo) para que un campo vacio
