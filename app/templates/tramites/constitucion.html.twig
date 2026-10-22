@@ -22,6 +22,14 @@
 
         <form id="consultaForm" class="contactForm" novalidate>
 
+            {# Borrador local (js/constitucion.js): si el navegador no deja usar el
+               storage, el JS oculta el aviso para no prometer algo que no va a pasar. #}
+            <div class="borradorAviso" id="borradorAviso">
+                <p class="formHint">Lo que cargue se guarda solo en este navegador hasta que env&iacute;e la consulta.
+                    Puede cerrar la p&aacute;gina y retomarla m&aacute;s tarde desde este mismo navegador.</p>
+                <span aria-live="polite"><span class="borradorEtiqueta" id="borradorEtiqueta" hidden>Borrador</span></span>
+            </div>
+
             <div class="tramiteGroup">
                 <h2>Tipo societario</h2>
                 <div class="tipoSocietarioGroup" data-tipo-societario-group>
@@ -270,9 +278,28 @@
 
             <button type="submit" class="btn">Enviar consulta</button>
             <p class="formHint">Los campos marcados con * son obligatorios. Recibimos su consulta y nos ponemos en contacto.</p>
+
+            {# Lejos de "Enviar consulta" y en otro estilo para que no se confundan. Sin JS
+               no hace nada: es type="button" y el dialog no se abre. #}
+            <div class="borradorLimpiar">
+                <button type="button" class="btnOutline" id="borradorLimpiar">Borrar todo y empezar de nuevo</button>
+            </div>
         </form>
     </div>
 </section>
+
+<dialog class="formDialogo" id="borradorDialogo" aria-labelledby="borradorDialogoTitulo" aria-describedby="borradorDialogoTexto">
+    <div class="formDialogoCuerpo">
+        <h2 id="borradorDialogoTitulo">&iquest;Borrar todos los datos cargados?</h2>
+        <p id="borradorDialogoTexto">Se van a vaciar todos los campos del formulario y no se van a poder recuperar.
+            Las consultas que ya envi&oacute; al estudio no se ven afectadas.</p>
+        <div class="formDialogoAcciones">
+            {# Cancelar primero y con el foco: Enter por reflejo no borra nada. #}
+            <button type="button" class="btnOutline" id="borradorCancelar" autofocus>Cancelar</button>
+            <button type="button" class="btn" id="borradorConfirmar">S&iacute;, borrar todo</button>
+        </div>
+    </div>
+</dialog>
 
 <template id="personaFieldsTemplate">
     <div class="formGrid">
